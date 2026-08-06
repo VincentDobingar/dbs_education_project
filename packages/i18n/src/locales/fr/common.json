@@ -1,0 +1,8 @@
+{
+  "app.name": "EduManage Africa",
+  "action.save": "Enregistrer",
+  "action.cancel": "Annuler",
+  "action.confirm": "Confirmer",
+  "state.loading": "Chargement...",
+  "state.empty": "Aucune donnée disponible"
+}

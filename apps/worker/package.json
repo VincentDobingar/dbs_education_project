@@ -1,0 +1,33 @@
+{
+  "name": "@edumanage/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@edumanage/config": "workspace:*",
+    "bullmq": "^5.34.1",
+    "pino": "^9.5.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@edumanage/eslint-config": "workspace:*",
+    "@edumanage/tsconfig": "workspace:*",
+    "@types/node": "^22.10.1",
+    "eslint": "^9.16.0",
+    "pino-pretty": "^13.0.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

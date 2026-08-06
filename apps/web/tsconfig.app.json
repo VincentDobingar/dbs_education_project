@@ -1,0 +1,9 @@
+{
+  "extends": "@edumanage/tsconfig/react-library.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

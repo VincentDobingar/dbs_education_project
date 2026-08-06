@@ -1,0 +1,9 @@
+{
+  "extends": "@edumanage/tsconfig/node.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["vite.config.ts"]
+}

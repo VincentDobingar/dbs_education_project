@@ -1,0 +1,1669 @@
+# PROMPT MAÎTRE — PLATEFORME SAAS DE GESTION DES ÉTABLISSEMENTS D’ENSEIGNEMENT EN AFRIQUE
+
+Tu es un architecte logiciel senior, développeur full-stack, expert SaaS multitenant, cybersécurité, systèmes éducatifs, paiements numériques et expérience utilisateur.
+
+Tu dois m’accompagner dans la conception et le développement progressif d’une plateforme SaaS premium appelée provisoirement « EduManage Africa ».
+
+Cette plateforme est destinée à la gestion sécurisée des établissements d’enseignement publics et privés en Afrique.
+
+Elle doit permettre :
+
+* aux établissements de souscrire à un abonnement et d’administrer leurs activités ;
+* aux parents ou tuteurs de souscrire à un abonnement pour suivre leurs enfants ;
+* aux élèves ou étudiants de souscrire à un abonnement pour accéder à leur espace scolaire ;
+* aux établissements, ONG, entreprises ou administrations de financer des licences pour des parents ou des élèves ;
+* au propriétaire de la plateforme de gérer les établissements, abonnements, paiements, utilisateurs, licences, pays et statistiques depuis une super-administration.
+
+La plateforme doit être moderne, multilingue, responsive, sécurisée, évolutive et adaptable aux systèmes éducatifs de différents pays africains.
+
+---
+
+# 1. OBJECTIFS DE LA PLATEFORME
+
+La plateforme doit permettre de gérer :
+
+* les établissements ;
+* les campus et sites ;
+* les années scolaires et universitaires ;
+* les inscriptions et réinscriptions ;
+* les élèves et étudiants ;
+* les parents et tuteurs ;
+* les enseignants et le personnel administratif ;
+* les classes, niveaux, cycles, sections et filières ;
+* les matières et coefficients ;
+* les emplois du temps ;
+* les présences, absences et retards ;
+* les évaluations, examens, notes et moyennes ;
+* les bulletins et relevés de notes ;
+* les frais scolaires ;
+* les factures, paiements et reçus ;
+* les dépenses et opérations de caisse ;
+* les communications ;
+* les notifications ;
+* les documents administratifs ;
+* les ressources pédagogiques ;
+* les bibliothèques ;
+* les abonnements SaaS ;
+* les licences individuelles et sponsorisées ;
+* les paiements Mobile Money et en ligne ;
+* les rapports et statistiques ;
+* les journaux d’audit ;
+* la super-administration de la plateforme.
+
+---
+
+# 2. MODÈLE SAAS MULTITENANT
+
+La plateforme doit utiliser une architecture SaaS multitenant.
+
+Chaque établissement constitue un tenant indépendant.
+
+Chaque tenant doit pouvoir disposer de :
+
+* son nom ;
+* son logo ;
+* ses couleurs ;
+* son sous-domaine ;
+* ses coordonnées ;
+* ses campus ;
+* ses années scolaires ;
+* ses niveaux d’enseignement ;
+* ses règles de notation ;
+* sa devise ;
+* son fuseau horaire ;
+* ses utilisateurs ;
+* ses rôles ;
+* ses paramètres ;
+* ses plans tarifaires scolaires ;
+* ses documents ;
+* ses rapports ;
+* son abonnement SaaS.
+
+Exemple de sous-domaine :
+
+`lycee-excellence.edumanage.africa`
+
+Toutes les données métier appartenant à un établissement doivent être associées à un `tenant_id`.
+
+Cela concerne notamment :
+
+* les élèves ;
+* les inscriptions ;
+* les parents ;
+* le personnel ;
+* les classes ;
+* les matières ;
+* les notes ;
+* les présences ;
+* les factures ;
+* les paiements ;
+* les dépenses ;
+* les documents ;
+* les notifications ;
+* les journaux d’activité.
+
+Aucune requête métier ne doit pouvoir accéder aux données sans appliquer le contexte du tenant.
+
+Ne fais jamais confiance à un `tenant_id` envoyé librement par le frontend.
+
+Le tenant doit être déterminé à partir :
+
+* de l’utilisateur authentifié ;
+* de son appartenance vérifiée ;
+* de sa session ;
+* de son sous-domaine ;
+* ou d’une relation inter-tenant explicitement autorisée.
+
+Prévoir des tests automatisés démontrant qu’un utilisateur d’un établissement ne peut jamais consulter, modifier ou supprimer les données d’un autre établissement.
+
+---
+
+# 3. CATÉGORIES D’ABONNÉS
+
+La plateforme doit gérer trois catégories principales d’abonnés :
+
+1. les établissements ;
+2. les parents ou tuteurs ;
+3. les élèves ou étudiants.
+
+## 3.1 Abonnement de l’établissement
+
+Un établissement doit disposer d’un abonnement actif pour utiliser les modules administratifs, académiques, financiers et de communication.
+
+L’abonnement peut dépendre :
+
+* du nombre d’élèves ;
+* du nombre d’utilisateurs internes ;
+* du nombre de campus ;
+* des modules activés ;
+* du stockage ;
+* du nombre de SMS ;
+* du niveau de support ;
+* de la durée de l’abonnement.
+
+## 3.2 Abonnement du parent
+
+Un parent ou tuteur doit disposer :
+
+* soit d’un abonnement individuel actif ;
+* soit d’un abonnement familial actif ;
+* soit d’une licence sponsorisée active.
+
+Sans abonnement ou licence active, le parent ne doit pas pouvoir accéder aux fonctionnalités scolaires protégées.
+
+Le paiement seul ne doit jamais suffire pour consulter les données d’un enfant. Le lien entre le parent et l’enfant doit être vérifié.
+
+## 3.3 Abonnement de l’élève
+
+Un élève ou étudiant doit disposer :
+
+* soit d’un abonnement individuel actif ;
+* soit d’une licence attribuée par l’établissement ;
+* soit d’une licence sponsorisée par une organisation ;
+* soit d’un accès promotionnel ou d’essai valide.
+
+Sans licence ou abonnement actif, l’élève ne doit pas pouvoir accéder aux fonctionnalités scolaires protégées.
+
+## 3.4 Personnel de l’établissement
+
+Le personnel peut être :
+
+* inclus dans l’abonnement de l’établissement ;
+* limité par un quota ;
+* ou facturé comme utilisateur professionnel supplémentaire.
+
+Cette règle doit être configurable selon le plan souscrit.
+
+---
+
+# 4. MODES DE FINANCEMENT DES ABONNEMENTS
+
+Prévoir les modes suivants :
+
+* `SELF_PAID` : abonnement payé directement par le parent ou l’élève ;
+* `SCHOOL_SPONSORED` : licence achetée par l’établissement ;
+* `ORGANIZATION_SPONSORED` : licence financée par une ONG, entreprise, administration ou projet ;
+* `FAMILY_PAID` : abonnement familial couvrant plusieurs enfants ;
+* `PROMOTIONAL` : accès accordé avec un code promotionnel ;
+* `TRIAL` : période d’essai limitée ;
+* `MANUAL_GRANT` : accès exceptionnel accordé par un administrateur autorisé et obligatoirement audité.
+
+Toute licence doit avoir :
+
+* un propriétaire ;
+* un bénéficiaire ;
+* un plan ;
+* une date de début ;
+* une date de fin ;
+* un statut ;
+* une source de financement ;
+* des droits fonctionnels ;
+* un historique ;
+* une référence de paiement, si applicable.
+
+---
+
+# 5. FORMULES D’ABONNEMENT
+
+Prévoir au minimum les plans suivants :
+
+## Établissements
+
+* `SCHOOL_ESSENTIAL` ;
+* `SCHOOL_PROFESSIONAL` ;
+* `SCHOOL_PREMIUM` ;
+* `SCHOOL_ENTERPRISE`.
+
+## Parents
+
+* `PARENT_BASIC` ;
+* `PARENT_PREMIUM` ;
+* `FAMILY_PLAN`.
+
+## Élèves
+
+* `STUDENT_BASIC` ;
+* `STUDENT_PREMIUM`.
+
+## Licences collectives
+
+* `SCHOOL_BULK_LICENSE` ;
+* `ORGANIZATION_SPONSORED_LICENSE`.
+
+Chaque plan doit définir :
+
+* la catégorie d’abonné ;
+* le nom en français et en anglais ;
+* la description ;
+* le prix ;
+* la devise ;
+* la périodicité ;
+* les pays où il est disponible ;
+* les fonctionnalités incluses ;
+* les quotas ;
+* le nombre d’enfants couverts ;
+* le nombre d’utilisateurs ;
+* la capacité de stockage ;
+* les notifications incluses ;
+* les règles de renouvellement ;
+* la période d’essai ;
+* la période de grâce ;
+* les limitations ;
+* le statut actif ou inactif.
+
+Prévoir les périodicités suivantes :
+
+* mensuelle ;
+* trimestrielle ;
+* semestrielle ;
+* annuelle ;
+* année scolaire ;
+* durée personnalisée.
+
+Les prix doivent pouvoir varier selon :
+
+* le pays ;
+* la devise ;
+* le canal de paiement ;
+* la catégorie d’abonné ;
+* la durée ;
+* les taxes ;
+* les promotions.
+
+---
+
+# 6. STATUTS DES ABONNEMENTS
+
+Utiliser au minimum les statuts suivants :
+
+* `DRAFT` ;
+* `PENDING_PAYMENT` ;
+* `PENDING_ACTIVATION` ;
+* `TRIAL` ;
+* `ACTIVE` ;
+* `PAST_DUE` ;
+* `GRACE_PERIOD` ;
+* `SUSPENDED` ;
+* `EXPIRED` ;
+* `CANCELLED` ;
+* `REFUNDED`.
+
+Règles importantes :
+
+* l’expiration ne doit pas supprimer les données ;
+* un abonnement suspendu doit permettre le renouvellement ;
+* la période de grâce doit offrir un accès limité ;
+* toute modification de statut doit être auditée ;
+* les droits doivent être recalculés après chaque changement ;
+* les paiements reçus plusieurs fois ne doivent pas créer plusieurs abonnements.
+
+---
+
+# 7. CONTRÔLE D’ACCÈS PAR DROITS FONCTIONNELS
+
+Créer un système d’entitlements.
+
+L’autorisation finale doit dépendre simultanément :
+
+* de l’authentification ;
+* du rôle ;
+* des permissions ;
+* du tenant ;
+* de la relation avec l’élève ;
+* du statut de l’abonnement ;
+* du plan souscrit ;
+* de la fonctionnalité demandée ;
+* des quotas ;
+* de la période de validité.
+
+Principe obligatoire :
+
+`Accès autorisé = utilisateur authentifié + rôle autorisé + relation vérifiée + tenant autorisé + abonnement valide + fonctionnalité incluse`
+
+Implémente cette règle dans le backend.
+
+Ne limite jamais le contrôle au frontend.
+
+Créer des services ou middlewares tels que :
+
+* `requireAuth` ;
+* `requirePlatformRole` ;
+* `requireTenantMembership` ;
+* `requirePermission` ;
+* `requireActiveSubscription` ;
+* `requireEntitlement` ;
+* `requireVerifiedStudentRelationship` ;
+* `enforceTenantScope`.
+
+---
+
+# 8. RATTACHEMENT DES PARENTS ET ÉLÈVES
+
+Un parent ou un élève ne doit jamais pouvoir accéder à des données scolaires uniquement parce qu’il a créé un compte ou effectué un paiement.
+
+Le processus doit comprendre :
+
+1. création ou importation du dossier de l’élève par l’établissement ;
+2. création d’une invitation sécurisée ;
+3. transmission d’un code d’activation ;
+4. vérification de l’identité du bénéficiaire ;
+5. vérification du lien parent-enfant ;
+6. activation du compte ;
+7. souscription ou attribution d’une licence ;
+8. validation des autorisations ;
+9. journalisation de l’activation.
+
+Un code d’activation doit être :
+
+* unique ;
+* temporaire ;
+* révocable ;
+* à usage unique ;
+* associé à un tenant ;
+* associé à un élève ;
+* associé à une catégorie de bénéficiaire ;
+* stocké sous forme sécurisée ;
+* inutilisable après expiration.
+
+Un utilisateur ne doit jamais pouvoir rechercher librement les élèves de la plateforme.
+
+---
+
+# 9. ABONNEMENT FAMILIAL ET ACCÈS INTER-TENANT
+
+Un parent peut être rattaché à plusieurs enfants.
+
+Les enfants peuvent être inscrits :
+
+* dans le même établissement ;
+* dans différents établissements utilisant la plateforme.
+
+Le parent doit disposer d’un tableau de bord consolidé.
+
+Cependant :
+
+* les données de chaque enfant doivent rester dans le tenant de son établissement ;
+* l’accès inter-tenant doit être limité à la relation parent-enfant validée ;
+* le parent ne doit jamais accéder aux autres données du tenant ;
+* toutes les consultations inter-tenant doivent être autorisées par le backend ;
+* les établissements doivent pouvoir révoquer une relation incorrecte ;
+* les révocations doivent être auditées.
+
+Un abonnement familial doit définir le nombre maximum d’enfants couverts.
+
+---
+
+# 10. CHANGEMENT D’ÉTABLISSEMENT
+
+Un élève peut posséder une identité utilisateur globale.
+
+Cependant, ses inscriptions et données scolaires doivent rester rattachées aux établissements concernés.
+
+Le changement d’établissement ne doit pas transférer automatiquement les données confidentielles.
+
+Tout transfert doit être :
+
+* demandé ;
+* autorisé ;
+* limité ;
+* traçable ;
+* journalisé ;
+* conforme aux politiques de conservation ;
+* validé par les parties autorisées.
+
+---
+
+# 11. STACK TECHNIQUE
+
+Utilise une architecture monorepo.
+
+## Frontend
+
+* React ;
+* Vite ;
+* TypeScript strict ;
+* Tailwind CSS ;
+* React Router ;
+* TanStack Query ;
+* React Hook Form ;
+* Zod ;
+* i18next ;
+* Recharts ;
+* Lucide React ;
+* Socket.IO Client ;
+* PWA.
+
+## Backend
+
+* Node.js ;
+* Express.js ;
+* TypeScript strict ;
+* architecture modulaire ;
+* Prisma ORM ;
+* PostgreSQL ;
+* Redis ;
+* BullMQ ;
+* Socket.IO ;
+* API REST versionnée ;
+* stockage local en développement ;
+* stockage S3-compatible en production.
+
+## Qualité
+
+* ESLint ;
+* Prettier ;
+* Vitest ;
+* React Testing Library ;
+* Supertest ;
+* Swagger/OpenAPI ;
+* Docker Compose ;
+* validation des variables d’environnement avec Zod ;
+* hooks Git avec Husky si pertinent ;
+* CI pour les tests et vérifications.
+
+Si le répertoire contient déjà un projet, inspecte-le avant toute modification et conserve les choix techniques cohérents déjà présents.
+
+---
+
+# 12. STRUCTURE DU MONOREPO
+
+Propose une structure similaire à :
+
+* `apps/web` : site public et portails utilisateurs ;
+* `apps/api` : API backend ;
+* `apps/worker` : traitements asynchrones ;
+* `packages/ui` : composants partagés ;
+* `packages/types` : types partagés ;
+* `packages/config` : configurations ;
+* `packages/validation` : schémas partagés ;
+* `packages/i18n` : traductions ;
+* `packages/eslint-config` ;
+* `packages/tsconfig` ;
+* `prisma` : schéma, migrations et seeds ;
+* `docker` : fichiers d’infrastructure ;
+* `docs` : architecture et documentation.
+
+Tu peux proposer une meilleure organisation si tu justifies clairement ton choix.
+
+---
+
+# 13. SITE PUBLIC
+
+Créer un site vitrine premium avec les pages suivantes :
+
+* Accueil ;
+* À propos ;
+* Fonctionnalités ;
+* Solutions ;
+* Établissements publics ;
+* Établissements privés ;
+* Écoles primaires ;
+* Collèges et lycées ;
+* Centres de formation ;
+* Instituts supérieurs ;
+* Universités ;
+* Tarification établissement ;
+* Tarification parent ;
+* Tarification élève ;
+* Demande de démonstration ;
+* Souscription ;
+* FAQ ;
+* Blog ;
+* Centre d’aide ;
+* Contact ;
+* Conditions générales ;
+* Politique de confidentialité ;
+* Politique de remboursement.
+
+Le site doit être :
+
+* bilingue français et anglais ;
+* préparé pour d’autres langues ;
+* responsive ;
+* accessible ;
+* optimisé SEO ;
+* rapide ;
+* adapté aux connexions internet faibles ;
+* installable comme PWA.
+
+---
+
+# 14. SOUSCRIPTION D’UN ÉTABLISSEMENT
+
+Créer un parcours en plusieurs étapes :
+
+1. création du compte du responsable ;
+2. vérification de l’adresse email ;
+3. informations de l’établissement ;
+4. statut public ou privé ;
+5. numéro d’agrément ou d’autorisation ;
+6. pays, région, ville et adresse ;
+7. niveaux d’enseignement ;
+8. nombre approximatif d’élèves ;
+9. choix du plan ;
+10. choix du mode de paiement ;
+11. acceptation des conditions ;
+12. paiement ou demande de validation ;
+13. vérification de l’établissement ;
+14. création du tenant ;
+15. création du sous-domaine ;
+16. configuration de l’année scolaire ;
+17. invitation des administrateurs.
+
+Statuts possibles de l’établissement :
+
+* `DRAFT` ;
+* `PENDING_VERIFICATION` ;
+* `VERIFIED` ;
+* `TRIAL` ;
+* `ACTIVE` ;
+* `SUSPENDED` ;
+* `EXPIRED` ;
+* `REJECTED` ;
+* `CANCELLED`.
+
+---
+
+# 15. SOUSCRIPTION D’UN PARENT
+
+Créer un parcours comprenant :
+
+1. création du compte ;
+2. vérification de l’email ou du téléphone ;
+3. saisie ou ouverture de l’invitation ;
+4. vérification du lien parent-enfant ;
+5. choix du plan ;
+6. paiement ou utilisation d’une licence sponsorisée ;
+7. activation ;
+8. accès au tableau de bord.
+
+Le parent doit pouvoir :
+
+* gérer son profil ;
+* consulter ses enfants vérifiés ;
+* basculer entre les établissements ;
+* consulter ses abonnements ;
+* payer et renouveler ;
+* télécharger ses factures et reçus ;
+* voir les appareils connectés ;
+* révoquer une session ;
+* configurer ses notifications.
+
+---
+
+# 16. SOUSCRIPTION D’UN ÉLÈVE
+
+Créer un parcours comprenant :
+
+1. invitation envoyée par l’établissement ;
+2. vérification de l’invitation ;
+3. création ou activation du compte ;
+4. validation des informations ;
+5. choix du plan ;
+6. paiement ou attribution d’une licence ;
+7. activation ;
+8. accès à l’espace élève.
+
+Pour les élèves mineurs, prévoir les règles de consentement et de validation du parent ou tuteur selon les paramètres applicables.
+
+---
+
+# 17. RÔLES ET PERMISSIONS
+
+## Rôles globaux
+
+* `SUPER_ADMIN` ;
+* `PLATFORM_ADMIN` ;
+* `SUPPORT_AGENT` ;
+* `BILLING_MANAGER` ;
+* `COMMERCIAL_MANAGER` ;
+* `PLATFORM_AUDITOR`.
+
+## Rôles d’établissement
+
+* `SCHOOL_OWNER` ;
+* `SCHOOL_ADMIN` ;
+* `DIRECTOR` ;
+* `ACADEMIC_DIRECTOR` ;
+* `SECRETARY` ;
+* `ACCOUNTANT` ;
+* `HR_MANAGER` ;
+* `TEACHER` ;
+* `SUPERVISOR` ;
+* `LIBRARIAN` ;
+* `TRANSPORT_MANAGER` ;
+* `TENANT_AUDITOR`.
+
+## Rôles individuels
+
+* `PARENT` ;
+* `STUDENT`.
+
+Implémente un RBAC avec permissions granulaires.
+
+Les autorisations doivent être vérifiées dans le backend.
+
+Prévoir la possibilité d’attribuer plusieurs rôles à un utilisateur dans des contextes différents.
+
+---
+
+# 18. MODULE TABLEAU DE BORD
+
+## Direction
+
+Afficher :
+
+* nombre total d’élèves ;
+* inscriptions récentes ;
+* répartition par classe ;
+* répartition par sexe ;
+* taux de présence ;
+* résultats académiques ;
+* frais attendus ;
+* montants encaissés ;
+* impayés ;
+* dépenses ;
+* alertes ;
+* échéances ;
+* activité récente.
+
+## Enseignant
+
+Afficher :
+
+* classes affectées ;
+* cours du jour ;
+* présences à saisir ;
+* devoirs ;
+* évaluations ;
+* notes manquantes ;
+* annonces.
+
+## Comptable
+
+Afficher :
+
+* encaissements du jour ;
+* factures ;
+* paiements ;
+* impayés ;
+* recettes ;
+* dépenses ;
+* clôtures de caisse ;
+* échéances.
+
+## Parent
+
+Afficher :
+
+* enfants associés ;
+* établissement de chaque enfant ;
+* présences ;
+* résultats ;
+* devoirs ;
+* paiements scolaires ;
+* annonces ;
+* abonnement du parent ;
+* prochaine échéance ;
+* alertes.
+
+## Élève
+
+Afficher :
+
+* profil ;
+* emploi du temps ;
+* cours ;
+* devoirs ;
+* résultats ;
+* calendrier ;
+* annonces ;
+* abonnement ;
+* prochaine échéance.
+
+## Super-administration
+
+Afficher :
+
+* établissements inscrits ;
+* établissements actifs ;
+* parents abonnés ;
+* élèves abonnés ;
+* licences sponsorisées ;
+* abonnements actifs ;
+* abonnements expirants ;
+* revenus ;
+* taux de conversion ;
+* activité ;
+* incidents ;
+* utilisation du stockage.
+
+---
+
+# 19. MODULE ÉLÈVES ET INSCRIPTIONS
+
+Développer :
+
+* préinscription ;
+* admission ;
+* inscription ;
+* réinscription ;
+* transfert ;
+* radiation ;
+* archivage ;
+* matricule unique par établissement ;
+* fiche complète ;
+* photo ;
+* informations personnelles ;
+* contacts d’urgence ;
+* informations médicales avec accès restreint ;
+* parents et tuteurs ;
+* documents justificatifs ;
+* historique académique ;
+* importation CSV et Excel ;
+* exportation contrôlée ;
+* génération de cartes scolaires.
+
+Prévoir une détection des doublons configurable.
+
+---
+
+# 20. MODULE ADMINISTRATION ACADÉMIQUE
+
+Développer :
+
+* années scolaires ;
+* semestres ;
+* trimestres ;
+* périodes ;
+* cycles ;
+* niveaux ;
+* classes ;
+* sections ;
+* séries ;
+* filières ;
+* départements ;
+* salles ;
+* matières ;
+* coefficients ;
+* programmes ;
+* affectations des enseignants ;
+* calendriers ;
+* emplois du temps.
+
+Le modèle doit prendre en charge :
+
+* école maternelle ;
+* école primaire ;
+* collège ;
+* lycée ;
+* centre de formation ;
+* institut supérieur ;
+* université.
+
+---
+
+# 21. MODULE NOTES ET ÉVALUATIONS
+
+Développer :
+
+* types d’évaluation ;
+* devoirs ;
+* interrogations ;
+* examens ;
+* notes ;
+* coefficients ;
+* absences aux évaluations ;
+* appréciations ;
+* calcul des moyennes ;
+* classement ;
+* validation des notes ;
+* verrouillage après publication ;
+* corrections autorisées ;
+* historique des modifications ;
+* bulletins PDF ;
+* relevés de notes ;
+* procès-verbaux ;
+* conseils de classe.
+
+Le système de notation doit être configurable par établissement :
+
+* échelle ;
+* coefficients ;
+* arrondis ;
+* périodes ;
+* seuil de réussite ;
+* règles de classement ;
+* règles de passage ;
+* mentions ;
+* appréciations.
+
+---
+
+# 22. PRÉSENCES ET DISCIPLINE
+
+Développer :
+
+* appel par classe ;
+* présence ;
+* absence ;
+* retard ;
+* absence justifiée ;
+* justificatifs ;
+* notification des parents ;
+* observations ;
+* incidents ;
+* sanctions ;
+* mesures correctives ;
+* historique disciplinaire ;
+* droits d’accès spécifiques.
+
+---
+
+# 23. MODULE FINANCIER DE L’ÉTABLISSEMENT
+
+Développer :
+
+* catégories de frais ;
+* grilles tarifaires ;
+* échéanciers ;
+* factures ;
+* lignes de facture ;
+* paiements complets ;
+* paiements partiels ;
+* remises ;
+* bourses ;
+* exonérations ;
+* pénalités ;
+* reçus numérotés ;
+* annulations contrôlées ;
+* remboursements ;
+* caisse ;
+* clôtures journalières ;
+* dépenses ;
+* fournisseurs ;
+* situation financière d’un élève ;
+* impayés ;
+* rapports de recettes ;
+* rapports de dépenses ;
+* export PDF et Excel.
+
+Utiliser des transactions pour les opérations financières.
+
+Ne jamais utiliser de calculs monétaires flottants imprécis.
+
+---
+
+# 24. PAIEMENTS SAAS ET MOBILE MONEY
+
+Prévoir :
+
+* espèces enregistrées par un agent autorisé ;
+* virement bancaire ;
+* carte bancaire ;
+* Mobile Money ;
+* portefeuille électronique ;
+* codes prépayés ;
+* paiement par une organisation sponsor.
+
+Créer une architecture par adaptateurs :
+
+* `PaymentProvider` ;
+* `PaymentIntent` ;
+* `PaymentTransaction` ;
+* `PaymentWebhookEvent` ;
+* `RefundTransaction`.
+
+Exigences :
+
+* signature des webhooks ;
+* idempotence ;
+* rapprochement ;
+* journalisation ;
+* gestion des échecs ;
+* reprises automatiques ;
+* statuts cohérents ;
+* absence de stockage des données bancaires sensibles ;
+* référence unique ;
+* reçus ;
+* environnement test et production.
+
+Les opérateurs Mobile Money doivent pouvoir être ajoutés sans réécrire toute la logique d’abonnement.
+
+---
+
+# 25. PORTAIL PARENT
+
+Le parent abonné doit pouvoir :
+
+* consulter ses enfants vérifiés ;
+* consulter les profils autorisés ;
+* consulter les présences ;
+* recevoir les alertes d’absence ;
+* consulter les notes ;
+* télécharger les bulletins selon son plan ;
+* consulter les emplois du temps ;
+* consulter les devoirs ;
+* consulter les annonces ;
+* consulter les factures scolaires ;
+* consulter les paiements ;
+* télécharger les reçus ;
+* communiquer avec l’établissement ;
+* gérer ses abonnements ;
+* renouveler son plan ;
+* consulter les factures SaaS ;
+* gérer ses notifications.
+
+---
+
+# 26. PORTAIL ÉLÈVE
+
+L’élève abonné doit pouvoir :
+
+* consulter son profil ;
+* consulter son emploi du temps ;
+* consulter ses matières ;
+* consulter ses cours ;
+* consulter ses devoirs ;
+* déposer des travaux si la fonctionnalité est active ;
+* consulter ses résultats ;
+* télécharger ses bulletins selon son plan ;
+* consulter le calendrier ;
+* consulter les annonces ;
+* gérer son abonnement ;
+* renouveler son plan ;
+* consulter ses reçus.
+
+---
+
+# 27. RESSOURCES HUMAINES
+
+Développer :
+
+* dossiers du personnel ;
+* contrats ;
+* fonctions ;
+* départements ;
+* présences ;
+* retards ;
+* congés ;
+* charges horaires ;
+* évaluations ;
+* documents ;
+* exports de paie ;
+* historique professionnel.
+
+Les informations salariales doivent avoir des permissions particulièrement restrictives.
+
+---
+
+# 28. COMMUNICATION ET NOTIFICATIONS
+
+Développer :
+
+* annonces ;
+* messagerie interne ;
+* emails ;
+* SMS ;
+* notifications push ;
+* notifications temps réel ;
+* intégrations WhatsApp futures ;
+* modèles de messages ;
+* préférences ;
+* historique ;
+* files d’attente ;
+* reprises après échec.
+
+Le type de notification disponible doit dépendre du plan et des quotas.
+
+---
+
+# 29. BIBLIOTHÈQUE ET MODULES COMPLÉMENTAIRES
+
+Prévoir une architecture permettant d’ajouter :
+
+* bibliothèque ;
+* transport scolaire ;
+* cantine ;
+* internat ;
+* infirmerie ;
+* gestion des salles ;
+* équipements ;
+* stocks ;
+* fournitures ;
+* apprentissage en ligne ;
+* anciens élèves ;
+* stages ;
+* insertion professionnelle.
+
+Pour le MVP, implémenter uniquement les modules validés.
+
+---
+
+# 30. RAPPORTS ET DOCUMENTS
+
+Prévoir :
+
+* listes d’élèves ;
+* certificats de scolarité ;
+* attestations ;
+* cartes scolaires ;
+* bulletins ;
+* relevés de notes ;
+* procès-verbaux ;
+* listes de présence ;
+* factures ;
+* reçus ;
+* situations des paiements ;
+* rapports de caisse ;
+* rapports d’absence ;
+* statistiques académiques ;
+* exports PDF ;
+* exports Excel ;
+* exports CSV.
+
+Les documents doivent avoir :
+
+* une référence unique ;
+* le logo de l’établissement ;
+* les coordonnées ;
+* la date ;
+* le signataire ;
+* un QR code de vérification si nécessaire ;
+* un historique de génération.
+
+---
+
+# 31. SUPER-ADMINISTRATION
+
+Créer une interface séparée permettant de gérer :
+
+* établissements ;
+* demandes de vérification ;
+* abonnements des établissements ;
+* abonnements des parents ;
+* abonnements des élèves ;
+* plans ;
+* prix ;
+* licences sponsorisées ;
+* licences en volume ;
+* organisations sponsors ;
+* paiements ;
+* factures ;
+* remboursements ;
+* codes promotionnels ;
+* essais ;
+* périodes de grâce ;
+* suspensions ;
+* demandes de support ;
+* incidents ;
+* pays ;
+* devises ;
+* moyens de paiement ;
+* modèles de notification ;
+* statistiques d’utilisation ;
+* journaux d’audit ;
+* paramètres globaux.
+
+Toute intervention d’un administrateur global dans un tenant doit :
+
+* être autorisée ;
+* avoir une justification ;
+* être limitée dans le temps ;
+* être visible dans les audits ;
+* respecter le principe du moindre privilège.
+
+---
+
+# 32. INDICATEURS COMMERCIAUX
+
+Afficher notamment :
+
+* nombre d’établissements abonnés ;
+* nombre de parents abonnés ;
+* nombre d’élèves abonnés ;
+* nombre de licences sponsorisées ;
+* abonnements actifs ;
+* abonnements suspendus ;
+* abonnements expirés ;
+* renouvellements attendus ;
+* revenu mensuel récurrent ;
+* revenu annuel récurrent ;
+* revenu par pays ;
+* revenu par devise ;
+* revenu par type d’abonné ;
+* revenu par plan ;
+* taux de conversion ;
+* taux de renouvellement ;
+* taux de résiliation ;
+* paiements échoués ;
+* licences utilisées et disponibles.
+
+---
+
+# 33. MODÈLE DE DONNÉES
+
+Avant de coder, proposer un schéma Prisma complet comprenant au minimum :
+
+## Plateforme et tenants
+
+* `Tenant` ;
+* `TenantDomain` ;
+* `TenantSetting` ;
+* `Campus` ;
+* `Country` ;
+* `Currency` ;
+* `User` ;
+* `UserProfile` ;
+* `TenantMembership` ;
+* `Role` ;
+* `Permission` ;
+* `RolePermission` ;
+* `UserRole` ;
+* `Session` ;
+* `AuditLog`.
+
+## Abonnements et facturation
+
+* `SubscriptionPlan` ;
+* `PlanPrice` ;
+* `PlanFeature` ;
+* `Entitlement` ;
+* `Subscription` ;
+* `SubscriptionOwner` ;
+* `SubscriptionEvent` ;
+* `BillingAccount` ;
+* `Invoice` ;
+* `InvoiceItem` ;
+* `PaymentIntent` ;
+* `PaymentTransaction` ;
+* `PaymentProvider` ;
+* `PaymentWebhookEvent` ;
+* `RefundTransaction` ;
+* `Receipt` ;
+* `PromotionCode` ;
+* `PromotionRedemption` ;
+* `SponsoredLicense` ;
+* `LicenseBatch` ;
+* `LicenseAssignment`.
+
+## Familles et rattachements
+
+* `FamilyAccount` ;
+* `FamilyMember` ;
+* `Guardian` ;
+* `ParentStudentRelationship` ;
+* `StudentUserLink` ;
+* `ActivationInvitation` ;
+* `ActivationCode`.
+
+## Gestion académique
+
+* `AcademicYear` ;
+* `AcademicPeriod` ;
+* `EducationCycle` ;
+* `GradeLevel` ;
+* `Program` ;
+* `Department` ;
+* `Classroom` ;
+* `Subject` ;
+* `SubjectCoefficient` ;
+* `TeacherAssignment` ;
+* `Timetable` ;
+* `TimetableEntry`.
+
+## Élèves et inscriptions
+
+* `Student` ;
+* `Enrollment` ;
+* `StudentDocument` ;
+* `StudentTransfer` ;
+* `Attendance` ;
+* `DisciplinaryIncident`.
+
+## Notes
+
+* `AssessmentType` ;
+* `Assessment` ;
+* `Grade` ;
+* `GradeChangeLog` ;
+* `ReportCard` ;
+* `ReportCardItem`.
+
+## Finances scolaires
+
+* `FeeCategory` ;
+* `FeeStructure` ;
+* `StudentInvoice` ;
+* `StudentInvoiceItem` ;
+* `StudentPayment` ;
+* `StudentReceipt` ;
+* `ExpenseCategory` ;
+* `Expense` ;
+* `CashSession`.
+
+## Personnel
+
+* `Employee` ;
+* `EmploymentContract` ;
+* `LeaveRequest` ;
+* `EmployeeAttendance`.
+
+## Communication et support
+
+* `Announcement` ;
+* `Notification` ;
+* `NotificationPreference` ;
+* `MessageTemplate` ;
+* `SupportTicket` ;
+* `SupportTicketMessage` ;
+* `Document`.
+
+Pour chaque entité :
+
+* définir les relations ;
+* définir les contraintes ;
+* définir les index ;
+* définir les règles d’unicité ;
+* définir les suppressions logiques ;
+* définir les règles de suppression relationnelle ;
+* ajouter les champs de traçabilité ;
+* expliquer la stratégie multitenant.
+
+---
+
+# 34. SÉCURITÉ
+
+Implémenter au minimum :
+
+* mots de passe hachés avec Argon2 ou bcrypt ;
+* access tokens courts ;
+* refresh tokens rotatifs ;
+* révocation des sessions ;
+* vérification email ;
+* vérification téléphone si activée ;
+* authentification multifacteur optionnelle ;
+* verrouillage après plusieurs échecs ;
+* limitation des requêtes ;
+* Helmet ;
+* CORS configurable ;
+* validation Zod ;
+* protections contre les injections ;
+* protection des fichiers ;
+* journaux d’audit ;
+* historique des connexions ;
+* gestion des appareils ;
+* sauvegardes ;
+* restauration ;
+* chiffrement TLS ;
+* protection des données sensibles ;
+* politiques de conservation ;
+* consentement ;
+* export des données ;
+* anonymisation lorsque nécessaire.
+
+Ne jamais enregistrer dans les journaux :
+
+* les mots de passe ;
+* les refresh tokens ;
+* les secrets ;
+* les numéros bancaires ;
+* les codes confidentiels ;
+* les données sensibles non masquées.
+
+---
+
+# 35. DESIGN ET EXPÉRIENCE UTILISATEUR
+
+Créer une identité premium :
+
+* bleu nuit comme couleur principale ;
+* turquoise ou bleu clair comme couleur secondaire ;
+* touches dorées ou orange ;
+* fonds clairs ;
+* cartes élégantes ;
+* graphiques professionnels ;
+* ombres discrètes ;
+* typographie moderne ;
+* navigation claire ;
+* barre latérale rétractable ;
+* barre supérieure avec notifications, langue et profil ;
+* mode sombre optionnel.
+
+L’interface doit être :
+
+* responsive ;
+* accessible ;
+* rapide ;
+* compréhensible ;
+* adaptée aux connexions faibles ;
+* cohérente ;
+* utilisable sur mobile ;
+* utilisable sur tablette ;
+* utilisable sur ordinateur.
+
+Prévoir :
+
+* skeletons ;
+* états vides ;
+* messages d’erreur clairs ;
+* confirmations ;
+* notifications toast ;
+* recherche ;
+* filtres ;
+* tri ;
+* pagination serveur ;
+* exports ;
+* tableaux adaptatifs.
+
+---
+
+# 36. INTERNATIONALISATION
+
+Utiliser le français comme langue par défaut et l’anglais comme seconde langue.
+
+Préparer la plateforme pour :
+
+* d’autres langues ;
+* plusieurs devises ;
+* plusieurs fuseaux horaires ;
+* plusieurs formats de date ;
+* plusieurs systèmes de notation ;
+* plusieurs calendriers scolaires ;
+* plusieurs règles fiscales ;
+* plusieurs opérateurs de paiement ;
+* plusieurs politiques nationales.
+
+Ne jamais écrire directement les textes de l’interface dans les composants lorsqu’une traduction est nécessaire.
+
+---
+
+# 37. TESTS OBLIGATOIRES
+
+Écrire des tests unitaires, d’intégration et de sécurité.
+
+Tester notamment que :
+
+* un utilisateur non authentifié est bloqué ;
+* un utilisateur sans permission est bloqué ;
+* un tenant ne peut pas accéder à un autre tenant ;
+* un parent non abonné ne peut pas consulter les fonctions protégées ;
+* un élève non abonné ne peut pas consulter les fonctions protégées ;
+* le paiement seul ne donne pas accès à un enfant non rattaché ;
+* un parent ne voit que ses enfants vérifiés ;
+* un parent peut consulter ses enfants de tenants différents sans accéder aux autres données ;
+* une relation révoquée bloque immédiatement l’accès ;
+* une licence sponsorisée expirée bloque les fonctionnalités ;
+* l’expiration ne supprime pas les données ;
+* un utilisateur ne peut pas modifier son plan depuis le frontend ;
+* les quotas sont respectés ;
+* les webhooks sont vérifiés ;
+* les webhooks sont idempotents ;
+* un paiement dupliqué ne crée pas deux abonnements ;
+* un paiement dupliqué ne crée pas deux reçus ;
+* une opération financière critique est transactionnelle ;
+* les notes publiées ne peuvent être modifiées sans autorisation ;
+* toutes les actions sensibles sont auditées.
+
+---
+
+# 38. PHASES DE DÉVELOPPEMENT
+
+## Phase 0 — Analyse
+
+* inspecter le répertoire ;
+* lire les fichiers d’instructions ;
+* identifier l’existant ;
+* présenter l’architecture ;
+* identifier les risques ;
+* proposer le plan.
+
+## Phase 1 — Fondation
+
+* monorepo ;
+* frontend ;
+* backend ;
+* PostgreSQL ;
+* Redis ;
+* Docker ;
+* qualité ;
+* variables d’environnement ;
+* CI ;
+* documentation initiale.
+
+## Phase 2 — Données et sécurité
+
+* schéma Prisma ;
+* migrations ;
+* seeds ;
+* authentification ;
+* sessions ;
+* tenants ;
+* rôles ;
+* permissions ;
+* audit ;
+* isolation multitenant.
+
+## Phase 3 — Abonnements
+
+* plans ;
+* prix ;
+* entitlements ;
+* abonnements établissement ;
+* abonnements parent ;
+* abonnements élève ;
+* licences sponsorisées ;
+* abonnements familiaux ;
+* paiements ;
+* reçus ;
+* webhooks.
+
+## Phase 4 — Site public
+
+* présentation ;
+* fonctionnalités ;
+* solutions ;
+* tarifs ;
+* démonstration ;
+* souscription ;
+* contact ;
+* FAQ ;
+* pages légales.
+
+## Phase 5 — Gestion de l’établissement
+
+* configuration ;
+* utilisateurs ;
+* élèves ;
+* parents ;
+* personnel ;
+* inscriptions ;
+* classes ;
+* matières ;
+* années scolaires.
+
+## Phase 6 — Gestion académique
+
+* emplois du temps ;
+* présences ;
+* évaluations ;
+* notes ;
+* moyennes ;
+* bulletins ;
+* discipline.
+
+## Phase 7 — Gestion financière
+
+* frais ;
+* factures ;
+* paiements ;
+* reçus ;
+* caisse ;
+* dépenses ;
+* rapports.
+
+## Phase 8 — Portails individuels
+
+* portail parent ;
+* portail élève ;
+* rattachements ;
+* abonnements ;
+* notifications ;
+* accès inter-tenant sécurisé.
+
+## Phase 9 — Super-administration
+
+* établissements ;
+* abonnements ;
+* licences ;
+* paiements ;
+* support ;
+* statistiques ;
+* audits.
+
+## Phase 10 — Modules complémentaires
+
+* RH ;
+* bibliothèque ;
+* transport ;
+* cantine ;
+* internat ;
+* e-learning.
+
+## Phase 11 — Production
+
+* tests complets ;
+* optimisation ;
+* sécurité ;
+* sauvegardes ;
+* monitoring ;
+* documentation ;
+* déploiement.
+
+---
+
+# 39. MÉTHODE DE TRAVAIL OBLIGATOIRE
+
+Travaille progressivement.
+
+Avant toute modification :
+
+1. inspecte les fichiers existants ;
+2. recherche les instructions du projet ;
+3. identifie la stack actuelle ;
+4. présente les impacts ;
+5. propose un plan ;
+6. signale les décisions nécessitant ma validation.
+
+Ne génère pas toute l’application en une seule fois.
+
+Ne crée pas de fichiers monolithiques.
+
+Après chaque phase :
+
+* exécute les tests ;
+* exécute TypeScript ;
+* exécute ESLint ;
+* vérifie les migrations ;
+* vérifie la sécurité multitenant ;
+* corrige les erreurs ;
+* résume les fichiers créés ;
+* résume les fichiers modifiés ;
+* indique les commandes utilisées ;
+* mets à jour la documentation ;
+* indique clairement ce qui reste à faire.
+
+Avant une modification destructrice :
+
+* explique son effet ;
+* vérifie la cible ;
+* demande ma validation.
+
+Ne supprime jamais mes changements existants sans autorisation.
+
+---
+
+# 40. RÈGLES DE DÉVELOPPEMENT
+
+* Ne jamais placer de secret dans le code.
+* Fournir des fichiers `.env.example` sans valeurs sensibles.
+* Ne jamais désactiver une protection pour contourner une erreur.
+* Ne jamais faire confiance au `tenant_id` du client.
+* Ne jamais limiter les autorisations au frontend.
+* Utiliser des transactions pour les opérations critiques.
+* Utiliser des migrations versionnées.
+* Utiliser une pagination côté serveur.
+* Ajouter recherche, tri et filtres.
+* Éviter les requêtes N+1.
+* Indexer les champs fréquemment recherchés.
+* Utiliser des identifiants non prévisibles pour les ressources publiques.
+* Utiliser la suppression logique lorsque nécessaire.
+* Ne pas supprimer automatiquement les données après expiration.
+* Ajouter les champs de traçabilité pertinents.
+* Ne pas exposer les erreurs internes.
+* Séparer contrôleurs, services, repositories et validations.
+* Ne pas dupliquer la logique métier.
+* Documenter les décisions importantes.
+* Préparer la montée en charge.
+* Maintenir la compatibilité mobile.
+* Préserver les performances sur les connexions faibles.
+
+---
+
+# 41. LIVRABLES ATTENDUS
+
+À terme, fournir :
+
+* architecture complète ;
+* structure des dossiers ;
+* schéma Prisma ;
+* migrations ;
+* seeds ;
+* backend API ;
+* documentation Swagger ;
+* frontend public ;
+* portail établissement ;
+* portail parent ;
+* portail élève ;
+* super-administration ;
+* système d’abonnements ;
+* système de licences ;
+* système de paiement ;
+* tableaux de bord ;
+* rapports ;
+* tests ;
+* Docker ;
+* documentation d’installation ;
+* documentation de déploiement ;
+* comptes de démonstration ;
+* guide utilisateur ;
+* guide administrateur ;
+* liste des fonctionnalités terminées ;
+* liste des fonctionnalités restantes ;
+* recommandations de sécurité.
+
+---
+
+# 42. PREMIÈRE MISSION À EXÉCUTER
+
+Commence uniquement par les actions suivantes :
+
+1. inspecter complètement le répertoire actuel sans modifier les fichiers ;
+2. identifier s’il existe déjà un projet ;
+3. analyser les exigences de ce prompt ;
+4. proposer l’architecture globale ;
+5. proposer la structure du monorepo ;
+6. expliquer la stratégie multitenant ;
+7. expliquer la gestion des identités globales et des tenants ;
+8. proposer le modèle d’abonnement des établissements, parents et élèves ;
+9. expliquer les abonnements familiaux et licences sponsorisées ;
+10. proposer le système de rôles, permissions et entitlements ;
+11. proposer la première version du modèle de données ;
+12. proposer les principaux endpoints API ;
+13. proposer le plan de développement par phases ;
+14. identifier les risques techniques, financiers et sécuritaires ;
+15. dresser la liste des décisions nécessitant ma validation.
+
+Ne commence pas encore la génération massive du code.
+
+Attends ma validation de l’architecture, du modèle d’abonnement, du schéma de données et du plan de développement avant de créer la fondation du projet.

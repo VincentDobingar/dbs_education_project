@@ -1,0 +1,11 @@
+// Schema de donnees complet a livrer en Phase 2 (voir prompt_dbs_edu_africa.txt §33).
+// Ce fichier ne fait que cabler l'outillage Prisma pour la Phase 1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

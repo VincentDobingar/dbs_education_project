@@ -1,0 +1,23 @@
+{
+  "name": "@edumanage/validation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@edumanage/eslint-config": "workspace:*",
+    "@edumanage/tsconfig": "workspace:*",
+    "eslint": "^9.16.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}
