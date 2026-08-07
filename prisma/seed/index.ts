@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 import { COUNTRIES, CURRENCIES } from "./data/countries-currencies.js";
 import { PAYMENT_PROVIDERS } from "./data/payment-providers.js";
+import { PLAN_FEATURES } from "./data/plan-features.js";
+import { PLAN_PRICES } from "./data/plan-prices.js";
 import {
   INDIVIDUAL_ROLES,
   PERMISSIONS,
@@ -103,6 +105,57 @@ async function seedSubscriptionPlans(): Promise<void> {
   console.log(`Seeded ${SUBSCRIPTION_PLANS.length} subscription plans`);
 }
 
+async function seedPlanPricesAndFeatures(): Promise<void> {
+  for (const price of PLAN_PRICES) {
+    const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { code: price.planCode } });
+    const currency = await prisma.currency.findUniqueOrThrow({ where: { isoCode: price.currencyIsoCode } });
+
+    // Prisma's compound-unique `where` shape doesn't accept `null` for the nullable
+    // countryId member, so the generic (no-country) price is looked up manually.
+    const existingPrice = await prisma.planPrice.findFirst({
+      where: {
+        planId: plan.id,
+        countryId: null,
+        currencyId: currency.id,
+        billingPeriod: price.billingPeriod,
+      },
+    });
+
+    if (existingPrice) {
+      await prisma.planPrice.update({
+        where: { id: existingPrice.id },
+        data: { amountCents: price.amountCents },
+      });
+    } else {
+      await prisma.planPrice.create({
+        data: {
+          planId: plan.id,
+          currencyId: currency.id,
+          billingPeriod: price.billingPeriod,
+          amountCents: price.amountCents,
+        },
+      });
+    }
+  }
+
+  for (const feature of PLAN_FEATURES) {
+    const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { code: feature.planCode } });
+
+    await prisma.planFeature.upsert({
+      where: { planId_featureCode: { planId: plan.id, featureCode: feature.featureCode } },
+      update: { isIncluded: feature.isIncluded, quotaLimit: feature.quotaLimit },
+      create: {
+        planId: plan.id,
+        featureCode: feature.featureCode,
+        isIncluded: feature.isIncluded,
+        quotaLimit: feature.quotaLimit,
+      },
+    });
+  }
+
+  console.log(`Seeded ${PLAN_PRICES.length} plan prices and ${PLAN_FEATURES.length} plan features`);
+}
+
 async function seedPaymentProviders(): Promise<void> {
   for (const provider of PAYMENT_PROVIDERS) {
     const country = provider.countryIso
@@ -135,6 +188,7 @@ async function main(): Promise<void> {
   await seedCurrenciesAndCountries();
   await seedRolesAndPermissions();
   await seedSubscriptionPlans();
+  await seedPlanPricesAndFeatures();
   await seedPaymentProviders();
 }
 

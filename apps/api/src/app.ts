@@ -8,6 +8,8 @@ import { env } from "./env.js";
 import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
+import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
 import { healthRouter } from "./routes/health.js";
 
 export function createApp(): express.Express {
@@ -15,11 +17,18 @@ export function createApp(): express.Express {
 
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
-  app.use(express.json({ limit: "1mb" }));
   app.use(pinoHttp({ logger }));
+
+  // Webhooks need the exact raw bytes the provider signed — mounted with their
+  // own raw body parser BEFORE the global JSON parser below, and before any
+  // auth middleware (the provider authenticates via its webhook signature, §24).
+  app.use("/api/v1/payments/webhooks", express.raw({ type: "*/*", limit: "1mb" }), paymentWebhookRouter);
+
+  app.use(express.json({ limit: "1mb" }));
 
   app.use("/api/v1", healthRouter);
   app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/subscriptions", subscriptionRouter);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Resource not found" });

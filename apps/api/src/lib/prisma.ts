@@ -141,3 +141,12 @@ const tenantGuardExtension = Prisma.defineExtension((client) =>
 
 export const prisma = rawPrisma.$extends(tenantGuardExtension);
 export type PrismaClientWithTenantGuard = typeof prisma;
+
+/**
+ * The interactive-transaction callback type for the EXTENDED client. Prisma's own
+ * `Prisma.TransactionClient` describes the base client only — passing it around as
+ * a parameter type for helpers that receive `tx` from `prisma.$transaction(...)`
+ * does not structurally match once extensions are involved. Services that build
+ * multi-statement transactions (§23/§40) should type their `tx` parameter as this.
+ */
+export type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];

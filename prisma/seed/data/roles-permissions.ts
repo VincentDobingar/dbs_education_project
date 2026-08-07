@@ -130,6 +130,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "finance.write",
     "hr.manage",
     "tenant.settings.manage",
+    "subscriptions.manage",
   ],
   SCHOOL_ADMIN: [
     "students.read",

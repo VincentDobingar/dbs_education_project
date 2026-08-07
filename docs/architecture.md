@@ -30,18 +30,35 @@ Deux couches de défense indépendantes, aucune ne suffisant seule :
 
 Toute future table jouant ce rôle de « point d'entrée de résolution de tenant » doit suivre le même traitement, avec la même justification enregistrée dans sa migration.
 
-**Limite connue** : le garde applicatif enveloppe chaque appel Prisma dans sa propre micro-transaction. Un service qui a besoin de plusieurs écritures scopées atomiques ensemble (ex. opération financière débitant une ligne et créditant une autre, §23/§40) ne doit pas compter sur ce comportement — un helper dédié ouvrant une transaction explicite unique reste à construire quand le premier service de ce type sera écrit (Phase 3+), plutôt que d'en deviner la forme maintenant.
+**Limite connue** : le garde applicatif enveloppe chaque appel Prisma dans sa propre micro-transaction. Un service qui a besoin de plusieurs écritures scopées atomiques ensemble (ex. opération financière débitant une ligne et créditant une autre, §23/§40) ne doit pas compter sur ce comportement seul. Note Phase 3 : pour les modèles NON tenant-scopés (Subscription, Invoice, PaymentTransaction, ...), ce n'est pas un problème — `payment.service.ts` compose `prisma.$transaction(tx => ...)` avec `applySubscriptionTransition(tx, ...)` directement, une seule transaction couvrant paiement + facture + abonnement + reçu (voir `handleSuccessfulTransaction`). Le cas non résolu reste : plusieurs écritures **tenant-scopées** atomiques ensemble (ex. facture élève + encaissement caisse, Phase 7) — le composant manque encore pour ce cas précis.
 
 Tests d'isolation (Phase 2, [apps/api/src/test/integration/](../apps/api/src/test/integration/)) : 23 tests couvrant l'extension Prisma + RLS directement, la chaîne RBAC complète, `requireActiveSubscription`/`requireEntitlement` (y compris quotas et non-suppression des données à l'expiration), et `requireVerifiedStudentRelationship` (enfants vérifiés, multi-tenant, révocation immédiate, paiement seul insuffisant).
 
 ## Modèle d'abonnement (implémenté, Phase 2)
 
 - `Subscription` rattaché à un `SubscriptionOwner` polymorphe (`Tenant`, `FamilyAccount`, `Student` ou `Organization`) via des FK nullables + discriminant `ownerType` (Prisma ne supporte pas les FK polymorphes natives) — table séparée plutôt que des champs directs sur `Subscription`, pour que `BillingAccount` et `LicenseAssignment` référencent le même point d'ancrage sans dupliquer la logique polymorphe.
-- Statuts (`DRAFT`…`REFUNDED`) et transitions tracées via `SubscriptionEvent` (immuable). La machine à états explicite (services) reste à construire en Phase 3.
+- Statuts (`DRAFT`…`REFUNDED`) et transitions tracées via `SubscriptionEvent` (immuable). Machine à états implémentée en Phase 3 (voir ci-dessous).
 - Le lien parent-enfant (`ParentStudentRelationship`) est indépendant du paiement : il naît uniquement du parcours d'activation sécurisé (invitation → code d'activation à usage unique, haché, jamais stocké en clair → vérification → activation), jamais d'une simple déclaration ou d'un paiement — testé explicitement.
 - Le tableau de bord parent consolidé interroge chaque tenant séparément avec le contexte de l'enfant concerné (voir `requireVerifiedStudentRelationship`) — jamais de jointure cross-tenant en base.
 
 Schéma complet : `prisma/schema/*.prisma` (10 fichiers par domaine, 88 modèles).
+
+## Abonnements et paiements (implémenté, Phase 3)
+
+**Machine à états** ([subscription.service.ts](../apps/api/src/modules/subscriptions/subscription.service.ts) + [subscription-transitions.ts](../apps/api/src/modules/subscriptions/subscription-transitions.ts)) : table `ALLOWED_SUBSCRIPTION_TRANSITIONS` explicite (§6) — `CANCELLED`/`REFUNDED` terminaux, pas de saut direct `DRAFT` → `ACTIVE`. Chaque transition, dans une seule transaction : valide le changement, marque `startsAt`/`endsAt`/`cancelledAt` selon le cas, écrit un `SubscriptionEvent` immuable, recalcule les `Entitlement` depuis `PlanFeature` (activés seulement si le nouveau statut est `ACTIVE`/`TRIAL`/`GRACE_PERIOD` — jamais supprimés, juste désactivés, données préservées).
+
+**Architecture adaptateur paiement** ([payment-providers/](../apps/api/src/modules/payments/payment-providers/)) : interface `PaymentProviderAdapter` (vérification de signature + parsing normalisé). Un seul flux est réellement opérationnel pour l'instant :
+
+- **Espèces (`CASH_AGENT`)** : synchrone, pas de webhook — un agent autorisé enregistre le paiement, qui déclenche immédiatement facture payée + abonnement actif + reçu.
+- **Mobile Money (Orange Money, MTN MoMo, M-Pesa, Airtel Money)** : **non branché** — aucun contrat opérateur ni identifiants sandbox à ce jour. `HmacSignedProviderAdapter` est un adaptateur de référence (HMAC-SHA256 sur le corps brut, schéma courant chez plusieurs opérateurs) servant de modèle et de banc de test — à dupliquer et ajuster contre la documentation réelle de chaque opérateur avant mise en production. `registry.ts` n'a donc aucun adaptateur réel enregistré par défaut : enregistrer un adaptateur y suffit pour activer un opérateur, sans toucher au reste du pipeline (§24).
+
+**Webhook générique** (`POST /api/v1/payments/webhooks/:providerCode`) : monté avec un parseur de corps brut (`express.raw`) **avant** le `express.json()` global — la vérification de signature a besoin des octets exacts. Idempotence à deux niveaux : `PaymentWebhookEvent` unique par `(providerId, externalEventId)`, et `PaymentTransaction` unique par `(providerId, externalReference)` — une livraison dupliquée déclenche une contrainte unique, interceptée et traitée comme un no-op plutôt qu'une erreur.
+
+**Chaîne facture → paiement** : `Invoice` (priorité tarifaire via `PlanPrice`, avec repli pays-spécifique → générique) → `PaymentIntent` (idempotent par `idempotencyKey`, fournie par le client ou générée) → `PaymentTransaction` → `handleSuccessfulTransaction` (marque la facture payée, active l'abonnement si transition valide, émet un reçu — le tout dans une seule transaction, idempotent si rejoué). Chaque étape appelée depuis les routes `/api/v1/subscriptions/school/*` revérifie que la ressource appartient bien au tenant de l'appelant (`assertInvoiceBelongsToSubscription`, `assertPaymentIntentBelongsToSubscription`) — jamais de confiance dans un id fourni par le client.
+
+Tests (Phase 3, [apps/api/src/test/integration/](../apps/api/src/test/integration/) + tests unitaires co-localisés) : transitions valides/invalides, recalcul des entitlements (activation et expiration), flux espèces de bout en bout avec double appel idempotent, garde-fou cross-tenant sur le paiement, webhook signature valide/invalide/dupliquée.
+
+**Hors périmètre Phase 3** : licences sponsorisées de bout en bout (`SponsoredLicense`/`LicenseBatch`/`LicenseAssignment` existent dans le schéma mais aucun service ne les pilote encore), codes promotionnels, abonnements parent/élève en libre-service (bloqués par l'absence d'authentification élève-via-`StudentUserLink`, voir Phase 5+), tarification par pays réelle (le seed n'a que des prix génériques XAF).
 
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
@@ -64,7 +81,7 @@ Voir §38 du cahier des charges pour le détail complet.
 
 - **Phase 1 — Fondation** : terminée (monorepo, squelettes apps/packages, Docker Compose dev, qualité, CI).
 - **Phase 2 — Données et sécurité** : terminée (schéma Prisma complet, migrations + RLS, authentification, RBAC, isolation multitenant testée). Restent hors périmètre Phase 2 : vérification email/téléphone effective (compte créé `ACTIVE` directement pour l'instant, voir TODO dans `auth.service.ts`), audit logging effectif (la table `AuditLog` existe, aucun service n'y écrit encore), MFA.
-- **Phase 3 — Abonnements** : prochaine étape (plans, prix, entitlements complets, paiements, webhooks, licences sponsorisées de bout en bout).
+- **Phase 3 — Abonnements** : terminée pour le flux établissement (machine à états, factures, paiement espèces de bout en bout, architecture webhook générique et idempotente). Restent hors périmètre : intégration Mobile Money réelle (aucun contrat opérateur signé), licences sponsorisées pilotées par un service, codes promotionnels, abonnements parent/élève en libre-service, tarification multi-pays réelle.
 - Phases 4 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement

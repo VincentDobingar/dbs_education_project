@@ -4,9 +4,9 @@ import { TEST_DATABASE_URL } from "./test-database-url.js";
 
 /**
  * Minimal reference data the isolation test suite needs (currency/country/roles/
- * permissions/plans). Deliberately self-contained and separate from
- * prisma/seed/ — tests should not depend on that script having been run, and it
- * seeds far more than these tests exercise.
+ * permissions/plans/prices/providers). Deliberately self-contained and separate
+ * from prisma/seed/ — tests should not depend on that script having been run, and
+ * it seeds far more than these tests exercise.
  */
 export default async function setup(): Promise<void> {
   const prisma = new PrismaClient({ datasourceUrl: TEST_DATABASE_URL });
@@ -41,6 +41,12 @@ export default async function setup(): Promise<void> {
     create: { code: "SCHOOL_ADMIN", nameFr: "Administrateur", nameEn: "Admin", scope: "TENANT" },
   });
 
+  const schoolOwnerRole = await prisma.role.upsert({
+    where: { code: "SCHOOL_OWNER" },
+    update: {},
+    create: { code: "SCHOOL_OWNER", nameFr: "Propriétaire", nameEn: "Owner", scope: "TENANT" },
+  });
+
   const studentsReadPermission = await prisma.permission.upsert({
     where: { code: "students.read" },
     update: {},
@@ -52,11 +58,41 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const subscriptionsManagePermission = await prisma.permission.upsert({
+    where: { code: "subscriptions.manage" },
+    update: {},
+    create: {
+      code: "subscriptions.manage",
+      module: "billing",
+      descriptionFr: "Gérer les abonnements",
+      descriptionEn: "Manage subscriptions",
+    },
+  });
+
+  const financeWritePermission = await prisma.permission.upsert({
+    where: { code: "finance.write" },
+    update: {},
+    create: {
+      code: "finance.write",
+      module: "finance",
+      descriptionFr: "Gérer les finances",
+      descriptionEn: "Manage finances",
+    },
+  });
+
   await prisma.rolePermission.upsert({
     where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: studentsReadPermission.id } },
     update: {},
     create: { roleId: teacherRole.id, permissionId: studentsReadPermission.id },
   });
+
+  for (const permission of [subscriptionsManagePermission, financeWritePermission]) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: schoolOwnerRole.id, permissionId: permission.id },
+    });
+  }
 
   const plans = [
     { code: "SCHOOL_ESSENTIAL", category: "SCHOOL" as const, nameFr: "Essentiel", nameEn: "Essential" },
@@ -71,6 +107,47 @@ export default async function setup(): Promise<void> {
       create: plan,
     });
   }
+
+  const schoolEssential = await prisma.subscriptionPlan.findUniqueOrThrow({
+    where: { code: "SCHOOL_ESSENTIAL" },
+  });
+
+  const existingPrice = await prisma.planPrice.findFirst({
+    where: { planId: schoolEssential.id, countryId: null, currencyId: currency.id, billingPeriod: "MONTHLY" },
+  });
+  if (!existingPrice) {
+    await prisma.planPrice.create({
+      data: {
+        planId: schoolEssential.id,
+        currencyId: currency.id,
+        billingPeriod: "MONTHLY",
+        amountCents: 25_000,
+      },
+    });
+  }
+
+  await prisma.planFeature.upsert({
+    where: { planId_featureCode: { planId: schoolEssential.id, featureCode: "report_card.download" } },
+    update: { isIncluded: true, quotaLimit: null },
+    create: {
+      planId: schoolEssential.id,
+      featureCode: "report_card.download",
+      isIncluded: true,
+      quotaLimit: null,
+    },
+  });
+
+  await prisma.paymentProvider.upsert({
+    where: { code: "CASH_AGENT" },
+    update: {},
+    create: {
+      code: "CASH_AGENT",
+      nameFr: "Espèces (agent autorisé)",
+      nameEn: "Cash (authorized agent)",
+      methodType: "CASH",
+      isTestMode: true,
+    },
+  });
 
   await prisma.$disconnect();
 }
