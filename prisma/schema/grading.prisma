@@ -1,0 +1,126 @@
+// Evaluations, notes et bulletins (§21, §33). Le systeme de notation (echelle,
+// coefficients, arrondis, seuils, mentions) est configurable par tenant via
+// TenantSetting (cle "grading.rules") plutot que par des colonnes dediees ici,
+// pour rester adaptable a differents systemes educatifs sans migration.
+
+model AssessmentType {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String // ex: DEVOIR, INTERROGATION, EXAMEN
+  nameFr    String
+  nameEn    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assessments Assessment[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Assessment {
+  id               String    @id @default(cuid())
+  tenantId         String
+  subjectId        String
+  classroomId      String
+  assessmentTypeId String
+  academicPeriodId String
+  title            String
+  maxScore         Decimal   @db.Decimal(5, 2)
+  coefficient      Decimal   @default(1) @db.Decimal(4, 2)
+  scheduledAt      DateTime?
+  isPublished      Boolean   @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  subject        Subject        @relation(fields: [subjectId], references: [id])
+  assessmentType AssessmentType @relation(fields: [assessmentTypeId], references: [id])
+  academicPeriod AcademicPeriod @relation(fields: [academicPeriodId], references: [id])
+
+  grades Grade[]
+
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+/// isLocked = true des la publication du bulletin correspondant : toute correction
+/// ulterieure doit passer par une action explicitement autorisee qui ecrit dans
+/// GradeChangeLog (§21 : verrouillage apres publication, corrections autorisees,
+/// historique des modifications).
+model Grade {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  assessmentId        String
+  studentId           String
+  score               Decimal? @db.Decimal(5, 2)
+  isAbsent            Boolean  @default(false)
+  comment             String?
+  enteredByEmployeeId String?
+  isLocked            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  changeLogs GradeChangeLog[]
+
+  @@unique([assessmentId, studentId])
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+/// Historique immuable : chaque correction de note (meme autorisee) ajoute une ligne,
+/// n'ecrase jamais les precedentes.
+model GradeChangeLog {
+  id            String   @id @default(cuid())
+  gradeId       String
+  previousScore Decimal? @db.Decimal(5, 2)
+  newScore      Decimal? @db.Decimal(5, 2)
+  changedByUserId String?
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+
+  @@index([gradeId])
+}
+
+model ReportCard {
+  id               String    @id @default(cuid())
+  tenantId         String
+  studentId        String
+  academicPeriodId String
+  generatedAt      DateTime  @default(now())
+  averageScore     Decimal?  @db.Decimal(5, 2)
+  classRank        Int?
+  mention          String?
+  pdfUrl           String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod @relation(fields: [academicPeriodId], references: [id])
+
+  items ReportCardItem[]
+
+  @@unique([studentId, academicPeriodId])
+  @@index([tenantId])
+}
+
+model ReportCardItem {
+  id              String   @id @default(cuid())
+  reportCardId    String
+  subjectId       String
+  averageScore    Decimal? @db.Decimal(5, 2)
+  coefficient     Decimal? @db.Decimal(4, 2)
+  teacherComment  String?
+  createdAt       DateTime @default(now())
+
+  reportCard ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
+  subject    Subject    @relation(fields: [subjectId], references: [id])
+
+  @@unique([reportCardId, subjectId])
+}

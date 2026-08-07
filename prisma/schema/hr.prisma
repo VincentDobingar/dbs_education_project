@@ -1,0 +1,113 @@
+// Ressources humaines (§27, §33). Les champs salariaux portent des permissions
+// particulierement restrictives cote application (jamais exposes dans un listing
+// general du personnel).
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  MATERNITY
+  UNPAID
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum EmployeeAttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model Employee {
+  id             String         @id @default(cuid())
+  tenantId       String
+  userId         String? // renseigne si le personnel a un compte de connexion
+  employeeNumber String
+  firstName      String
+  lastName       String
+  jobTitle       String
+  departmentId   String?
+  hireDate       DateTime?
+  status         EmployeeStatus @default(ACTIVE)
+  deletedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  contracts           EmploymentContract[]
+  leaveRequests        LeaveRequest[]
+  attendances          EmployeeAttendance[]
+  teacherAssignments   TeacherAssignment[]
+  timetableEntries     TimetableEntry[]
+
+  @@unique([tenantId, employeeNumber])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+/// salaryCents : acces restreint (§27).
+model EmploymentContract {
+  id           String    @id @default(cuid())
+  tenantId     String
+  employeeId   String
+  contractType String
+  startDate    DateTime
+  endDate      DateTime?
+  salaryCents  Int?
+  fileUrl      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+}
+
+model LeaveRequest {
+  id                  String      @id @default(cuid())
+  tenantId            String
+  employeeId          String
+  type                LeaveType
+  startDate           DateTime
+  endDate             DateTime
+  status              LeaveStatus @default(PENDING)
+  reason              String?
+  approvedByEmployeeId String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+}
+
+model EmployeeAttendance {
+  id         String                   @id @default(cuid())
+  tenantId   String
+  employeeId String
+  date       DateTime
+  status     EmployeeAttendanceStatus
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([tenantId])
+}

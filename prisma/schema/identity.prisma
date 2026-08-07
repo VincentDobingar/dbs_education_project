@@ -1,0 +1,195 @@
+// Identite globale (§6 de docs/architecture.md), RBAC (§17) et audit (§31, §34).
+// User est une identite UNIQUE sur toute la plateforme (un email = un compte),
+// independante des tenants. L'appartenance a un tenant passe par TenantMembership ;
+// les droits passent par UserRole (role scope PLATFORM => tenantId null,
+// role scope TENANT => tenantId obligatoire).
+//
+// Convention "qui a fait l'action" : les champs createdById/updatedById/actorUserId
+// de ce schema sont des references applicatives simples (String, pas de relation
+// Prisma nommee) pour eviter une explosion de relations nommees vers User ; la
+// jointure se fait au besoin cote application.
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum RoleScope {
+  PLATFORM
+  TENANT
+  INDIVIDUAL
+}
+
+model User {
+  id                  String     @id @default(cuid())
+  email               String     @unique
+  phone               String?    @unique
+  passwordHash        String
+  status              UserStatus @default(PENDING)
+  emailVerifiedAt     DateTime?
+  phoneVerifiedAt     DateTime?
+  mfaEnabled          Boolean    @default(false)
+  mfaSecretCiphertext String?
+  failedLoginAttempts Int        @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  profile     UserProfile?
+  memberships TenantMembership[]
+  roles       UserRole[]
+  sessions    Session[]
+
+  @@index([status])
+}
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  firstName   String
+  lastName    String
+  displayName String?
+  avatarUrl   String?
+  locale      String    @default("fr")
+  dateOfBirth DateTime?
+  gender      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TenantMembership {
+  id        String           @id @default(cuid())
+  userId    String
+  tenantId  String
+  status    MembershipStatus @default(ACTIVE)
+  invitedAt DateTime?
+  joinedAt  DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model Role {
+  id        String    @id @default(cuid())
+  code      String    @unique // ex: SCHOOL_ADMIN, TEACHER, PARENT, SUPER_ADMIN
+  nameFr    String
+  nameEn    String
+  scope     RoleScope
+  isSystem  Boolean   @default(true) // false = role personnalise cree par un etablissement
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  permissions RolePermission[]
+  userRoles   UserRole[]
+
+  @@index([scope])
+}
+
+model Permission {
+  id            String   @id @default(cuid())
+  code          String   @unique // ex: "students.read", "grades.publish"
+  module        String // ex: "students", "grades", "billing"
+  descriptionFr String
+  descriptionEn String
+  createdAt     DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@index([module])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+/// tenantId = null pour un role PLATFORM ; obligatoire pour un role TENANT/INDIVIDUAL.
+/// NOTE: Postgres autorise plusieurs lignes (userId, roleId, NULL) car NULL n'est
+/// jamais egal a NULL dans une contrainte unique standard. Une migration manuelle
+/// ajoute un index unique partiel (`WHERE "tenantId" IS NULL`) pour empecher les
+/// doublons de role plateforme par utilisateur.
+model UserRole {
+  id           String    @id @default(cuid())
+  userId       String
+  roleId       String
+  tenantId     String?
+  grantedAt    DateTime  @default(now())
+  grantedById  String?
+  expiresAt    DateTime? // acces exceptionnel temporaire (§31 : intervention super-admin)
+  justification String?  // obligatoire pour un MANUAL_GRANT ou une intervention super-admin
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, tenantId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  deviceLabel      String?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokedReason    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Journal d'audit immuable : jamais de update/delete applicatif sur cette table.
+/// tenantId = null pour une action strictement plateforme (ex: creation d'un pays).
+model AuditLog {
+  id            String   @id @default(cuid())
+  tenantId      String?
+  actorUserId   String?
+  actorRoleCode String? // role sous lequel l'action a ete effectuee, utile pour les interventions super-admin
+  action        String // ex: "subscription.suspend", "student.grade.update"
+  entityType    String
+  entityId      String
+  beforeData    Json?
+  afterData     Json?
+  justification String? // obligatoire pour toute intervention globale dans un tenant (§31)
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}

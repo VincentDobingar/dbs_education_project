@@ -17,20 +17,28 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "prepare": "husky",
-    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
-    "db:migrate:dev": "prisma migrate dev --schema=./prisma/schema.prisma",
-    "db:studio": "prisma studio --schema=./prisma/schema.prisma"
+    "db:generate": "prisma generate --schema=./prisma/schema",
+    "db:migrate:dev": "prisma migrate dev --schema=./prisma/schema",
+    "db:seed": "tsx prisma/seed/index.ts",
+    "db:seed:typecheck": "tsc --noEmit -p prisma/tsconfig.json",
+    "db:studio": "prisma studio --schema=./prisma/schema"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0"
   },
   "devDependencies": {
+    "@edumanage/tsconfig": "workspace:*",
+    "@types/node": "^22.10.1",
     "turbo": "^2.3.0",
     "prettier": "^3.4.0",
     "prisma": "^6.1.0",
     "rimraf": "^6.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed/index.ts"
   }
 }

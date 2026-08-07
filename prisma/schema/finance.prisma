@@ -1,0 +1,180 @@
+// Finances scolaires (§23, §33). Montants en centimes (Int), jamais en flottant (§40).
+// Les operations qui modifient plusieurs tables (encaissement + mise a jour du solde
+// facture + recu) doivent etre executees dans une transaction Prisma cote service,
+// jamais en plusieurs requetes independantes.
+
+enum StudentInvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model FeeCategory {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  nameFr    String
+  nameEn    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feeStructures  FeeStructure[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model FeeStructure {
+  id            String   @id @default(cuid())
+  tenantId      String
+  academicYearId String
+  gradeLevelId  String?
+  feeCategoryId String
+  amountCents   Int
+  dueDate       DateTime?
+  isMandatory   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  feeCategory FeeCategory @relation(fields: [feeCategoryId], references: [id])
+
+  @@index([tenantId])
+  @@index([academicYearId])
+}
+
+model StudentInvoice {
+  id             String               @id @default(cuid())
+  tenantId       String
+  studentId      String
+  academicYearId String
+  number         String
+  status         StudentInvoiceStatus @default(DRAFT)
+  totalCents     Int
+  paidCents      Int                  @default(0)
+  dueAt          DateTime?
+  issuedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  items          StudentInvoiceItem[]
+  payments       StudentPayment[]
+  paymentIntents PaymentIntent[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model StudentInvoiceItem {
+  id             String  @id @default(cuid())
+  invoiceId      String
+  feeStructureId String?
+  description    String
+  amountCents    Int
+  discountCents  Int     @default(0)
+  createdAt      DateTime @default(now())
+
+  invoice StudentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model StudentPayment {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  studentInvoiceId    String
+  amountCents         Int
+  method              PaymentMethodType
+  recordedByEmployeeId String? // obligatoire pour un encaissement especes (agent autorise)
+  paymentTransactionId String? // renseigne pour un paiement electronique (Mobile Money, carte)
+  paidAt              DateTime          @default(now())
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  invoice StudentInvoice @relation(fields: [studentInvoiceId], references: [id])
+
+  receipt StudentReceipt?
+
+  @@index([tenantId])
+  @@index([studentInvoiceId])
+}
+
+model StudentReceipt {
+  id               String   @id @default(cuid())
+  tenantId         String
+  studentPaymentId String   @unique
+  number           String
+  issuedAt         DateTime @default(now())
+  pdfUrl           String?
+  createdAt        DateTime @default(now())
+
+  payment StudentPayment @relation(fields: [studentPaymentId], references: [id])
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+}
+
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  nameFr    String
+  nameEn    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Expense {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  categoryId          String
+  supplierName        String?
+  description         String
+  amountCents         Int
+  expenseDate         DateTime
+  approvedByEmployeeId String?
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([tenantId])
+  @@index([expenseDate])
+}
+
+model CashSession {
+  id                   String             @id @default(cuid())
+  tenantId             String
+  campusId             String?
+  openedByEmployeeId   String
+  openedAt             DateTime           @default(now())
+  closedByEmployeeId   String?
+  closedAt             DateTime?
+  openingBalanceCents  Int
+  closingBalanceCents  Int?
+  status               CashSessionStatus  @default(OPEN)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+}

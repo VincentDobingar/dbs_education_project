@@ -1,0 +1,159 @@
+// Referentiels globaux (Country, Currency) et modele tenant (§2, §14 du cahier des charges).
+// Tenant est la racine de l'isolation multitenant : toute table metier porte un tenantId
+// qui pointe, directement ou indirectement, vers Tenant.id.
+
+enum TenantOwnershipType {
+  PUBLIC
+  PRIVATE
+}
+
+enum TenantStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  VERIFIED
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  REJECTED
+  CANCELLED
+}
+
+model Country {
+  id                String   @id @default(cuid())
+  isoCode           String   @unique // ISO 3166-1 alpha-2, ex: CM, KE, CI
+  nameFr            String
+  nameEn            String
+  phoneCallingCode  String
+  defaultCurrencyId String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  defaultCurrency Currency? @relation(fields: [defaultCurrencyId], references: [id])
+  tenants         Tenant[]
+
+  @@index([isActive])
+}
+
+model Currency {
+  id            String   @id @default(cuid())
+  isoCode       String   @unique // ISO 4217, ex: XAF, XOF, KES, USD
+  nameFr        String
+  nameEn        String
+  symbol        String
+  decimalDigits Int      @default(2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  countriesDefaultingHere Country[]
+  tenants                 Tenant[]
+  planPrices              PlanPrice[]
+
+  @@index([isActive])
+}
+
+model Tenant {
+  id              String              @id @default(cuid())
+  name            String
+  legalName       String?
+  logoUrl         String?
+  colorPrimary    String?
+  colorSecondary  String?
+  ownershipType   TenantOwnershipType
+  licenseNumber   String? // numero d'agrement / autorisation
+  countryId       String
+  region          String?
+  city            String?
+  address         String?
+  phone           String?
+  email           String?
+  timezone        String              @default("Africa/Douala")
+  currencyId      String
+  status          TenantStatus        @default(DRAFT)
+  verifiedAt      DateTime?
+  suspendedAt     DateTime?
+  suspendedReason String?
+  deletedAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  country  Country @relation(fields: [countryId], references: [id])
+  currency Currency @relation(fields: [currencyId], references: [id])
+
+  domains      TenantDomain[]
+  settings     TenantSetting[]
+  campuses     Campus[]
+  memberships  TenantMembership[]
+  auditLogs    AuditLog[]
+  subscriptionOwner SubscriptionOwner?
+
+  academicYears    AcademicYear[]
+  educationCycles  EducationCycle[]
+  gradeLevels      GradeLevel[]
+  programs         Program[]
+  departments      Department[]
+  classrooms       Classroom[]
+  subjects         Subject[]
+  assessmentTypes  AssessmentType[]
+  students         Student[]
+  employees        Employee[]
+  feeCategories    FeeCategory[]
+
+  @@index([status])
+  @@index([countryId])
+}
+
+model TenantDomain {
+  id         String    @id @default(cuid())
+  tenantId   String
+  subdomain  String    @unique // ex: lycee-excellence -> lycee-excellence.edumanage.africa
+  isPrimary  Boolean   @default(true)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Stockage cle/valeur des parametres d'etablissement (regles de notation, quotas
+/// d'affichage, preferences...) pour rester extensible sans migration a chaque nouveau
+/// parametre. Les parametres structurels (annee scolaire, devise) restent des colonnes
+/// typees sur Tenant.
+model TenantSetting {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedById String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+model Campus {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  code      String
+  address   String?
+  city      String?
+  phone     String?
+  email     String?
+  isMain    Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classrooms Classroom[]
+  enrollments Enrollment[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}

@@ -1,0 +1,565 @@
+// Abonnements, licences et facturation SaaS (§3 a §9, §24, §33).
+// Toutes les sommes d'argent sont stockees en centimes (Int), jamais en flottant (§40).
+//
+// SubscriptionOwner est le point d'ancrage polymorphe unique reutilise par
+// Subscription, BillingAccount et LicenseAssignment : exactement un des 4 FK
+// (tenantId / familyAccountId / studentId / organizationId) doit etre renseigne,
+// contrainte imposee cote application ET par un CHECK SQL ajoute en migration manuelle.
+//
+// Organization n'est pas dans la liste minimale du §33 mais est necessaire pour
+// representer les ONG/entreprises/administrations sponsors mentionnees aux §4, §9, §31.
+
+enum SubscriberCategory {
+  SCHOOL
+  PARENT
+  STUDENT
+  ORGANIZATION
+}
+
+enum FundingSource {
+  SELF_PAID
+  SCHOOL_SPONSORED
+  ORGANIZATION_SPONSORED
+  FAMILY_PAID
+  PROMOTIONAL
+  TRIAL
+  MANUAL_GRANT
+}
+
+enum SubscriptionStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PENDING_ACTIVATION
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  GRACE_PERIOD
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+enum BillingPeriod {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+  SCHOOL_YEAR
+  CUSTOM
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethodType {
+  CASH
+  BANK_TRANSFER
+  CARD
+  MOBILE_MONEY
+  WALLET
+  PREPAID_CODE
+  SPONSOR
+}
+
+enum PaymentPurpose {
+  SAAS_INVOICE
+  STUDENT_FEE
+  LICENSE_BATCH
+}
+
+enum PaymentTransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum OrganizationType {
+  NGO
+  COMPANY
+  GOVERNMENT
+  OTHER
+}
+
+enum LicensePurchaserType {
+  TENANT
+  ORGANIZATION
+}
+
+enum LicenseStatus {
+  AVAILABLE
+  ASSIGNED
+  REVOKED
+  EXPIRED
+}
+
+enum LicenseBeneficiaryType {
+  PARENT
+  STUDENT
+}
+
+model Organization {
+  id           String           @id @default(cuid())
+  name         String
+  type         OrganizationType
+  countryId    String?
+  contactEmail String?
+  contactPhone String?
+  deletedAt    DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  subscriptionOwner SubscriptionOwner?
+  licenseBatches    LicenseBatch[]
+  sponsoredLicenses SponsoredLicense[]
+
+  @@index([type])
+}
+
+model SubscriptionPlan {
+  id               String             @id @default(cuid())
+  code             String             @unique // ex: SCHOOL_PROFESSIONAL, PARENT_PREMIUM
+  category         SubscriberCategory
+  nameFr           String
+  nameEn           String
+  descriptionFr    String?
+  descriptionEn    String?
+  defaultPeriod    BillingPeriod      @default(MONTHLY)
+  trialDays        Int                @default(0)
+  gracePeriodDays  Int                @default(0)
+  maxStudents      Int?
+  maxUsers         Int?
+  maxCampuses      Int?
+  storageQuotaMb   Int?
+  smsQuota         Int?
+  childrenCovered  Int? // pertinent pour FAMILY_PLAN
+  supportLevel     String?
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  prices        PlanPrice[]
+  features      PlanFeature[]
+  subscriptions Subscription[]
+  licenseBatches LicenseBatch[]
+  sponsoredLicenses SponsoredLicense[]
+
+  @@index([category])
+}
+
+model PlanPrice {
+  id              String        @id @default(cuid())
+  planId          String
+  countryId       String?
+  currencyId      String
+  billingPeriod   BillingPeriod
+  amountCents     Int
+  taxRatePercent  Decimal       @default(0) @db.Decimal(5, 2)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  currency Currency         @relation(fields: [currencyId], references: [id])
+
+  @@unique([planId, countryId, currencyId, billingPeriod])
+  @@index([planId])
+}
+
+model PlanFeature {
+  id          String   @id @default(cuid())
+  planId      String
+  featureCode String // ex: "report_card.download", "sms.notifications"
+  isIncluded  Boolean  @default(true)
+  quotaLimit  Int? // null = illimite
+  createdAt   DateTime @default(now())
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureCode])
+}
+
+/// Droits effectifs materialises, recalcules a chaque changement de statut d'abonnement
+/// (jamais derives a la volee dans les controleurs). requireEntitlement() ne lit que cette table.
+model Entitlement {
+  id           String    @id @default(cuid())
+  subscriptionId String
+  featureCode  String
+  isEnabled    Boolean   @default(true)
+  quotaLimit   Int?
+  quotaUsed    Int       @default(0)
+  computedAt   DateTime  @default(now())
+  expiresAt    DateTime?
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, featureCode])
+  @@index([subscriptionId])
+}
+
+model SubscriptionOwner {
+  id              String             @id @default(cuid())
+  ownerType       SubscriberCategory
+  tenantId        String?            @unique
+  familyAccountId String?            @unique
+  studentId       String?            @unique
+  organizationId  String?            @unique
+  createdAt       DateTime           @default(now())
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id])
+  familyAccount FamilyAccount? @relation(fields: [familyAccountId], references: [id])
+  student       Student?       @relation(fields: [studentId], references: [id])
+  organization  Organization?  @relation(fields: [organizationId], references: [id])
+
+  subscriptions   Subscription[]
+  billingAccounts BillingAccount[]
+
+  @@index([ownerType])
+}
+
+model Subscription {
+  id                       String             @id @default(cuid())
+  ownerId                  String
+  planId                   String
+  status                   SubscriptionStatus @default(DRAFT)
+  fundingSource            FundingSource
+  billingPeriod            BillingPeriod
+  startsAt                 DateTime?
+  endsAt                   DateTime?
+  trialEndsAt              DateTime?
+  graceEndsAt              DateTime?
+  cancelledAt              DateTime?
+  cancelReason             String?
+  autoRenew                Boolean            @default(true)
+  externalPaymentReference String?
+  deletedAt                DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  owner SubscriptionOwner @relation(fields: [ownerId], references: [id])
+  plan  SubscriptionPlan  @relation(fields: [planId], references: [id])
+
+  events              SubscriptionEvent[]
+  entitlements        Entitlement[]
+  invoices            Invoice[]
+  promotionRedemptions PromotionRedemption[]
+  licenseAssignments  LicenseAssignment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([planId])
+}
+
+/// Historique immuable des transitions de statut (§6 : toute modification de statut doit
+/// etre auditee). Jamais de update/delete applicatif.
+model SubscriptionEvent {
+  id             String              @id @default(cuid())
+  subscriptionId String
+  fromStatus     SubscriptionStatus?
+  toStatus       SubscriptionStatus
+  reason         String?
+  actorUserId    String?
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([createdAt])
+}
+
+model BillingAccount {
+  id             String   @id @default(cuid())
+  ownerId        String
+  billingName    String
+  billingEmail   String
+  billingAddress String?
+  taxId          String?
+  currencyId     String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owner    SubscriptionOwner @relation(fields: [ownerId], references: [id])
+  invoices Invoice[]
+
+  @@index([ownerId])
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  billingAccountId String
+  subscriptionId   String?
+  number           String        @unique
+  status           InvoiceStatus @default(DRAFT)
+  currencyId       String
+  subtotalCents    Int
+  taxCents         Int           @default(0)
+  totalCents       Int
+  issuedAt         DateTime?
+  dueAt            DateTime?
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  billingAccount BillingAccount @relation(fields: [billingAccountId], references: [id])
+  subscription   Subscription?  @relation(fields: [subscriptionId], references: [id])
+
+  items         InvoiceItem[]
+  paymentIntents PaymentIntent[]
+  receipts      Receipt[]
+
+  @@index([billingAccountId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id               String @id @default(cuid())
+  invoiceId        String
+  description      String
+  quantity         Int    @default(1)
+  unitAmountCents  Int
+  totalAmountCents Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model PaymentProvider {
+  id          String            @id @default(cuid())
+  code        String            @unique // ex: ORANGE_MONEY_CM, MTN_MOMO_CM, STRIPE
+  nameFr      String
+  nameEn      String
+  countryId   String?
+  methodType  PaymentMethodType
+  isTestMode  Boolean           @default(true)
+  isActive    Boolean           @default(true)
+  config      Json? // config non sensible uniquement ; secrets = variables d'environnement
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  paymentIntents     PaymentIntent[]
+  paymentTransactions PaymentTransaction[]
+  webhookEvents      PaymentWebhookEvent[]
+
+  @@index([countryId])
+  @@index([isActive])
+}
+
+/// IdempotencyKey empeche la double creation d'intention de paiement (§24, §37).
+model PaymentIntent {
+  id              String                    @id @default(cuid())
+  providerId      String
+  purpose         PaymentPurpose
+  invoiceId       String?
+  studentInvoiceId String?
+  licenseBatchId  String?
+  amountCents     Int
+  currencyId      String
+  status          PaymentTransactionStatus  @default(PENDING)
+  idempotencyKey  String                    @unique
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  provider      PaymentProvider @relation(fields: [providerId], references: [id])
+  invoice       Invoice?        @relation(fields: [invoiceId], references: [id])
+  studentInvoice StudentInvoice? @relation(fields: [studentInvoiceId], references: [id])
+  licenseBatch  LicenseBatch?   @relation(fields: [licenseBatchId], references: [id])
+
+  transactions PaymentTransaction[]
+
+  @@index([providerId])
+  @@index([status])
+}
+
+/// externalReference unique par provider = deuxieme verrou d'idempotence, en plus
+/// de PaymentIntent.idempotencyKey (§24, §37 : un paiement duplique ne doit jamais
+/// creer deux abonnements ni deux recus).
+model PaymentTransaction {
+  id               String                   @id @default(cuid())
+  paymentIntentId  String
+  providerId       String
+  externalReference String
+  status           PaymentTransactionStatus @default(PENDING)
+  amountCents      Int
+  currencyId       String
+  rawResponse      Json?
+  occurredAt       DateTime                 @default(now())
+  createdAt        DateTime                 @default(now())
+
+  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  provider      PaymentProvider @relation(fields: [providerId], references: [id])
+
+  refunds RefundTransaction[]
+  receipt Receipt?
+
+  @@unique([providerId, externalReference])
+  @@index([paymentIntentId])
+  @@index([status])
+}
+
+/// Idempotence webhook (§24, §37) : externalEventId unique par provider, evenement
+/// traite une seule fois meme si l'operateur le renvoie plusieurs fois.
+model PaymentWebhookEvent {
+  id               String    @id @default(cuid())
+  providerId       String
+  externalEventId  String
+  signatureValid   Boolean
+  payload          Json
+  processedAt      DateTime?
+  processingError  String?
+  receivedAt       DateTime  @default(now())
+
+  provider PaymentProvider @relation(fields: [providerId], references: [id])
+
+  @@unique([providerId, externalEventId])
+  @@index([processedAt])
+}
+
+model RefundTransaction {
+  id                   String                   @id @default(cuid())
+  paymentTransactionId String
+  amountCents          Int
+  reason               String
+  status               PaymentTransactionStatus @default(PENDING)
+  processedAt          DateTime?
+  createdAt            DateTime                 @default(now())
+
+  paymentTransaction PaymentTransaction @relation(fields: [paymentTransactionId], references: [id])
+
+  @@index([paymentTransactionId])
+}
+
+model Receipt {
+  id                   String   @id @default(cuid())
+  paymentTransactionId String   @unique
+  invoiceId            String?
+  number               String   @unique
+  issuedAt             DateTime @default(now())
+  pdfUrl               String?
+  createdAt            DateTime @default(now())
+
+  paymentTransaction PaymentTransaction @relation(fields: [paymentTransactionId], references: [id])
+  invoice            Invoice?           @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+}
+
+enum PromotionDiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model PromotionCode {
+  id               String                 @id @default(cuid())
+  code             String                 @unique
+  descriptionFr    String?
+  descriptionEn    String?
+  discountType     PromotionDiscountType
+  discountValue    Decimal                @db.Decimal(10, 2)
+  applicableCategory SubscriberCategory?
+  maxRedemptions   Int?
+  redemptionCount  Int                    @default(0)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  isActive         Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+
+  redemptions PromotionRedemption[]
+
+  @@index([isActive])
+}
+
+model PromotionRedemption {
+  id              String   @id @default(cuid())
+  promotionCodeId String
+  subscriptionId  String
+  redeemedByUserId String?
+  redeemedAt      DateTime @default(now())
+
+  promotionCode PromotionCode @relation(fields: [promotionCodeId], references: [id])
+  subscription  Subscription  @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([promotionCodeId, subscriptionId])
+}
+
+/// Lot de licences achete en une fois par un etablissement (SCHOOL_SPONSORED) ou une
+/// organisation sponsor (ORGANIZATION_SPONSORED). Genere N lignes SponsoredLicense.
+model LicenseBatch {
+  id                 String               @id @default(cuid())
+  planId             String
+  purchaserType      LicensePurchaserType
+  sponsorTenantId    String?
+  sponsorOrganizationId String?
+  quantity           Int
+  unitPriceCents     Int
+  currencyId         String
+  purchasedAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  sponsorOrganization Organization?   @relation(fields: [sponsorOrganizationId], references: [id])
+
+  licenses       SponsoredLicense[]
+  paymentIntents PaymentIntent[]
+
+  @@index([sponsorTenantId])
+  @@index([sponsorOrganizationId])
+}
+
+/// Une licence individuelle issue (ou non) d'un lot. Porte son propre statut car une
+/// licence peut etre revoquee independamment des autres licences du meme lot.
+model SponsoredLicense {
+  id                    String        @id @default(cuid())
+  batchId               String?
+  planId                String
+  fundingSource         FundingSource
+  sponsorTenantId       String?
+  sponsorOrganizationId String?
+  status                LicenseStatus @default(AVAILABLE)
+  validFrom             DateTime?
+  validUntil            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  batch              LicenseBatch? @relation(fields: [batchId], references: [id])
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  sponsorOrganization Organization? @relation(fields: [sponsorOrganizationId], references: [id])
+
+  assignments LicenseAssignment[]
+
+  @@index([batchId])
+  @@index([status])
+}
+
+/// Historique des attributions d'une licence a un beneficiaire (parent ou eleve).
+/// Une revocation cree une nouvelle ligne plutot que d'ecraser l'historique.
+model LicenseAssignment {
+  id                 String                 @id @default(cuid())
+  licenseId          String
+  beneficiaryType    LicenseBeneficiaryType
+  beneficiaryUserId  String?
+  beneficiaryStudentId String?
+  subscriptionId     String
+  assignedAt         DateTime               @default(now())
+  revokedAt          DateTime?
+  revokedReason      String?
+  createdAt          DateTime               @default(now())
+
+  license      SponsoredLicense @relation(fields: [licenseId], references: [id])
+  subscription Subscription     @relation(fields: [subscriptionId], references: [id])
+
+  @@index([licenseId])
+  @@index([beneficiaryUserId])
+  @@index([beneficiaryStudentId])
+}

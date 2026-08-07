@@ -1,0 +1,149 @@
+// Familles et rattachement securise parent-eleve (§8, §9, §33).
+// Le lien parent-enfant (ParentStudentRelationship) est INDEPENDANT du paiement :
+// il ne peut naitre que d'une ActivationInvitation + ActivationCode verifies.
+
+enum FamilyRole {
+  PRIMARY
+  CO_GUARDIAN
+}
+
+enum RelationshipStatus {
+  PENDING
+  VERIFIED
+  REVOKED
+}
+
+enum ActivationBeneficiaryCategory {
+  PARENT
+  STUDENT
+}
+
+enum InvitationStatus {
+  PENDING
+  SENT
+  USED
+  EXPIRED
+  REVOKED
+}
+
+model FamilyAccount {
+  id            String   @id @default(cuid())
+  primaryUserId String
+  maxChildren   Int?
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptionOwner SubscriptionOwner?
+  members           FamilyMember[]
+
+  @@index([primaryUserId])
+}
+
+/// Une personne "tuteur legal" au sens metier : peut exister avant meme d'avoir un
+/// compte User actif (ex: saisi par l'etablissement lors de l'inscription de l'eleve).
+model Guardian {
+  id        String    @id @default(cuid())
+  userId    String?   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  email     String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  familyMemberships FamilyMember[]
+
+  @@index([userId])
+}
+
+model FamilyMember {
+  id              String     @id @default(cuid())
+  familyAccountId String
+  guardianId      String
+  roleInFamily    FamilyRole @default(CO_GUARDIAN)
+  joinedAt        DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+
+  familyAccount FamilyAccount @relation(fields: [familyAccountId], references: [id], onDelete: Cascade)
+  guardian      Guardian      @relation(fields: [guardianId], references: [id])
+
+  @@unique([familyAccountId, guardianId])
+  @@index([familyAccountId])
+}
+
+/// tenantId = tenant DE L'ELEVE (pas du parent) : c'est ce qui permet au parent de
+/// consulter des enfants situes dans des tenants differents sans jamais franchir la
+/// frontiere tenant pour le reste des donnees (§9).
+model ParentStudentRelationship {
+  id           String             @id @default(cuid())
+  parentUserId String
+  studentId    String
+  tenantId     String
+  status       RelationshipStatus @default(PENDING)
+  verifiedAt   DateTime?
+  revokedAt    DateTime?
+  revokedById  String?
+  revokedReason String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentUserId, studentId])
+  @@index([tenantId])
+  @@index([parentUserId])
+  @@index([status])
+}
+
+/// Un Student (dossier academique tenant-scope) peut se lier a une identite User
+/// globale. Un meme User peut correspondre a plusieurs Student au fil des
+/// transferts d'etablissement (§10), donc seul studentId est unique ici.
+model StudentUserLink {
+  id        String   @id @default(cuid())
+  studentId String   @unique
+  userId    String
+  linkedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ActivationInvitation {
+  id                 String                        @id @default(cuid())
+  tenantId           String
+  studentId          String
+  beneficiaryCategory ActivationBeneficiaryCategory
+  invitedEmail       String?
+  invitedPhone       String?
+  createdByUserId    String?
+  status             InvitationStatus              @default(PENDING)
+  expiresAt          DateTime
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  codes   ActivationCode[]
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([status])
+}
+
+/// Code stocke hache (jamais en clair), a usage unique, revocable, expirable (§8).
+model ActivationCode {
+  id           String    @id @default(cuid())
+  invitationId String
+  codeHash     String    @unique
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  invitation ActivationInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
+}

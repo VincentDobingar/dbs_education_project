@@ -1,0 +1,185 @@
+// Eleves, inscriptions, presences et discipline (§19, §22, §33).
+// medicalNotes est un champ a permissions restreintes : l'application ne doit
+// l'exposer qu'aux roles explicitement autorises (infirmerie, direction), jamais
+// dans les listings generaux d'eleves.
+
+enum StudentStatus {
+  PROSPECTIVE
+  ACTIVE
+  TRANSFERRED
+  GRADUATED
+  WITHDRAWN
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  PRE_REGISTERED
+  ADMITTED
+  ENROLLED
+  RE_ENROLLED
+  TRANSFERRED_OUT
+  WITHDRAWN
+  GRADUATED
+}
+
+enum TransferStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum IncidentSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+model Student {
+  id                    String        @id @default(cuid())
+  tenantId              String
+  matricule             String // matricule unique PAR etablissement
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime?
+  gender                String?
+  photoUrl              String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  medicalNotes          String? // acces restreint, voir commentaire en tete de fichier
+  status                StudentStatus @default(PROSPECTIVE)
+  deletedAt             DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enrollments             Enrollment[]
+  documents               StudentDocument[]
+  transfers               StudentTransfer[]
+  attendances             Attendance[]
+  disciplinaryIncidents   DisciplinaryIncident[]
+  parentRelationships     ParentStudentRelationship[]
+  userLink                StudentUserLink?
+  subscriptionOwner       SubscriptionOwner?
+  activationInvitations   ActivationInvitation[]
+  grades                  Grade[]
+  reportCards             ReportCard[]
+  invoices                StudentInvoice[]
+
+  @@unique([tenantId, matricule])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model Enrollment {
+  id             String           @id @default(cuid())
+  tenantId       String
+  studentId      String
+  academicYearId String
+  classroomId    String
+  campusId       String
+  gradeLevelId   String
+  status         EnrollmentStatus @default(ENROLLED)
+  enrolledAt     DateTime         @default(now())
+  withdrawnAt    DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  classroom    Classroom    @relation(fields: [classroomId], references: [id])
+  campus       Campus       @relation(fields: [campusId], references: [id])
+  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id])
+
+  @@unique([studentId, academicYearId])
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+model StudentDocument {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String
+  category       String // ex: BIRTH_CERTIFICATE, PREVIOUS_TRANSCRIPT, ID_PHOTO
+  fileUrl        String
+  uploadedByUserId String?
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+/// Le transfert ne copie jamais automatiquement les donnees confidentielles (§10) :
+/// dataScope decrit precisement ce qui a ete autorise a transiter, et ce champ est
+/// rempli/valide par un humain autorise, jamais par defaut.
+model StudentTransfer {
+  id              String         @id @default(cuid())
+  studentId       String
+  fromTenantId    String
+  toTenantId      String?
+  requestedByUserId String?
+  status          TransferStatus @default(REQUESTED)
+  requestedAt     DateTime       @default(now())
+  decidedAt       DateTime?
+  dataScope       Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@index([fromTenantId])
+  @@index([toTenantId])
+  @@index([status])
+}
+
+model Attendance {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  studentId           String
+  classroomId         String
+  subjectId           String?
+  date                DateTime
+  status              AttendanceStatus
+  justificationNote   String?
+  recordedByEmployeeId String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classroomId, subjectId, date])
+  @@index([tenantId])
+  @@index([classroomId, date])
+}
+
+model DisciplinaryIncident {
+  id                  String           @id @default(cuid())
+  tenantId            String
+  studentId           String
+  occurredAt           DateTime
+  description          String
+  severity             IncidentSeverity
+  sanction             String?
+  correctiveAction     String?
+  reportedByEmployeeId String?
+  deletedAt            DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([studentId])
+}

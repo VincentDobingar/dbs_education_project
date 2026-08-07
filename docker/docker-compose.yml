@@ -8,10 +8,12 @@ services:
       POSTGRES_USER: edumanage
       POSTGRES_PASSWORD: edumanage
       POSTGRES_DB: edumanage_dev
+      APP_ROLE_PASSWORD: ${APP_ROLE_PASSWORD:-edumanage_app}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U edumanage -d edumanage_dev"]
       interval: 5s

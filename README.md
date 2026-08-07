@@ -13,19 +13,26 @@ Plateforme SaaS multitenant de gestion des établissements d'enseignement en Afr
 ```bash
 pnpm install
 
-# Base de données + cache en local
-docker compose -f docker/docker-compose.yml up -d
+# Base de données + cache en local (crée aussi le rôle applicatif edumanage_app,
+# voir docker/init-db/01-create-app-role.sh)
+cp docker/.env.example docker/.env    # ajuster APP_ROLE_PASSWORD
+docker compose -f docker/docker-compose.yml --env-file docker/.env up -d
 
-# Copier les variables d'environnement de chaque app
+# Copier les variables d'environnement
+cp .env.example .env                  # connexion superuser, pour les migrations
 cp apps/api/.env.example apps/api/.env
 cp apps/worker/.env.example apps/worker/.env
 cp apps/web/.env.example apps/web/.env
+# Aligner APP_ROLE_PASSWORD dans apps/api/.env et apps/worker/.env avec docker/.env
 # Générer des secrets JWT dans apps/api/.env : openssl rand -base64 48
 
-pnpm db:generate
+pnpm db:migrate:dev   # applique les migrations, y compris les policies RLS
+pnpm db:seed          # pays, devises, rôles/permissions, plans d'abonnement
 
 pnpm dev
 ```
+
+L'API et le worker se connectent avec le rôle `edumanage_app` (privilèges DML seuls, sans `BYPASSRLS`) — jamais avec le superuser Postgres, sans quoi la Row-Level Security serait silencieusement ignorée. Détail dans [docs/architecture.md](docs/architecture.md#stratégie-multitenant-implémentée-phase-2).
 
 - Web : http://localhost:5173
 - API : http://localhost:4000/api/v1/health
@@ -43,8 +50,9 @@ packages/validation     Schémas Zod partagés front/back
 packages/i18n           Traductions fr (défaut) / en
 packages/eslint-config  Config ESLint partagée (flat config)
 packages/tsconfig       tsconfig de base partagés
-prisma/                 Schéma Prisma, migrations, seeds
-docker/                 Docker Compose (Postgres + Redis, dev)
+prisma/schema/          Schéma Prisma multi-fichiers (88 modèles) + migrations
+prisma/seed/            Script de seed (pays, devises, rôles, plans)
+docker/                 Docker Compose (Postgres + Redis, dev) + init du rôle applicatif
 docs/                   Documentation d'architecture
 ```
 
@@ -59,8 +67,9 @@ docs/                   Documentation d'architecture
 | `pnpm test`           | Tests (Vitest)                                |
 | `pnpm db:generate`    | Génère le client Prisma                       |
 | `pnpm db:migrate:dev` | Applique une migration Prisma en dev          |
+| `pnpm db:seed`        | Peuple pays/devises/rôles/permissions/plans   |
 | `pnpm format`         | Formatage Prettier                            |
 
 ## État du projet
 
-Phase 1 (Fondation) en cours — voir [docs/architecture.md](docs/architecture.md#phases-de-développement) pour le détail des phases et ce qui reste à faire.
+Phases 1 (Fondation) et 2 (Données et sécurité) terminées — schéma Prisma complet, authentification, RBAC, isolation multitenant testée (23 tests). Voir [docs/architecture.md](docs/architecture.md#phases-de-développement) pour le détail des phases et ce qui reste à faire.

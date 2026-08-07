@@ -1,0 +1,158 @@
+// Communication, notifications et support (§28, §31, §33).
+// Le type de notification realisable depend du plan/quotas de l'abonnement (§28) :
+// verifie via Entitlement au moment de l'envoi, pas modelise ici.
+
+enum AnnouncementAudience {
+  ALL
+  STAFF
+  TEACHERS
+  PARENTS
+  STUDENTS
+  CLASSROOM
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  READ
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Announcement {
+  id              String               @id @default(cuid())
+  tenantId        String
+  title           String
+  body            String
+  audienceScope   AnnouncementAudience @default(ALL)
+  classroomId     String?
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  createdByUserId String?
+  deletedAt       DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([publishedAt])
+}
+
+/// File d'attente + historique d'envoi. status transite QUEUED -> SENT|FAILED -> READ ;
+/// les echecs sont repris par le worker (§28 : reprises apres echec).
+model Notification {
+  id        String              @id @default(cuid())
+  tenantId  String?
+  userId    String
+  channel   NotificationChannel
+  type      String // code applicatif, ex: "absence.alert", "invoice.due"
+  title     String?
+  body      String
+  status    NotificationStatus  @default(QUEUED)
+  sentAt    DateTime?
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model NotificationPreference {
+  id        String              @id @default(cuid())
+  userId    String
+  channel   NotificationChannel
+  category  String
+  isEnabled Boolean             @default(true)
+  updatedAt DateTime            @updatedAt
+
+  @@unique([userId, channel, category])
+}
+
+/// tenantId = null pour un modele global de la plateforme, renseigne pour une
+/// personnalisation propre a un etablissement.
+model MessageTemplate {
+  id        String              @id @default(cuid())
+  tenantId  String?
+  code      String
+  channel   NotificationChannel
+  subject   String?
+  bodyFr    String
+  bodyEn    String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+model SupportTicket {
+  id              String               @id @default(cuid())
+  tenantId        String?
+  createdByUserId String
+  subject         String
+  category        String?
+  status          SupportTicketStatus  @default(OPEN)
+  priority        TicketPriority       @default(MEDIUM)
+  assignedToUserId String?
+  closedAt        DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  messages SupportTicketMessage[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([assignedToUserId])
+}
+
+model SupportTicketMessage {
+  id             String   @id @default(cuid())
+  ticketId       String
+  authorUserId   String
+  body           String
+  isInternalNote Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+/// Documents administratifs generaux (distincts de StudentDocument qui est lie a
+/// un eleve precis).
+model Document {
+  id              String    @id @default(cuid())
+  tenantId        String?
+  category        String
+  title           String
+  fileUrl         String
+  uploadedByUserId String?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([category])
+}

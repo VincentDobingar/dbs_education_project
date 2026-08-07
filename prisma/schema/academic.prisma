@@ -1,0 +1,255 @@
+// Administration academique (§20, §33). Toutes les tables portent tenantId :
+// le decoupage annees/cycles/niveaux/classes/matieres est propre a chaque etablissement,
+// meme si les codes (ex: "6EME") se ressemblent d'un tenant a l'autre.
+
+enum AcademicPeriodType {
+  TRIMESTER
+  SEMESTER
+  CUSTOM
+}
+
+model AcademicYear {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String // ex: "2025-2026"
+  startDate DateTime
+  endDate   DateTime
+  isCurrent Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  periods    AcademicPeriod[]
+  classrooms Classroom[]
+  timetables Timetable[]
+  enrollments Enrollment[]
+  teacherAssignments TeacherAssignment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model AcademicPeriod {
+  id             String             @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  name           String // ex: "Trimestre 1"
+  type           AcademicPeriodType
+  sequence       Int
+  startDate      DateTime
+  endDate        DateTime
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  assessments  Assessment[]
+  reportCards  ReportCard[]
+
+  @@unique([academicYearId, sequence])
+  @@index([tenantId])
+}
+
+model EducationCycle {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String // ex: MATERNELLE, PRIMAIRE, COLLEGE, LYCEE, SUP
+  nameFr    String
+  nameEn    String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  gradeLevels GradeLevel[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model GradeLevel {
+  id        String   @id @default(cuid())
+  tenantId  String
+  cycleId   String
+  code      String // ex: 6EME, TERMINALE_D, L1
+  nameFr    String
+  nameEn    String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cycle  EducationCycle @relation(fields: [cycleId], references: [id])
+
+  programs             Program[]
+  classrooms           Classroom[]
+  subjectCoefficients  SubjectCoefficient[]
+  enrollments          Enrollment[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([cycleId])
+}
+
+model Program {
+  id           String   @id @default(cuid())
+  tenantId     String
+  code         String
+  nameFr       String
+  nameEn       String
+  gradeLevelId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  gradeLevel GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  classrooms Classroom[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Department {
+  id              String   @id @default(cuid())
+  tenantId        String
+  code            String
+  nameFr          String
+  nameEn          String
+  headEmployeeId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subjects Subject[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Classroom {
+  id             String    @id @default(cuid())
+  tenantId       String
+  campusId       String
+  academicYearId String
+  gradeLevelId   String
+  programId      String?
+  name           String // ex: "6e A"
+  capacity       Int?
+  mainTeacherId  String?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campus       Campus       @relation(fields: [campusId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id])
+  program      Program?     @relation(fields: [programId], references: [id])
+
+  enrollments        Enrollment[]
+  teacherAssignments TeacherAssignment[]
+  timetables         Timetable[]
+
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId])
+  @@index([campusId])
+}
+
+model Subject {
+  id           String   @id @default(cuid())
+  tenantId     String
+  code         String
+  nameFr       String
+  nameEn       String
+  departmentId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  coefficients       SubjectCoefficient[]
+  teacherAssignments TeacherAssignment[]
+  timetableEntries   TimetableEntry[]
+  assessments        Assessment[]
+  reportCardItems    ReportCardItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model SubjectCoefficient {
+  id           String   @id @default(cuid())
+  tenantId     String
+  subjectId    String
+  gradeLevelId String
+  coefficient  Decimal  @db.Decimal(4, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  gradeLevel GradeLevel @relation(fields: [gradeLevelId], references: [id])
+
+  @@unique([subjectId, gradeLevelId])
+  @@index([tenantId])
+}
+
+model TeacherAssignment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  employeeId     String
+  subjectId      String
+  classroomId    String
+  academicYearId String
+  hoursPerWeek   Decimal? @db.Decimal(4, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee     Employee     @relation(fields: [employeeId], references: [id])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  classroom    Classroom    @relation(fields: [classroomId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  @@unique([employeeId, subjectId, classroomId, academicYearId])
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+model Timetable {
+  id             String   @id @default(cuid())
+  tenantId       String
+  classroomId    String
+  academicYearId String
+  name           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  classroom    Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  entries TimetableEntry[]
+
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+model TimetableEntry {
+  id                String   @id @default(cuid())
+  tenantId          String
+  timetableId       String
+  subjectId         String
+  teacherEmployeeId String
+  dayOfWeek         Int // 0 = lundi ... 6 = dimanche
+  startTime         String // "08:00"
+  endTime           String // "09:00"
+  roomLabel         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  timetable       Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  subject         Subject   @relation(fields: [subjectId], references: [id])
+  teacherEmployee Employee  @relation(fields: [teacherEmployeeId], references: [id])
+
+  @@index([tenantId])
+  @@index([timetableId])
+}
