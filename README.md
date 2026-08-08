@@ -72,4 +72,4 @@ docs/                   Documentation d'architecture
 
 ## État du projet
 
-Phases 1 (Fondation) et 2 (Données et sécurité) terminées — schéma Prisma complet, authentification, RBAC, isolation multitenant testée (23 tests). Voir [docs/architecture.md](docs/architecture.md#phases-de-développement) pour le détail des phases et ce qui reste à faire.
+Phases 1 à 4 terminées : Fondation, Données et sécurité (schéma Prisma complet, authentification, RBAC, isolation multitenant testée), Abonnements (machine à états, paiement espèces de bout en bout, architecture webhook Mobile Money), Site public (accueil, tarifs, contact, pages légales, assistant d'inscription établissement — vérifié de bout en bout contre l'API réelle). Voir [docs/architecture.md](docs/architecture.md#phases-de-développement) pour le détail des phases et ce qui reste à faire.

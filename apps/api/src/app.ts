@@ -10,6 +10,7 @@ import { logger } from "./lib/logger.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
+import { tenantRouter } from "./modules/tenants/tenant.routes.js";
 import { healthRouter } from "./routes/health.js";
 
 export function createApp(): express.Express {
@@ -28,6 +29,7 @@ export function createApp(): express.Express {
 
   app.use("/api/v1", healthRouter);
   app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/tenants", tenantRouter);
   app.use("/api/v1/subscriptions", subscriptionRouter);
 
   app.use((_req: Request, res: Response) => {

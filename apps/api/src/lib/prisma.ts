@@ -83,11 +83,9 @@ export const rawPrisma = new PrismaClient();
  *
  * KNOWN LIMITATION: this wraps each individual Prisma call in its own transaction.
  * A service that needs several scoped writes to be atomically consistent together
- * (e.g. a financial operation debiting one row and crediting another) must NOT rely
- * on this per-call wrapping — it will need a dedicated helper opening one explicit
- * transaction and setting app.tenant_id once for the whole block. That helper does
- * not exist yet; build it when the first such service needs it (Phase 3+), rather
- * than guessing its shape now.
+ * (e.g. a financial operation debiting one row and crediting another, or creating a
+ * Tenant together with its first TenantMembership) must NOT rely on this per-call
+ * wrapping — use withTenantSession (below) instead.
  */
 const tenantGuardExtension = Prisma.defineExtension((client) =>
   client.$extends({
@@ -150,3 +148,23 @@ export type PrismaClientWithTenantGuard = typeof prisma;
  * multi-statement transactions (§23/§40) should type their `tx` parameter as this.
  */
 export type PrismaTransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Escape hatch for a service that needs several tenant-scoped writes to commit or
+ * fail together (§23/§40) — opens ONE transaction, sets app.tenant_id once for its
+ * whole duration, and hands back the raw (unextended) transaction client.
+ *
+ * IMPORTANT: `tx` here is NOT wrapped by the tenant-guard extension — it gets you
+ * past RLS (the session variable is set) but does not auto-inject/validate tenantId
+ * on each call the way `prisma` does. The caller is responsible for setting the
+ * correct tenantId explicitly on every write made through `tx`.
+ */
+export async function withTenantSession<T>(
+  tenantId: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return rawPrisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+    return fn(tx);
+  });
+}

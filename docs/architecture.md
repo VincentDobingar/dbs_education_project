@@ -30,7 +30,7 @@ Deux couches de défense indépendantes, aucune ne suffisant seule :
 
 Toute future table jouant ce rôle de « point d'entrée de résolution de tenant » doit suivre le même traitement, avec la même justification enregistrée dans sa migration.
 
-**Limite connue** : le garde applicatif enveloppe chaque appel Prisma dans sa propre micro-transaction. Un service qui a besoin de plusieurs écritures scopées atomiques ensemble (ex. opération financière débitant une ligne et créditant une autre, §23/§40) ne doit pas compter sur ce comportement seul. Note Phase 3 : pour les modèles NON tenant-scopés (Subscription, Invoice, PaymentTransaction, ...), ce n'est pas un problème — `payment.service.ts` compose `prisma.$transaction(tx => ...)` avec `applySubscriptionTransition(tx, ...)` directement, une seule transaction couvrant paiement + facture + abonnement + reçu (voir `handleSuccessfulTransaction`). Le cas non résolu reste : plusieurs écritures **tenant-scopées** atomiques ensemble (ex. facture élève + encaissement caisse, Phase 7) — le composant manque encore pour ce cas précis.
+**Limite connue** : le garde applicatif enveloppe chaque appel Prisma dans sa propre micro-transaction. Un service qui a besoin de plusieurs écritures scopées atomiques ensemble (ex. opération financière débitant une ligne et créditant une autre, §23/§40) ne doit pas compter sur ce comportement seul. Note Phase 3 : pour les modèles NON tenant-scopés (Subscription, Invoice, PaymentTransaction, ...), ce n'est pas un problème — `payment.service.ts` compose `prisma.$transaction(tx => ...)` avec `applySubscriptionTransition(tx, ...)` directement, une seule transaction couvrant paiement + facture + abonnement + reçu (voir `handleSuccessfulTransaction`). Résolu en Phase 4 pour les écritures **tenant-scopées** atomiques ensemble : `withTenantSession(tenantId, fn)` ([apps/api/src/lib/prisma.ts](../apps/api/src/lib/prisma.ts)) ouvre une seule `rawPrisma.$transaction`, positionne `app.tenant_id` une fois, puis expose le client transactionnel brut — première utilisation réelle dans `tenant.service.ts` (création de la `TenantMembership` + du `UserRole` SCHOOL_OWNER en une seule transaction).
 
 Tests d'isolation (Phase 2, [apps/api/src/test/integration/](../apps/api/src/test/integration/)) : 23 tests couvrant l'extension Prisma + RLS directement, la chaîne RBAC complète, `requireActiveSubscription`/`requireEntitlement` (y compris quotas et non-suppression des données à l'expiration), et `requireVerifiedStudentRelationship` (enfants vérifiés, multi-tenant, révocation immédiate, paiement seul insuffisant).
 
@@ -60,6 +60,19 @@ Tests (Phase 3, [apps/api/src/test/integration/](../apps/api/src/test/integratio
 
 **Hors périmètre Phase 3** : licences sponsorisées de bout en bout (`SponsoredLicense`/`LicenseBatch`/`LicenseAssignment` existent dans le schéma mais aucun service ne les pilote encore), codes promotionnels, abonnements parent/élève en libre-service (bloqués par l'absence d'authentification élève-via-`StudentUserLink`, voir Phase 5+), tarification par pays réelle (le seed n'a que des prix génériques XAF).
 
+## Site public et inscription établissement (implémenté, Phase 4)
+
+**Inscription établissement** ([tenant.service.ts](../apps/api/src/modules/tenants/tenant.service.ts), `POST /api/v1/tenants/onboarding`, authentifié mais sans tenant résolu — délibérément pas de `enforceTenantScope`, puisqu'aucun tenant n'existe encore) :
+
+1. Valide pays/devise (référentiels seedés) et unicité du sous-domaine.
+2. Crée `Tenant` + `TenantDomain` (statut `PENDING_VERIFICATION`, `verifiedAt` posé immédiatement — le parcours d'inscription lui-même constitue la vérification) dans une seule `rawPrisma.$transaction`.
+3. Crée `TenantMembership` + `UserRole` (`SCHOOL_OWNER`) via `withTenantSession` (voir ci-dessus).
+4. Crée optionnellement un abonnement `DRAFT` si un `planCode` est fourni.
+
+Pas d'atomicité unique couvrant les étapes 2 et 3 (générer les ids à l'avance a été envisagé et écarté comme fragile) : en cas d'échec de l'étape 3, nettoyage compensatoire explicite (suppression du domaine puis du tenant) dans un `catch`.
+
+**Site public** ([apps/web/src/pages/marketing/](../apps/web/src/pages/marketing/)) : accueil, tarifs (grille par catégorie — établissement/parent/élève, alimentée par les codes de plan seedés), contact (formulaire client uniquement, pas d'endpoint backend — voir Phase 10), pages légales (CGU/confidentialité/remboursement, bandeau « brouillon »), et l'assistant d'inscription multi-étapes (`SignupPage.tsx` : compte → établissement → formule → vérification → soumission `registerAccount` → `login` → `onboardTenant`). Bilingue via le namespace i18next `marketing` (fr par défaut, en secondaire — voir [packages/i18n/](../packages/i18n/)).
+
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
 ```
@@ -82,7 +95,8 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 1 — Fondation** : terminée (monorepo, squelettes apps/packages, Docker Compose dev, qualité, CI).
 - **Phase 2 — Données et sécurité** : terminée (schéma Prisma complet, migrations + RLS, authentification, RBAC, isolation multitenant testée). Restent hors périmètre Phase 2 : vérification email/téléphone effective (compte créé `ACTIVE` directement pour l'instant, voir TODO dans `auth.service.ts`), audit logging effectif (la table `AuditLog` existe, aucun service n'y écrit encore), MFA.
 - **Phase 3 — Abonnements** : terminée pour le flux établissement (machine à états, factures, paiement espèces de bout en bout, architecture webhook générique et idempotente). Restent hors périmètre : intégration Mobile Money réelle (aucun contrat opérateur signé), licences sponsorisées pilotées par un service, codes promotionnels, abonnements parent/élève en libre-service, tarification multi-pays réelle.
-- Phases 4 à 11 : selon le plan validé, non commencées.
+- **Phase 4 — Site public** : terminée (accueil, tarifs, contact, pages légales, assistant d'inscription établissement de bout en bout, vérifié en conditions réelles contre l'API). Restent hors périmètre : endpoint backend pour le formulaire de contact, connexion effective à l'espace créé (le portail établissement lui-même est Phase 5).
+- Phases 5 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement
 

@@ -1,0 +1,43 @@
+const API_URL: string =
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+interface RequestOptions {
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: unknown;
+  accessToken?: string;
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: options.method ?? "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
+    },
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+  });
+
+  const data: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const errorBody = data as { code?: string; message?: string } | null;
+    throw new ApiError(
+      response.status,
+      errorBody?.code ?? "UNKNOWN_ERROR",
+      errorBody?.message ?? "Request failed",
+    );
+  }
+
+  return data as T;
+}
