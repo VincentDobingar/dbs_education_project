@@ -12,6 +12,7 @@ import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { studentRouter } from "./modules/students/student.routes.js";
+import { studentTransferRouter } from "./modules/students/transfer.routes.js";
 import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
 import { tenantUserRouter } from "./modules/tenant-users/tenant-user.routes.js";
 import { tenantRouter } from "./modules/tenants/tenant.routes.js";
@@ -37,6 +38,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/subscriptions", subscriptionRouter);
   app.use("/api/v1/school-config", schoolConfigRouter);
   app.use("/api/v1/students", studentRouter);
+  app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);
   app.use("/api/v1/tenant-users", tenantUserRouter);
 
