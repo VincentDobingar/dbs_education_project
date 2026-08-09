@@ -121,6 +121,7 @@ describe("élèves et inscriptions (§19)", () => {
     const body = created.body as Record<string, unknown>;
     expect(body.status).toBe("PROSPECTIVE");
     expect(body).not.toHaveProperty("medicalNotes");
+    expect(body.possibleDuplicates).toEqual([]);
 
     const fetched = await request(app)
       .get(`/api/v1/students/${body.id as string}`)
@@ -370,5 +371,55 @@ describe("élèves et inscriptions (§19)", () => {
       .send();
     expect(removeUnknown.status).toBe(404);
     expect((removeUnknown.body as { code: string }).code).toBe("STUDENT_DOCUMENT_NOT_FOUND");
+  });
+
+  it("flags possible duplicates on creation and via the dedicated check endpoint", async () => {
+    const { subdomain, ownerToken } = await setUpTenantWithOwner();
+
+    const first = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        matricule: `MAT-${uniqueSuffix()}`,
+        firstName: "Sanou",
+        lastName: "Traore",
+        dateOfBirth: "2012-03-10",
+      });
+    expect(first.status).toBe(201);
+    expect((first.body as { possibleDuplicates: unknown[] }).possibleDuplicates).toEqual([]);
+
+    const preCheck = await request(app)
+      .get("/api/v1/students/check-duplicates")
+      .query({ firstName: "Sanou", lastName: "Traore" })
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(preCheck.status).toBe(200);
+    const preCheckBody = preCheck.body as { id: string }[];
+    expect(preCheckBody.length).toBe(1);
+    expect(preCheckBody[0]?.id).toBe((first.body as { id: string }).id);
+
+    const second = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        matricule: `MAT-${uniqueSuffix()}`,
+        firstName: "sanou",
+        lastName: "TRAORE",
+        dateOfBirth: "2013-01-01",
+      });
+    expect(second.status).toBe(201);
+    const secondDuplicates = (second.body as { possibleDuplicates: { id: string }[] }).possibleDuplicates;
+    expect(secondDuplicates.length).toBe(1);
+    expect(secondDuplicates[0]?.id).toBe((first.body as { id: string }).id);
+
+    const unrelated = await request(app)
+      .get("/api/v1/students/check-duplicates")
+      .query({ firstName: "Nobody", lastName: "Unrelated" })
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(unrelated.status).toBe(200);
+    expect((unrelated.body as unknown[]).length).toBe(0);
   });
 });

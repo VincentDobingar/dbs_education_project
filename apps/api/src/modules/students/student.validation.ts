@@ -34,3 +34,10 @@ export const updateStudentSchema = z.object({
   status: z.enum(STUDENT_STATUSES).optional(),
 });
 export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
+
+export const checkDuplicateStudentsQuerySchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  dateOfBirth: z.coerce.date().optional(),
+});
+export type CheckDuplicateStudentsQuery = z.infer<typeof checkDuplicateStudentsQuerySchema>;

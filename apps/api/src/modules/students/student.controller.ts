@@ -1,13 +1,29 @@
 import type { NextFunction, Request, Response } from "express";
 
 import * as studentService from "./student.service.js";
-import { createStudentSchema, updateStudentSchema } from "./student.validation.js";
+import {
+  checkDuplicateStudentsQuerySchema,
+  createStudentSchema,
+  updateStudentSchema,
+} from "./student.validation.js";
 
 export function createStudent(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = createStudentSchema.parse(req.body);
     const student = await studentService.createStudent(input);
     res.status(201).json(student);
+  })().catch(next);
+}
+
+export function checkDuplicateStudents(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const query = checkDuplicateStudentsQuerySchema.parse(req.query);
+    const duplicates = await studentService.checkDuplicateStudents(
+      query.firstName,
+      query.lastName,
+      query.dateOfBirth,
+    );
+    res.status(200).json(duplicates);
   })().catch(next);
 }
 

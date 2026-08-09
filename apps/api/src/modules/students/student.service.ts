@@ -13,6 +13,39 @@ async function assertMatriculeAvailable(matricule: string): Promise<void> {
   }
 }
 
+export interface PossibleDuplicateStudent {
+  id: string;
+  matricule: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: Date | null;
+  status: Student["status"];
+}
+
+/**
+ * Doublon detection (§19): same last name plus either a matching first name or a
+ * matching date of birth, within the same tenant. Deliberately a same-name/DOB
+ * heuristic rather than an exact-match rule — it is meant to surface candidates for
+ * a human to review, never to block a creation outright.
+ */
+export async function checkDuplicateStudents(
+  firstName: string,
+  lastName: string,
+  dateOfBirth?: Date,
+): Promise<PossibleDuplicateStudent[]> {
+  return prisma.student.findMany({
+    where: {
+      deletedAt: null,
+      lastName: { equals: lastName, mode: "insensitive" },
+      OR: [
+        { firstName: { equals: firstName, mode: "insensitive" } },
+        ...(dateOfBirth ? [{ dateOfBirth }] : []),
+      ],
+    },
+    select: { id: true, matricule: true, firstName: true, lastName: true, dateOfBirth: true, status: true },
+  });
+}
+
 /**
  * Full record, medicalNotes included — for internal server-side use only (e.g. the
  * enrollment service checking a student's current status). Never return this
@@ -26,10 +59,14 @@ export async function requireStudentRecord(id: string): Promise<Student> {
   return student;
 }
 
-export async function createStudent(input: CreateStudentInput): Promise<Omit<Student, "medicalNotes">> {
+export async function createStudent(
+  input: CreateStudentInput,
+): Promise<Omit<Student, "medicalNotes"> & { possibleDuplicates: PossibleDuplicateStudent[] }> {
   await assertMatriculeAvailable(input.matricule);
 
-  return prisma.student.create({
+  const possibleDuplicates = await checkDuplicateStudents(input.firstName, input.lastName, input.dateOfBirth);
+
+  const student = await prisma.student.create({
     data: {
       tenantId: requireCurrentTenantId(),
       matricule: input.matricule,
@@ -44,6 +81,8 @@ export async function createStudent(input: CreateStudentInput): Promise<Omit<Stu
     },
     omit: { medicalNotes: true },
   });
+
+  return { ...student, possibleDuplicates };
 }
 
 /**

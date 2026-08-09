@@ -18,6 +18,9 @@ const manageStudents = requirePermission("students.write");
 
 studentRouter.post("/", manageStudents, studentController.createStudent);
 studentRouter.get("/", readStudents, studentController.listStudents);
+// Must be registered before "/:id" — otherwise Express would capture this path
+// segment as the :id param instead.
+studentRouter.get("/check-duplicates", readStudents, studentController.checkDuplicateStudents);
 studentRouter.get("/:id", readStudents, studentController.getStudent);
 studentRouter.patch("/:id", manageStudents, studentController.updateStudent);
 studentRouter.post("/:id/archive", manageStudents, studentController.archiveStudent);
