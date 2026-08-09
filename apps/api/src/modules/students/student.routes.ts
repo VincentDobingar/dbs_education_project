@@ -5,6 +5,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
+import * as documentController from "./document.controller.js";
 import * as enrollmentController from "./enrollment.controller.js";
 import * as studentController from "./student.controller.js";
 
@@ -28,3 +29,7 @@ studentRouter.patch(
   manageStudents,
   enrollmentController.updateEnrollmentStatus,
 );
+
+studentRouter.post("/:studentId/documents", manageStudents, documentController.addStudentDocument);
+studentRouter.get("/:studentId/documents", readStudents, documentController.listStudentDocuments);
+studentRouter.delete("/:studentId/documents/:id", manageStudents, documentController.removeStudentDocument);

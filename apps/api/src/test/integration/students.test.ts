@@ -12,6 +12,7 @@ describe("élèves et inscriptions (§19)", () => {
 
   afterAll(async () => {
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentDocument.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -313,5 +314,61 @@ describe("élèves et inscriptions (§19)", () => {
       .send({ status: "GRADUATED" });
     expect(unknownEnrollment.status).toBe(404);
     expect((unknownEnrollment.body as { code: string }).code).toBe("ENROLLMENT_NOT_FOUND");
+  });
+
+  it("adds, lists and removes a student's supporting documents, but refuses a TEACHER from adding one", async () => {
+    const { subdomain, ownerToken, teacherToken } = await setUpTenantWithOwner();
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Omar", lastName: "Toure" });
+    const studentId = (student.body as { id: string }).id;
+
+    const denied = await request(app)
+      .post(`/api/v1/students/${studentId}/documents`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ category: "BIRTH_CERTIFICATE", fileUrl: "https://files.example.test/a.pdf" });
+    expect(denied.status).toBe(403);
+
+    const added = await request(app)
+      .post(`/api/v1/students/${studentId}/documents`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ category: "BIRTH_CERTIFICATE", fileUrl: "https://files.example.test/a.pdf" });
+    expect(added.status).toBe(201);
+    const documentBody = added.body as { id: string; category: string; uploadedByUserId: string };
+    expect(documentBody.category).toBe("BIRTH_CERTIFICATE");
+    expect(documentBody.uploadedByUserId).toBeTruthy();
+
+    const listed = await request(app)
+      .get(`/api/v1/students/${studentId}/documents`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(listed.status).toBe(200);
+    expect((listed.body as unknown[]).length).toBe(1);
+
+    const removed = await request(app)
+      .delete(`/api/v1/students/${studentId}/documents/${documentBody.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+    expect(removed.status).toBe(204);
+
+    const listedAfterRemoval = await request(app)
+      .get(`/api/v1/students/${studentId}/documents`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect((listedAfterRemoval.body as unknown[]).length).toBe(0);
+
+    const removeUnknown = await request(app)
+      .delete(`/api/v1/students/${studentId}/documents/00000000-0000-0000-0000-000000000000`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+    expect(removeUnknown.status).toBe(404);
+    expect((removeUnknown.body as { code: string }).code).toBe("STUDENT_DOCUMENT_NOT_FOUND");
   });
 });
