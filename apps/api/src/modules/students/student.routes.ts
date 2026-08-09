@@ -7,6 +7,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 
 import * as documentController from "./document.controller.js";
 import * as enrollmentController from "./enrollment.controller.js";
+import * as importExportController from "./import-export.controller.js";
 import * as studentController from "./student.controller.js";
 
 export const studentRouter: Router = Router();
@@ -21,6 +22,8 @@ studentRouter.get("/", readStudents, studentController.listStudents);
 // Must be registered before "/:id" — otherwise Express would capture this path
 // segment as the :id param instead.
 studentRouter.get("/check-duplicates", readStudents, studentController.checkDuplicateStudents);
+studentRouter.post("/import", manageStudents, importExportController.importStudents);
+studentRouter.get("/export", readStudents, importExportController.exportStudents);
 studentRouter.get("/:id", readStudents, studentController.getStudent);
 studentRouter.patch("/:id", manageStudents, studentController.updateStudent);
 studentRouter.post("/:id/archive", manageStudents, studentController.archiveStudent);
