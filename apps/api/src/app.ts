@@ -8,8 +8,11 @@ import { env } from "./env.js";
 import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
+import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
+import { tenantUserRouter } from "./modules/tenant-users/tenant-user.routes.js";
 import { tenantRouter } from "./modules/tenants/tenant.routes.js";
 import { healthRouter } from "./routes/health.js";
 
@@ -31,6 +34,9 @@ export function createApp(): express.Express {
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/tenants", tenantRouter);
   app.use("/api/v1/subscriptions", subscriptionRouter);
+  app.use("/api/v1/school-config", schoolConfigRouter);
+  app.use("/api/v1/employees", employeeRouter);
+  app.use("/api/v1/tenant-users", tenantUserRouter);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Resource not found" });

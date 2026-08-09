@@ -41,3 +41,18 @@ export function getContext(): RequestContext | undefined {
 export function getCurrentTenantId(): string | null {
   return getContext()?.tenantId ?? null;
 }
+
+/**
+ * Same as getCurrentTenantId, but throws instead of returning null. Convenient in
+ * services that only ever run behind enforceTenantScope + requireTenantMembership
+ * (§17) and need a plain `string` to satisfy a tenant-scoped model's Prisma types —
+ * the tenant-guard extension (prisma.ts) still validates/injects it at runtime
+ * regardless, this just keeps TypeScript's Unchecked*CreateInput shapes happy.
+ */
+export function requireCurrentTenantId(): string {
+  const tenantId = getCurrentTenantId();
+  if (!tenantId) {
+    throw new Error("Tenant context missing: this must run behind enforceTenantScope.");
+  }
+  return tenantId;
+}

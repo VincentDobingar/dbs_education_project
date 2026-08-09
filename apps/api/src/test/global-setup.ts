@@ -80,19 +80,55 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const tenantSettingsManagePermission = await prisma.permission.upsert({
+    where: { code: "tenant.settings.manage" },
+    update: {},
+    create: {
+      code: "tenant.settings.manage",
+      module: "tenant",
+      descriptionFr: "Gérer les paramètres de l'établissement",
+      descriptionEn: "Manage school settings",
+    },
+  });
+
+  const hrManagePermission = await prisma.permission.upsert({
+    where: { code: "hr.manage" },
+    update: {},
+    create: {
+      code: "hr.manage",
+      module: "hr",
+      descriptionFr: "Gérer le personnel",
+      descriptionEn: "Manage staff",
+    },
+  });
+
   await prisma.rolePermission.upsert({
     where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: studentsReadPermission.id } },
     update: {},
     create: { roleId: teacherRole.id, permissionId: studentsReadPermission.id },
   });
 
-  for (const permission of [subscriptionsManagePermission, financeWritePermission]) {
+  for (const permission of [
+    subscriptionsManagePermission,
+    financeWritePermission,
+    tenantSettingsManagePermission,
+    hrManagePermission,
+  ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },
       update: {},
       create: { roleId: schoolOwnerRole.id, permissionId: permission.id },
     });
   }
+
+  const schoolAdminRole = await prisma.role.findUniqueOrThrow({ where: { code: "SCHOOL_ADMIN" } });
+  await prisma.rolePermission.upsert({
+    where: {
+      roleId_permissionId: { roleId: schoolAdminRole.id, permissionId: tenantSettingsManagePermission.id },
+    },
+    update: {},
+    create: { roleId: schoolAdminRole.id, permissionId: tenantSettingsManagePermission.id },
+  });
 
   const plans = [
     { code: "SCHOOL_ESSENTIAL", category: "SCHOOL" as const, nameFr: "Essentiel", nameEn: "Essential" },
