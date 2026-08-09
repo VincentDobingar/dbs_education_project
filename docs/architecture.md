@@ -73,6 +73,17 @@ Pas d'atomicité unique couvrant les étapes 2 et 3 (générer les ids à l'avan
 
 **Site public** ([apps/web/src/pages/marketing/](../apps/web/src/pages/marketing/)) : accueil, tarifs (grille par catégorie — établissement/parent/élève, alimentée par les codes de plan seedés), contact (formulaire client uniquement, pas d'endpoint backend — voir Phase 10), pages légales (CGU/confidentialité/remboursement, bandeau « brouillon »), et l'assistant d'inscription multi-étapes (`SignupPage.tsx` : compte → établissement → formule → vérification → soumission `registerAccount` → `login` → `onboardTenant`). Bilingue via le namespace i18next `marketing` (fr par défaut, en secondaire — voir [packages/i18n/](../packages/i18n/)).
 
+## Gestion de l'établissement (en cours, Phase 5)
+
+Modules REST sous `enforceTenantScope + requireTenantMembership + requirePermission`, un router par domaine, montés dans [app.ts](../apps/api/src/app.ts) :
+
+- **Configuration** ([school-config](../apps/api/src/modules/school-config/)) : campus, années/périodes académiques, cycles/niveaux, classes, départements/matières. Lecture ouverte à tout membre du tenant, écriture derrière `tenant.settings.manage`.
+- **Utilisateurs** ([tenant-users](../apps/api/src/modules/tenant-users/)) : invitation (crée le `User` s'il n'existe pas encore, mot de passe aléatoire jamais communiqué — passe obligatoirement par reset, même TODO que `registerUser`), attribution/révocation de rôle, changement de statut de membership. Derrière `tenant.settings.manage`.
+- **Personnel** ([employees](../apps/api/src/modules/employees/)) : fiche, statut, archivage (soft delete). `salaryCents` vit sur `EmploymentContract`, un modèle séparé jamais joint dans les listings — jamais exposé via ce module. Derrière `hr.manage`.
+- **Élèves et inscriptions** ([students](../apps/api/src/modules/students/)) : fiche élève (matricule unique par tenant), statut, archivage ; inscription/réinscription (`Enrollment`, une ligne par élève et par année scolaire, `withTenantSession` pour l'écriture combinée inscription + passage `PROSPECTIVE → ACTIVE`). `medicalNotes` accepté en écriture mais jamais renvoyé par l'API générale (`omit` Prisma) — pas encore d'endpoint dédié infirmerie/direction pour le relire (§19). Lecture derrière `students.read` (dont `TEACHER`), écriture derrière `students.write` (`SCHOOL_OWNER`/`SCHOOL_ADMIN`).
+
+Restent hors périmètre de cette tranche : rattachement parent/élève par invitation + code d'activation (§8 — explicitement Phase 8), import/export CSV/Excel, génération de cartes scolaires, détection de doublons, documents justificatifs (`StudentDocument`), transferts inter-établissements (`StudentTransfer`).
+
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
 ```
@@ -96,7 +107,8 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 2 — Données et sécurité** : terminée (schéma Prisma complet, migrations + RLS, authentification, RBAC, isolation multitenant testée). Restent hors périmètre Phase 2 : vérification email/téléphone effective (compte créé `ACTIVE` directement pour l'instant, voir TODO dans `auth.service.ts`), audit logging effectif (la table `AuditLog` existe, aucun service n'y écrit encore), MFA.
 - **Phase 3 — Abonnements** : terminée pour le flux établissement (machine à états, factures, paiement espèces de bout en bout, architecture webhook générique et idempotente). Restent hors périmètre : intégration Mobile Money réelle (aucun contrat opérateur signé), licences sponsorisées pilotées par un service, codes promotionnels, abonnements parent/élève en libre-service, tarification multi-pays réelle.
 - **Phase 4 — Site public** : terminée (accueil, tarifs, contact, pages légales, assistant d'inscription établissement de bout en bout, vérifié en conditions réelles contre l'API). Restent hors périmètre : endpoint backend pour le formulaire de contact, connexion effective à l'espace créé (le portail établissement lui-même est Phase 5).
-- Phases 5 à 11 : selon le plan validé, non commencées.
+- **Phase 5 — Gestion de l'établissement** : en cours. Terminé : configuration, utilisateurs, personnel, élèves et inscriptions (voir section dédiée ci-dessus). Restent : rattachement parent/élève (renvoyé à la Phase 8), import/export CSV/Excel, cartes scolaires, détection de doublons, documents justificatifs, transferts inter-établissements.
+- Phases 6 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement
 

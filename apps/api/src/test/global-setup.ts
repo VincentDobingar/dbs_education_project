@@ -102,6 +102,17 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const studentsWritePermission = await prisma.permission.upsert({
+    where: { code: "students.write" },
+    update: {},
+    create: {
+      code: "students.write",
+      module: "students",
+      descriptionFr: "Gérer les élèves",
+      descriptionEn: "Manage students",
+    },
+  });
+
   await prisma.rolePermission.upsert({
     where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: studentsReadPermission.id } },
     update: {},
@@ -113,6 +124,8 @@ export default async function setup(): Promise<void> {
     financeWritePermission,
     tenantSettingsManagePermission,
     hrManagePermission,
+    studentsReadPermission,
+    studentsWritePermission,
   ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },
@@ -122,13 +135,17 @@ export default async function setup(): Promise<void> {
   }
 
   const schoolAdminRole = await prisma.role.findUniqueOrThrow({ where: { code: "SCHOOL_ADMIN" } });
-  await prisma.rolePermission.upsert({
-    where: {
-      roleId_permissionId: { roleId: schoolAdminRole.id, permissionId: tenantSettingsManagePermission.id },
-    },
-    update: {},
-    create: { roleId: schoolAdminRole.id, permissionId: tenantSettingsManagePermission.id },
-  });
+  for (const permission of [
+    tenantSettingsManagePermission,
+    studentsReadPermission,
+    studentsWritePermission,
+  ]) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: schoolAdminRole.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: schoolAdminRole.id, permissionId: permission.id },
+    });
+  }
 
   const plans = [
     { code: "SCHOOL_ESSENTIAL", category: "SCHOOL" as const, nameFr: "Essentiel", nameEn: "Essential" },
