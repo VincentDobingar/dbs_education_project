@@ -8,6 +8,8 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 import * as academicStructureController from "./academic-structure.controller.js";
 import * as academicYearController from "./academic-year.controller.js";
 import * as campusController from "./campus.controller.js";
+import * as programController from "./program.controller.js";
+import * as subjectCoefficientController from "./subject-coefficient.controller.js";
 import * as subjectController from "./subject.controller.js";
 import * as teacherAssignmentController from "./teacher-assignment.controller.js";
 import * as timetableController from "./timetable.controller.js";
@@ -62,6 +64,21 @@ schoolConfigRouter.get("/departments", subjectController.listDepartments);
 schoolConfigRouter.post("/subjects", manageSettings, subjectController.createSubject);
 schoolConfigRouter.get("/subjects", subjectController.listSubjects);
 schoolConfigRouter.patch("/subjects/:id", manageSettings, subjectController.updateSubject);
+schoolConfigRouter.post(
+  "/subjects/:id/coefficients",
+  manageSettings,
+  subjectCoefficientController.setSubjectCoefficient,
+);
+schoolConfigRouter.get("/subjects/:id/coefficients", subjectCoefficientController.listSubjectCoefficients);
+schoolConfigRouter.delete(
+  "/subjects/:id/coefficients/:coefficientId",
+  manageSettings,
+  subjectCoefficientController.removeSubjectCoefficient,
+);
+
+schoolConfigRouter.post("/programs", manageSettings, programController.createProgram);
+schoolConfigRouter.get("/programs", programController.listPrograms);
+schoolConfigRouter.patch("/programs/:id", manageSettings, programController.updateProgram);
 
 schoolConfigRouter.post(
   "/teacher-assignments",

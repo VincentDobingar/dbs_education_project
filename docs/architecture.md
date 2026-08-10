@@ -77,7 +77,7 @@ Pas d'atomicité unique couvrant les étapes 2 et 3 (générer les ids à l'avan
 
 Modules REST sous `enforceTenantScope + requireTenantMembership + requirePermission`, un router par domaine, montés dans [app.ts](../apps/api/src/app.ts) :
 
-- **Configuration** ([school-config](../apps/api/src/modules/school-config/)) : campus, années/périodes académiques, cycles/niveaux, classes, départements/matières. Lecture ouverte à tout membre du tenant, écriture derrière `tenant.settings.manage`.
+- **Configuration** ([school-config](../apps/api/src/modules/school-config/)) : campus, années/périodes académiques, cycles/niveaux, classes, départements/matières, programmes, coefficients par matière/niveau. Lecture ouverte à tout membre du tenant, écriture derrière `tenant.settings.manage`.
 - **Utilisateurs** ([tenant-users](../apps/api/src/modules/tenant-users/)) : invitation (crée le `User` s'il n'existe pas encore, mot de passe aléatoire jamais communiqué — passe obligatoirement par reset, même TODO que `registerUser`), attribution/révocation de rôle, changement de statut de membership. Derrière `tenant.settings.manage`.
 - **Personnel** ([employees](../apps/api/src/modules/employees/)) : fiche, statut, archivage (soft delete). `salaryCents` vit sur `EmploymentContract`, un modèle séparé jamais joint dans les listings — jamais exposé via ce module. Derrière `hr.manage`.
 - **Élèves et inscriptions** ([students](../apps/api/src/modules/students/)) : fiche élève (matricule unique par tenant), statut, archivage ; inscription/réinscription (`Enrollment`, une ligne par élève et par année scolaire, `withTenantSession` pour l'écriture combinée inscription + passage `PROSPECTIVE → ACTIVE`). `medicalNotes` accepté en écriture mais jamais renvoyé par l'API générale (`omit` Prisma) — pas encore d'endpoint dédié infirmerie/direction pour le relire (§19). Lecture derrière `students.read` (dont `TEACHER`), écriture derrière `students.write` (`SCHOOL_OWNER`/`SCHOOL_ADMIN`).
@@ -88,6 +88,17 @@ Modules REST sous `enforceTenantScope + requireTenantMembership + requirePermiss
 - **Cartes scolaires** (`GET /students/:id/id-card`, toujours dans `students`) : PDF généré à la volée avec `pdfkit` (format CR80, aucune dépendance native), contenu texte uniquement — établissement, nom, matricule, date de naissance, classe et année scolaire tirées de l'inscription active la plus récente. Bloqué (`STUDENT_NOT_ENROLLED`, 400) si l'élève n'a aucune inscription `ENROLLED`/`RE_ENROLLED`. La photo n'est délibérément **pas** intégrée : `photoUrl` est une URL externe fournie par le client, et la récupérer côté serveur pour l'incorporer au PDF serait un vecteur SSRF direct sans allowlist/timeout/limite de taille — différé, pas un oubli.
 
 Restent hors périmètre de cette Phase : rattachement parent/élève par invitation + code d'activation (§8 — explicitement Phase 8), export/import au format Excel natif, intégration de la photo sur la carte scolaire.
+
+## Administration académique — §20 clôturé (Phase 6 démarrée)
+
+Le §20 (« module administration académique ») listait années/périodes/cycles/niveaux/classes/départements/matières (couverts en Phase 5, voir ci-dessus) plus programmes, coefficients, affectations des enseignants, emplois du temps — ces quatre derniers ajoutés après la clôture de la Phase 5, toujours dans [school-config](../apps/api/src/modules/school-config/) :
+
+- **Affectations des enseignants** (`TeacherAssignment`) : lie employé/matière/classe/année scolaire, avec vérification d'existence des quatre références, garde-fou classe↔année (une classe n'appartient qu'à une année, l'affectation doit être cohérente) et unicité (un même quadruplet ne peut être affecté deux fois).
+- **Emplois du temps** (`Timetable`/`TimetableEntry`) : une grille par classe et par année, chaque entrée (matière, enseignant, jour, créneau `HH:MM`, salle en texte libre) validée sur deux axes de conflit indépendants — la classe ne peut avoir deux cours au même créneau, et l'enseignant ne peut être dans deux classes en même temps, ce dernier vérifié sur **toutes** les grilles de la même année scolaire (pas seulement celle en cours d'édition).
+- **Programmes** (`Program`) : référentiel simple code/nom, rattachable optionnellement à un niveau, réutilisé par `Classroom.programId`.
+- **Coefficients** (`SubjectCoefficient`) : un coefficient par couple matière/niveau (`upsert` — renvoyer un coefficient déjà défini le met à jour plutôt que de lever un conflit), consommé plus tard par le calcul des moyennes (§21, Phase 6).
+
+`Program` et `SubjectCoefficient` existaient dans le schéma depuis la Phase 5 sans service pour les piloter ; c'est maintenant fait, §20 est donc intégralement couvert. Restent hors périmètre : salles comme entité propre (le `roomLabel` de `TimetableEntry` reste une chaîne libre, pas de modèle `Room`/réservation), calendriers/jours fériés dédiés (`AcademicPeriod` couvre le découpage trimestre/semestre, pas un calendrier d'événements).
 
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
@@ -113,7 +124,8 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 3 — Abonnements** : terminée pour le flux établissement (machine à états, factures, paiement espèces de bout en bout, architecture webhook générique et idempotente). Restent hors périmètre : intégration Mobile Money réelle (aucun contrat opérateur signé), licences sponsorisées pilotées par un service, codes promotionnels, abonnements parent/élève en libre-service, tarification multi-pays réelle.
 - **Phase 4 — Site public** : terminée (accueil, tarifs, contact, pages légales, assistant d'inscription établissement de bout en bout, vérifié en conditions réelles contre l'API). Restent hors périmètre : endpoint backend pour le formulaire de contact, connexion effective à l'espace créé (le portail établissement lui-même est Phase 5).
 - **Phase 5 — Gestion de l'établissement** : terminée pour le périmètre retenu (configuration, utilisateurs, personnel, élèves et inscriptions, documents justificatifs, détection de doublons, transferts inter-établissements, import/export CSV, cartes scolaires — voir section dédiée ci-dessus). Restent hors périmètre, par choix : rattachement parent/élève par invitation (explicitement Phase 8), export/import Excel natif, photo sur la carte scolaire.
-- Phases 6 à 11 : selon le plan validé, non commencées.
+- **Phase 6 — Gestion académique** : démarrée. §20 (administration académique : programmes, coefficients, affectations des enseignants, emplois du temps) terminé — voir section dédiée ci-dessus. Restent à faire : §21 (notes et évaluations, bulletins) et §22 (présences et discipline).
+- Phases 7 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement
 
