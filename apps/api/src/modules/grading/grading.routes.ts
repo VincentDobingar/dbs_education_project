@@ -8,6 +8,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 import * as assessmentTypeController from "./assessment-type.controller.js";
 import * as assessmentController from "./assessment.controller.js";
 import * as gradeController from "./grade.controller.js";
+import * as reportCardController from "./report-card.controller.js";
 
 export const gradingRouter: Router = Router();
 
@@ -32,3 +33,8 @@ gradingRouter.get("/assessments/:id/grades", readGrades, gradeController.listGra
 gradingRouter.patch("/grades/:id/correct", publishGrades, gradeController.correctGrade);
 
 gradingRouter.get("/students/:studentId/grades", readGrades, gradeController.listGradesForStudent);
+
+gradingRouter.post("/report-cards/generate", publishGrades, reportCardController.generateReportCards);
+gradingRouter.get("/report-cards", readGrades, reportCardController.listReportCards);
+gradingRouter.get("/report-cards/:id", readGrades, reportCardController.getReportCard);
+gradingRouter.get("/report-cards/:id/pdf", readGrades, reportCardController.getReportCardPdf);
