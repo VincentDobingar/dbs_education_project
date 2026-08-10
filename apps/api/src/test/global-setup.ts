@@ -146,7 +146,59 @@ export default async function setup(): Promise<void> {
     },
   });
 
-  for (const permission of [studentsReadPermission, gradesReadPermission, gradesWritePermission]) {
+  const attendanceReadPermission = await prisma.permission.upsert({
+    where: { code: "attendance.read" },
+    update: {},
+    create: {
+      code: "attendance.read",
+      module: "attendance",
+      descriptionFr: "Consulter les présences",
+      descriptionEn: "View attendance",
+    },
+  });
+
+  const attendanceWritePermission = await prisma.permission.upsert({
+    where: { code: "attendance.write" },
+    update: {},
+    create: {
+      code: "attendance.write",
+      module: "attendance",
+      descriptionFr: "Saisir les présences",
+      descriptionEn: "Record attendance",
+    },
+  });
+
+  const disciplineReadPermission = await prisma.permission.upsert({
+    where: { code: "discipline.read" },
+    update: {},
+    create: {
+      code: "discipline.read",
+      module: "discipline",
+      descriptionFr: "Consulter les incidents disciplinaires",
+      descriptionEn: "View disciplinary incidents",
+    },
+  });
+
+  const disciplineWritePermission = await prisma.permission.upsert({
+    where: { code: "discipline.write" },
+    update: {},
+    create: {
+      code: "discipline.write",
+      module: "discipline",
+      descriptionFr: "Gérer les incidents disciplinaires",
+      descriptionEn: "Manage disciplinary incidents",
+    },
+  });
+
+  for (const permission of [
+    studentsReadPermission,
+    gradesReadPermission,
+    gradesWritePermission,
+    attendanceReadPermission,
+    attendanceWritePermission,
+    disciplineReadPermission,
+    disciplineWritePermission,
+  ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: permission.id } },
       update: {},
@@ -163,6 +215,8 @@ export default async function setup(): Promise<void> {
     studentsWritePermission,
     gradesReadPermission,
     gradesPublishPermission,
+    attendanceReadPermission,
+    disciplineReadPermission,
   ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },
