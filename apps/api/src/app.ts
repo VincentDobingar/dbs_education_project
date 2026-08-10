@@ -9,6 +9,7 @@ import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { employeeRouter } from "./modules/employees/employee.routes.js";
+import { gradingRouter } from "./modules/grading/grading.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { studentRouter } from "./modules/students/student.routes.js";
@@ -37,6 +38,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/tenants", tenantRouter);
   app.use("/api/v1/subscriptions", subscriptionRouter);
   app.use("/api/v1/school-config", schoolConfigRouter);
+  app.use("/api/v1/grading", gradingRouter);
   app.use("/api/v1/students", studentRouter);
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);

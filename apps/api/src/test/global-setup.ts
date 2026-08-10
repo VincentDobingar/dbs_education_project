@@ -113,11 +113,46 @@ export default async function setup(): Promise<void> {
     },
   });
 
-  await prisma.rolePermission.upsert({
-    where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: studentsReadPermission.id } },
+  const gradesReadPermission = await prisma.permission.upsert({
+    where: { code: "grades.read" },
     update: {},
-    create: { roleId: teacherRole.id, permissionId: studentsReadPermission.id },
+    create: {
+      code: "grades.read",
+      module: "grades",
+      descriptionFr: "Consulter les notes",
+      descriptionEn: "View grades",
+    },
   });
+
+  const gradesWritePermission = await prisma.permission.upsert({
+    where: { code: "grades.write" },
+    update: {},
+    create: {
+      code: "grades.write",
+      module: "grades",
+      descriptionFr: "Saisir les notes",
+      descriptionEn: "Enter grades",
+    },
+  });
+
+  const gradesPublishPermission = await prisma.permission.upsert({
+    where: { code: "grades.publish" },
+    update: {},
+    create: {
+      code: "grades.publish",
+      module: "grades",
+      descriptionFr: "Publier les bulletins",
+      descriptionEn: "Publish report cards",
+    },
+  });
+
+  for (const permission of [studentsReadPermission, gradesReadPermission, gradesWritePermission]) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: permission.id } },
+      update: {},
+      create: { roleId: teacherRole.id, permissionId: permission.id },
+    });
+  }
 
   for (const permission of [
     subscriptionsManagePermission,
@@ -126,6 +161,8 @@ export default async function setup(): Promise<void> {
     hrManagePermission,
     studentsReadPermission,
     studentsWritePermission,
+    gradesReadPermission,
+    gradesPublishPermission,
   ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },
