@@ -9,6 +9,8 @@ import * as academicStructureController from "./academic-structure.controller.js
 import * as academicYearController from "./academic-year.controller.js";
 import * as campusController from "./campus.controller.js";
 import * as subjectController from "./subject.controller.js";
+import * as teacherAssignmentController from "./teacher-assignment.controller.js";
+import * as timetableController from "./timetable.controller.js";
 
 export const schoolConfigRouter: Router = Router();
 
@@ -60,3 +62,25 @@ schoolConfigRouter.get("/departments", subjectController.listDepartments);
 schoolConfigRouter.post("/subjects", manageSettings, subjectController.createSubject);
 schoolConfigRouter.get("/subjects", subjectController.listSubjects);
 schoolConfigRouter.patch("/subjects/:id", manageSettings, subjectController.updateSubject);
+
+schoolConfigRouter.post(
+  "/teacher-assignments",
+  manageSettings,
+  teacherAssignmentController.createTeacherAssignment,
+);
+schoolConfigRouter.get("/teacher-assignments", teacherAssignmentController.listTeacherAssignments);
+schoolConfigRouter.delete(
+  "/teacher-assignments/:id",
+  manageSettings,
+  teacherAssignmentController.removeTeacherAssignment,
+);
+
+schoolConfigRouter.post("/timetables", manageSettings, timetableController.createTimetable);
+schoolConfigRouter.get("/timetables", timetableController.listTimetables);
+schoolConfigRouter.post("/timetables/:id/entries", manageSettings, timetableController.addTimetableEntry);
+schoolConfigRouter.get("/timetables/:id/entries", timetableController.listTimetableEntries);
+schoolConfigRouter.delete(
+  "/timetables/:id/entries/:entryId",
+  manageSettings,
+  timetableController.removeTimetableEntry,
+);
