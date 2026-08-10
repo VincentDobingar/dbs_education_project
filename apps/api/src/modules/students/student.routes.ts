@@ -7,6 +7,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 
 import * as documentController from "./document.controller.js";
 import * as enrollmentController from "./enrollment.controller.js";
+import * as idCardController from "./id-card.controller.js";
 import * as importExportController from "./import-export.controller.js";
 import * as studentController from "./student.controller.js";
 
@@ -27,6 +28,7 @@ studentRouter.get("/export", readStudents, importExportController.exportStudents
 studentRouter.get("/:id", readStudents, studentController.getStudent);
 studentRouter.patch("/:id", manageStudents, studentController.updateStudent);
 studentRouter.post("/:id/archive", manageStudents, studentController.archiveStudent);
+studentRouter.get("/:id/id-card", readStudents, idCardController.generateIdCard);
 
 studentRouter.post("/:studentId/enrollments", manageStudents, enrollmentController.enrollStudent);
 studentRouter.get("/:studentId/enrollments", readStudents, enrollmentController.listEnrollments);
