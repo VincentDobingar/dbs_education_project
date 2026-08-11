@@ -80,6 +80,17 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const financeReadPermission = await prisma.permission.upsert({
+    where: { code: "finance.read" },
+    update: {},
+    create: {
+      code: "finance.read",
+      module: "finance",
+      descriptionFr: "Consulter les finances",
+      descriptionEn: "View finances",
+    },
+  });
+
   const tenantSettingsManagePermission = await prisma.permission.upsert({
     where: { code: "tenant.settings.manage" },
     update: {},
@@ -209,6 +220,7 @@ export default async function setup(): Promise<void> {
   for (const permission of [
     subscriptionsManagePermission,
     financeWritePermission,
+    financeReadPermission,
     tenantSettingsManagePermission,
     hrManagePermission,
     studentsReadPermission,

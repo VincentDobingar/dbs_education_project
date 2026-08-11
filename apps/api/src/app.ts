@@ -11,6 +11,7 @@ import { attendanceRouter } from "./modules/attendance/attendance.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { disciplineRouter } from "./modules/discipline/discipline.routes.js";
 import { employeeRouter } from "./modules/employees/employee.routes.js";
+import { financeRouter } from "./modules/finance/finance.routes.js";
 import { gradingRouter } from "./modules/grading/grading.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
@@ -43,6 +44,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/grading", gradingRouter);
   app.use("/api/v1/attendance", attendanceRouter);
   app.use("/api/v1/discipline", disciplineRouter);
+  app.use("/api/v1/finance", financeRouter);
   app.use("/api/v1/students", studentRouter);
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);

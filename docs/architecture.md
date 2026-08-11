@@ -124,6 +124,18 @@ Deux modules distincts (schéma déjà prêt depuis la Phase 2/5 : `Attendance`,
 
 Avec §20, §21 et §22 clos pour leur périmètre retenu, **la Phase 6 (Gestion académique) est terminée**.
 
+## Module financier de l'établissement — §23 démarré (Phase 7), frais et factures faits
+
+§23 est la plus grosse section du cahier des charges (catégories de frais, grilles tarifaires, factures, paiements complets/partiels, remises/bourses/exonérations/pénalités, reçus numérotés, annulations contrôlées, remboursements, caisse, clôtures journalières, dépenses, fournisseurs, situation financière d'un élève, impayés, rapports, export PDF/Excel) — traitée en tranches plutôt qu'en un seul morceau, comme la Phase 6. Cette tranche couvre la base : catégories/grilles tarifaires et cycle de vie de la facture, **sans encore l'encaissement** (paiements, reçus, remboursements — tranche suivante). Le schéma (`finance.prisma`, Phase 2/5) a déjà tous les modèles nécessaires pour l'ensemble du §23 ; seul le service manquait, même situation que `Program`/`SubjectCoefficient` avant leur tranche dédiée en §20.
+
+Nouveau module [finance](../apps/api/src/modules/finance/), monté sur `/api/v1/finance`, derrière `finance.read`/`finance.write` (permissions déjà présentes dans le seed depuis la Phase 3, mais jusqu'ici seulement consommées par le module `payments` — inchangé). Toutes les sommes en centimes (`Int`), jamais en flottant (§23, §40).
+
+- **Catégories de frais** (`FeeCategory`) et **grilles tarifaires** (`FeeStructure` : année scolaire + niveau optionnel + catégorie + montant + échéance + obligatoire ou non) : référentiel classique, code unique par tenant, mêmes garde-fous d'existence croisée que le reste de `school-config`.
+- **Factures élève** (`StudentInvoice`/`StudentInvoiceItem`) : `POST /student-invoices` crée une facture `DRAFT` avec ses lignes en une seule écriture Prisma imbriquée (atomique nativement, pas besoin de `$transaction` explicite ici). Chaque ligne référence optionnellement une `FeeStructure` (traçabilité) mais peut aussi être libre (ex. frais d'inscription hors grille). `discountCents` par ligne couvre remises/bourses/exonérations (une exonération totale = `discountCents == amountCents`) — refusé si le rabais dépasse le montant de la ligne. `totalCents` calculé serveur (jamais fourni par le client) en centimes entiers. Numérotation via `generateReference("INV")` (réutilisé tel quel depuis [payments/reference.ts](../apps/api/src/modules/payments/reference.ts), déjà pensé pour ce rôle).
+- **Cycle de vie** : `DRAFT → ISSUED` (`POST /:id/issue`, une seule fois) → `CANCELLED` (`POST /:id/cancel`, « annulation contrôlée » : refusée si `paidCents > 0` ou statut déjà `PAID`/`PARTIALLY_PAID` — il faudrait rembourser d'abord, hors périmètre de cette tranche). Le schéma n'a pas de colonne pour un motif d'annulation ; l'annulation reste donc gardée par la règle métier seule, pas par une piste d'audit texte — limite assumée plutôt qu'un ajout de colonne hors sujet pour cette tranche.
+
+**Restent hors périmètre de cette tranche** (prochaine) : encaissement complet/partiel (`StudentPayment`), reçus numérotés (`StudentReceipt`), remboursements (`RefundTransaction`, déjà généraliste depuis le §24/Phase 3 via `PaymentIntent.studentInvoiceId`), caisse (`CashSession`) et ses clôtures journalières, dépenses/fournisseurs (`Expense`/`ExpenseCategory` — `supplierName` reste une chaîne libre dans le schéma, pas d'entité `Supplier` dédiée), situation financière consolidée d'un élève, impayés, rapports de recettes/dépenses, export PDF/Excel. Génération automatique de factures en masse depuis une grille tarifaire (pour toute une classe) également différée — la création reste ligne par ligne pour cette tranche.
+
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
 ```
@@ -149,7 +161,8 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 4 — Site public** : terminée (accueil, tarifs, contact, pages légales, assistant d'inscription établissement de bout en bout, vérifié en conditions réelles contre l'API). Restent hors périmètre : endpoint backend pour le formulaire de contact, connexion effective à l'espace créé (le portail établissement lui-même est Phase 5).
 - **Phase 5 — Gestion de l'établissement** : terminée pour le périmètre retenu (configuration, utilisateurs, personnel, élèves et inscriptions, documents justificatifs, détection de doublons, transferts inter-établissements, import/export CSV, cartes scolaires — voir section dédiée ci-dessus). Restent hors périmètre, par choix : rattachement parent/élève par invitation (explicitement Phase 8), export/import Excel natif, photo sur la carte scolaire.
 - **Phase 6 — Gestion académique** : terminée pour le périmètre retenu. §20 (administration académique), §21 (notes et évaluations) et §22 (présences et discipline) — voir sections dédiées ci-dessus. Restent hors périmètre, par choix : notification effective des parents (suppose Communication §28 + rattachement parent/élève §8, Phase 8), système de notation configurable par tenant, procès-verbaux/conseils de classe.
-- Phases 7 à 11 : selon le plan validé, non commencées.
+- **Phase 7 — Gestion financière** : démarrée. §23 (module financier de l'établissement) en cours par tranches — catégories de frais, grilles tarifaires et cycle de vie de la facture (brouillon → émise → annulée) faits ; encaissement, reçus, remboursements, caisse, dépenses, situation financière et rapports restent à faire — voir section dédiée ci-dessus.
+- Phases 8 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement
 
