@@ -8,6 +8,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 import * as feeCategoryController from "./fee-category.controller.js";
 import * as feeStructureController from "./fee-structure.controller.js";
 import * as studentInvoiceController from "./student-invoice.controller.js";
+import * as studentPaymentController from "./student-payment.controller.js";
 
 export const financeRouter: Router = Router();
 
@@ -32,3 +33,17 @@ financeRouter.post(
   writeFinance,
   studentInvoiceController.cancelStudentInvoice,
 );
+
+financeRouter.post(
+  "/student-invoices/:id/payments",
+  writeFinance,
+  studentPaymentController.recordCashPayment,
+);
+financeRouter.get(
+  "/student-invoices/:id/payments",
+  readFinance,
+  studentPaymentController.listPaymentsForInvoice,
+);
+
+financeRouter.get("/receipts/:id", readFinance, studentPaymentController.getReceipt);
+financeRouter.get("/receipts/:id/pdf", readFinance, studentPaymentController.getReceiptPdf);
