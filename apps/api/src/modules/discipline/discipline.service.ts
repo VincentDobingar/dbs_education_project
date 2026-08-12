@@ -3,6 +3,7 @@ import type { DisciplinaryIncident } from "@prisma/client";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { notifyParentsOfStudent } from "../communication/notification.service.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
 import type {
@@ -24,7 +25,7 @@ export async function createIncident(
   await requireStudentRecord(input.studentId);
   const reportedByEmployeeId = await resolveActingEmployeeId(actingUserId);
 
-  return prisma.disciplinaryIncident.create({
+  const incident = await prisma.disciplinaryIncident.create({
     data: {
       tenantId: requireCurrentTenantId(),
       studentId: input.studentId,
@@ -36,6 +37,15 @@ export async function createIncident(
       ...(reportedByEmployeeId ? { reportedByEmployeeId } : {}),
     },
   });
+
+  await notifyParentsOfStudent({
+    studentId: input.studentId,
+    type: "discipline.incident",
+    title: "Incident disciplinaire",
+    body: `Un incident disciplinaire (${input.severity}) a été enregistré.`,
+  });
+
+  return incident;
 }
 
 export async function listIncidents(query: ListIncidentsQuery): Promise<DisciplinaryIncident[]> {

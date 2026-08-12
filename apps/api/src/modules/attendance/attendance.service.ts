@@ -3,6 +3,7 @@ import type { Attendance } from "@prisma/client";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { notifyParentsOfStudent } from "../communication/notification.service.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
 import type {
@@ -80,6 +81,15 @@ export async function recordRollCall(
           },
         });
     results.push(attendance);
+
+    if (attendance.status === "ABSENT") {
+      await notifyParentsOfStudent({
+        studentId: attendance.studentId,
+        type: "attendance.absence",
+        title: "Absence enregistrée",
+        body: `Une absence a été enregistrée le ${date.toISOString().slice(0, 10)}.`,
+      });
+    }
   }
 
   return results;

@@ -9,8 +9,10 @@ import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
 import { attendanceRouter } from "./modules/attendance/attendance.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { communicationRouter } from "./modules/communication/communication.routes.js";
 import { disciplineRouter } from "./modules/discipline/discipline.routes.js";
 import { employeeRouter } from "./modules/employees/employee.routes.js";
+import { familyRouter } from "./modules/family/family.routes.js";
 import { financeRouter } from "./modules/finance/finance.routes.js";
 import { gradingRouter } from "./modules/grading/grading.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
@@ -49,6 +51,8 @@ export function createApp(): express.Express {
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);
   app.use("/api/v1/tenant-users", tenantUserRouter);
+  app.use("/api/v1/family", familyRouter);
+  app.use("/api/v1/communication", communicationRouter);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Resource not found" });
