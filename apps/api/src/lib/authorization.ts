@@ -19,6 +19,11 @@ export async function userHasPlatformRole(userId: string, allowedCodes: readonly
   return codes.some((code) => allowedCodes.includes(code));
 }
 
+/** §31 : le(s) rôle(s) plateforme actifs d'un utilisateur, pour la piste d'audit (actorRoleCode). */
+export async function getPlatformRoleCodes(userId: string): Promise<string[]> {
+  return activeRoleCodes(userId, null);
+}
+
 export async function userHasPermission(
   userId: string,
   tenantId: string | null,

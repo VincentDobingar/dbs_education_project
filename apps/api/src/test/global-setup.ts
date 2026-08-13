@@ -47,6 +47,33 @@ export default async function setup(): Promise<void> {
     create: { code: "SCHOOL_OWNER", nameFr: "Propriétaire", nameEn: "Owner", scope: "TENANT" },
   });
 
+  // §31 : rôles plateforme, portée nulle (tenantId: null côté UserRole).
+  await prisma.role.upsert({
+    where: { code: "SUPER_ADMIN" },
+    update: {},
+    create: { code: "SUPER_ADMIN", nameFr: "Super administrateur", nameEn: "Super Admin", scope: "PLATFORM" },
+  });
+  await prisma.role.upsert({
+    where: { code: "PLATFORM_ADMIN" },
+    update: {},
+    create: {
+      code: "PLATFORM_ADMIN",
+      nameFr: "Administrateur plateforme",
+      nameEn: "Platform Admin",
+      scope: "PLATFORM",
+    },
+  });
+  await prisma.role.upsert({
+    where: { code: "PLATFORM_AUDITOR" },
+    update: {},
+    create: {
+      code: "PLATFORM_AUDITOR",
+      nameFr: "Auditeur plateforme",
+      nameEn: "Platform Auditor",
+      scope: "PLATFORM",
+    },
+  });
+
   const studentsReadPermission = await prisma.permission.upsert({
     where: { code: "students.read" },
     update: {},
