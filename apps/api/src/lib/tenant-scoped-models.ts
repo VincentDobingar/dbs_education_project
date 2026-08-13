@@ -27,6 +27,7 @@ export const TENANT_SCOPED_MODELS = [
   "Announcement",
   "ParentStudentRelationship",
   "ActivationInvitation",
+  "StudentUserLink",
   "FeeCategory",
   "FeeStructure",
   "StudentInvoice",

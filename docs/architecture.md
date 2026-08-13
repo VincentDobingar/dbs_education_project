@@ -23,10 +23,12 @@ Deux couches de défense indépendantes, aucune ne suffisant seule :
 
 **Le rôle applicatif ne doit jamais être le superuser Postgres** : RLS est totalement ignorée pour un superuser ou un rôle `BYPASSRLS`, quel que soit `FORCE ROW LEVEL SECURITY`. L'app tourne sous un rôle dédié `edumanage_app` (créé manuellement, hors migration versionnée — voir `docs/architecture.md#notes-denvironnement-de-développement`), avec uniquement les privilèges DML nécessaires.
 
-**Exceptions RLS documentées** — deux tables ont RLS explicitement désactivée, chacune via une migration dédiée expliquant pourquoi :
+**Exceptions RLS documentées** — quatre tables n'ont jamais ou plus RLS active, chacune via une migration dédiée expliquant pourquoi :
 
 - `TenantDomain` : résoudre un sous-domaine vers un tenant est par nature une lecture _avant_ qu'aucun contexte tenant n'existe (c'est justement ce que cette requête établit). RLS rendrait ce bootstrap impossible.
 - `ParentStudentRelationship` : même catégorie de problème — retrouver le tenant d'un enfant à partir de `(parentUserId, studentId)` doit fonctionner avant que le tenant ne soit connu (§9, portail parent multi-établissement). Le lookup reste sûr car c'est toujours une clé composite exacte, jamais un scan, et le statut `VERIFIED` + l'absence de révocation restent vérifiés par le middleware.
+- `ActivationInvitation` : `redeemActivation` (§8) résout le tenant DEPUIS le code d'activation, avant tout contexte tenant établi — même bootstrap, lookup ponctuel par clé sur un identifiant que l'appelant possède déjà (`20260812090000_activation_invitation_no_rls`).
+- `StudentUserLink` : `requireLinkedStudent` (§26) a le même besoin côté élève que `requireVerifiedStudentRelationship` côté parent — jamais activée dès sa création avec `tenantId` (`20260813090037_student_user_link_tenant_id`), plutôt que désactivée après coup.
 
 Toute future table jouant ce rôle de « point d'entrée de résolution de tenant » doit suivre le même traitement, avec la même justification enregistrée dans sa migration.
 
@@ -188,7 +190,7 @@ Module [communication](../apps/api/src/modules/communication/) (`/api/v1/communi
 Trio [announcement.validation/.service/.controller.ts](../apps/api/src/modules/communication/) ajouté au module `communication` existant. Nouvelle permission **`communication.manage`** (`prisma/seed/data/roles-permissions.ts` et `apps/api/src/test/global-setup.ts`, qui seed indépendamment pour les tests) — accordée à `SCHOOL_OWNER`, `SCHOOL_ADMIN`, `DIRECTOR` ; aucune permission de lecture staff séparée n'existe (créer implique aussi lister/supprimer pour ce périmètre).
 
 - **`POST /communication/announcements`** : `title`/`body`/`audienceScope` (`ALL|STAFF|TEACHERS|PARENTS|STUDENTS|CLASSROOM`, défaut `ALL`) + `classroomId` obligatoire seulement si `audienceScope === CLASSROOM` (refine zod). `GET /communication/announcements` (filtrable `?classroomId=`), `DELETE /communication/announcements/:id` (suppression douce, `deletedAt`).
-- **`listAnnouncementsForStudent(studentId)`** (consommé par le portail parent, voir ci-dessous) : résout la classe courante de l'élève (`requireCurrentEnrollment`, voir §25), filtre `publishedAt <= now`, `expiresAt` nul ou futur, et `audienceScope ∈ {ALL, PARENTS}` ou `CLASSROOM` correspondant à cette classe.
+- **`listAnnouncementsForStudent(studentId, audience)`** (consommé par les deux portails, voir ci-dessous — `audience` vaut `"PARENTS"` ou `"STUDENTS"` selon l'appelant) : résout la classe courante de l'élève (`requireCurrentEnrollment`, voir §25), filtre `publishedAt <= now`, `expiresAt` nul ou futur, et `audienceScope ∈ {ALL, <audience>}` ou `CLASSROOM` correspondant à cette classe.
 
 ## Portail parent — §25 (lecture seule, Phase 8)
 
@@ -197,7 +199,7 @@ Nouveau module [parent-portal](../apps/api/src/modules/parent-portal/), monté s
 - `GET .../attendance` → `attendanceService.listAttendance({studentId, ...})`.
 - `GET .../report-cards`, `GET .../report-cards/:id`, `GET .../report-cards/:id/pdf` → services de `grading`, avec vérification explicite `reportCard.studentId === studentId` (404, jamais 403 — ne jamais confirmer l'existence du bulletin d'un autre élève).
 - `GET .../timetable` → `requireCurrentEnrollment(studentId)` pour la classe/année courantes, puis `timetableService.listTimetables`/`listTimetableEntries`.
-- `GET .../announcements` → `listAnnouncementsForStudent(studentId)`.
+- `GET .../announcements` → `listAnnouncementsForStudent(studentId, "PARENTS")`.
 - `GET .../finance/situation` → `getStudentFinancialSituation(studentId)` (import cross-module depuis `finance`, même convention que `finance` impute déjà `students/student.service.ts`).
 - `GET .../receipts/:receiptId/pdf` → vérifie que la facture du paiement du reçu appartient à `studentId` (404 sinon), réutilise `generateReceiptPdf` tel quel.
 
@@ -206,7 +208,18 @@ Nouveau module [parent-portal](../apps/api/src/modules/parent-portal/), monté s
 - `requireVerifiedStudentRelationship` ([middleware](../apps/api/src/middleware/requireVerifiedStudentRelationship.ts)) peuple désormais aussi `req.tenant` (même forme qu'`enforceTenantScope`) après avoir trouvé la relation vérifiée — les handlers PDF existants (bulletin, reçu) lisent `req.tenant.name` et étaient jusque-là inutilisables hors d'une route `enforceTenantScope`.
 - `requireCurrentEnrollment(studentId)` existait en privé dans `id-card.service.ts` (§19) ; déplacé et exporté depuis `students/student.service.ts`, réutilisé par le timetable, les annonces, et toujours par la carte scolaire.
 
-**Restent hors périmètre** : portail élève (§26), gestion par le parent de son propre abonnement SaaS/factures/préférences de notification (§9 abonnement familial en libre-service — chantier à part touchant le paiement, différé à plusieurs reprises), devoirs/« homework » (aucun modèle au schéma, décision de schéma non prise).
+**Restent hors périmètre** : gestion par le parent de son propre abonnement SaaS/factures/préférences de notification (§9 abonnement familial en libre-service — chantier à part touchant le paiement, différé à plusieurs reprises). Le portail élève (§26) est désormais fait — voir la section dédiée ci-dessous.
+
+## Portail élève — §26 (lecture seule, Phase 8)
+
+Chemin d'accès différent du portail parent : un `Student` devient consultable par un `User` via `StudentUserLink` (créé exclusivement par la rédemption d'un code d'activation catégorie `STUDENT`, §8 — jamais par simple authentification), pas via `ParentStudentRelationship`.
+
+- **Problème bloquant résolu avant de construire le portail** : `requireVerifiedStudentRelationship` peut peupler `req.tenant` uniquement parce que `ParentStudentRelationship` porte déjà `tenantId` (ajouté précisément pour ce bootstrap). `StudentUserLink` n'avait **aucune colonne `tenantId`** — la seule façon de le retrouver aurait été de lire `Student.tenantId` via `rawPrisma`, bloqué par la RLS de `Student` (même bug que celui corrigé pour `ActivationInvitation`). Migration `20260813090037_student_user_link_tenant_id` : ajoute `tenantId` (backfillé depuis `Student.tenantId`), **sans jamais activer RLS** dessus (même raisonnement que `TenantDomain`/`ParentStudentRelationship`/`ActivationInvitation`), ajouté à `TENANT_SCOPED_MODELS` pour le garde applicatif. `redeemActivation` (famille, §8) pose maintenant `tenantId` à la création du lien.
+- **`requireLinkedStudent`** ([middleware](../apps/api/src/middleware/requireLinkedStudent.ts)) : même structure que `requireVerifiedStudentRelationship` — résout `studentId`, vérifie `StudentUserLink.userId === req.user.id` (403 `STUDENT_LINK_NOT_VERIFIED` sinon — pas de statut `VERIFIED` distinct : l'existence du lien EST la vérification), peuple `req.tenant`, verrouille le contexte tenant.
+- **`GET /family/linked-students`** ([student-user-link.service.ts](../apps/api/src/modules/family/student-user-link.service.ts)) : symétrique à `GET /family/children`, devenu trivial maintenant que `StudentUserLink` porte `tenantId` — chaque `Student` lu via `withTenantSession(link.tenantId, …)`, pas de dérogation RLS supplémentaire sur `Student` lui-même (donnée sensible).
+- Nouveau module [student-portal](../apps/api/src/modules/student-portal/), monté sur `/api/v1/student-portal`, chemins imbriqués sous `/students/:studentId/...`, toutes les routes `requireAuth, requireLinkedStudent()` : `GET .../profile` (`getStudent` + `requireCurrentEnrollment`, tolérant — `null` si pas d'inscription active), `GET .../timetable` (même composition que le portail parent), `GET .../report-cards`/`:id`/`:id/pdf` (mêmes services `grading`, même garde d'appartenance 404), `GET .../announcements` (`listAnnouncementsForStudent(studentId, "STUDENTS")`), `GET .../receipts` (nouveau `listReceiptsForStudent`, `finance/student-payment.service.ts`) et `GET .../receipts/:receiptId/pdf` (même garde d'appartenance que le portail parent).
+
+**Restent hors périmètre** : devoirs et dépôt de travaux (aucun modèle `Homework` au schéma, décision de schéma non prise, même exclusion que pour les annonces initialement) ; calendrier dédié (aucun modèle d'événements/jours fériés, déjà noté hors périmètre en §20) ; gestion par l'élève de son propre abonnement SaaS/renouvellement (même chantier différé que pour le parent).
 
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
@@ -234,7 +247,7 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 5 — Gestion de l'établissement** : terminée pour le périmètre retenu (configuration, utilisateurs, personnel, élèves et inscriptions, documents justificatifs, détection de doublons, transferts inter-établissements, import/export CSV, cartes scolaires — voir section dédiée ci-dessus). Restent hors périmètre, par choix : export/import Excel natif, photo sur la carte scolaire.
 - **Phase 6 — Gestion académique** : terminée pour le périmètre retenu. §20 (administration académique), §21 (notes et évaluations) et §22 (présences et discipline) — voir sections dédiées ci-dessus. Restent hors périmètre, par choix : système de notation configurable par tenant, procès-verbaux/conseils de classe.
 - **Phase 7 — Gestion financière** : démarrée. §23 (module financier de l'établissement) en cours par tranches — catégories de frais, grilles tarifaires, cycle de vie de la facture, encaissement espèces (complet/partiel) et reçus PDF, dépenses/catégories de dépenses et caisse (ouverture/clôture), remboursements et situation financière consolidée faits ; paiements électroniques et rapports de recettes/dépenses restent à faire — voir sections dédiées ci-dessus.
-- **Phase 8 — Portails individuels** : démarrée. §8 (rattachement parent/élève), un socle minimal de §28 (notifications `IN_APP` + annonces) et un portail parent en lecture seule (§25 : présences, bulletins, emploi du temps, annonces, finances scolaires) faits — voir sections dédiées ci-dessus. Restent hors périmètre : portail élève (§26), abonnement familial en libre-service (§9), gestion par le parent de son propre abonnement SaaS/factures, canaux EMAIL/SMS/PUSH réels, tickets de support.
+- **Phase 8 — Portails individuels** : démarrée. §8 (rattachement parent/élève), un socle minimal de §28 (notifications `IN_APP` + annonces), et les portails parent (§25) et élève (§26) en lecture seule (présences côté parent, profil/emploi du temps/bulletins/annonces/reçus des deux côtés, finances scolaires côté parent) faits — voir sections dédiées ci-dessus. Restent hors périmètre : abonnement familial en libre-service (§9), gestion par le parent/l'élève de son propre abonnement SaaS/factures, canaux EMAIL/SMS/PUSH réels, tickets de support, devoirs/dépôt de travaux.
 - Phases 9 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement

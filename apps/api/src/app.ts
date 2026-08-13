@@ -18,6 +18,7 @@ import { gradingRouter } from "./modules/grading/grading.routes.js";
 import { parentPortalRouter } from "./modules/parent-portal/parent-portal.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
+import { studentPortalRouter } from "./modules/student-portal/student-portal.routes.js";
 import { studentRouter } from "./modules/students/student.routes.js";
 import { studentTransferRouter } from "./modules/students/transfer.routes.js";
 import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
@@ -55,6 +56,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/family", familyRouter);
   app.use("/api/v1/communication", communicationRouter);
   app.use("/api/v1/parent-portal", parentPortalRouter);
+  app.use("/api/v1/student-portal", studentPortalRouter);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Resource not found" });

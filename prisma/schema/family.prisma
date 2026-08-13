@@ -100,8 +100,12 @@ model ParentStudentRelationship {
 /// Un Student (dossier academique tenant-scope) peut se lier a une identite User
 /// globale. Un meme User peut correspondre a plusieurs Student au fil des
 /// transferts d'etablissement (§10), donc seul studentId est unique ici.
+/// tenantId duplique Student.tenantId : necessaire pour que requireLinkedStudent
+/// (§26) resolve le tenant AVANT tout contexte etabli, sans lire Student (RLS
+/// active) via rawPrisma — meme raison que tenantId sur ParentStudentRelationship.
 model StudentUserLink {
   id        String   @id @default(cuid())
+  tenantId  String
   studentId String   @unique
   userId    String
   linkedAt  DateTime @default(now())
@@ -110,6 +114,7 @@ model StudentUserLink {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([tenantId])
 }
 
 model ActivationInvitation {

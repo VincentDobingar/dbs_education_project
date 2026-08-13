@@ -7,6 +7,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 
 import * as activationController from "./activation-invitation.controller.js";
 import * as relationshipController from "./parent-student-relationship.controller.js";
+import * as studentUserLinkController from "./student-user-link.controller.js";
 
 export const familyRouter: Router = Router();
 
@@ -62,3 +63,4 @@ familyRouter.post(
 // tenant.routes.ts:onboarding.
 familyRouter.post("/activation/redeem", requireAuth, activationController.redeemActivation);
 familyRouter.get("/children", requireAuth, relationshipController.listMyChildren);
+familyRouter.get("/linked-students", requireAuth, studentUserLinkController.listLinkedStudents);

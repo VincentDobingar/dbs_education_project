@@ -146,7 +146,7 @@ export async function redeemActivation(
       }
 
       const studentLink = await tx.studentUserLink.create({
-        data: { studentId: invitation.studentId, userId: actingUserId },
+        data: { tenantId: invitation.tenantId, studentId: invitation.studentId, userId: actingUserId },
       });
       return { beneficiaryCategory: "STUDENT" as const, studentLink };
     }

@@ -1,4 +1,4 @@
-import type { Announcement } from "@prisma/client";
+import type { Announcement, AnnouncementAudience } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
@@ -53,11 +53,15 @@ export async function removeAnnouncement(id: string): Promise<void> {
 }
 
 /**
- * §25 : annonces visibles par un parent pour un enfant donné — audience ALL/PARENTS,
- * ou CLASSROOM si elle correspond à la classe actuelle de l'élève, publiées et non
- * expirées.
+ * §25/§26 : annonces visibles pour un enfant donné, du point de vue d'un parent
+ * (`audience: "PARENTS"`) ou de l'élève lui-même (`"STUDENTS"`) — audience ALL ou
+ * la catégorie du spectateur, ou CLASSROOM si elle correspond à la classe actuelle
+ * de l'élève, publiées et non expirées.
  */
-export async function listAnnouncementsForStudent(studentId: string): Promise<Announcement[]> {
+export async function listAnnouncementsForStudent(
+  studentId: string,
+  audience: Extract<AnnouncementAudience, "PARENTS" | "STUDENTS">,
+): Promise<Announcement[]> {
   const enrollment = await requireCurrentEnrollment(studentId);
   const now = new Date();
 
@@ -69,7 +73,7 @@ export async function listAnnouncementsForStudent(studentId: string): Promise<An
         { OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] },
         {
           OR: [
-            { audienceScope: { in: ["ALL", "PARENTS"] } },
+            { audienceScope: { in: ["ALL", audience] } },
             { audienceScope: "CLASSROOM", classroomId: enrollment.classroomId },
           ],
         },

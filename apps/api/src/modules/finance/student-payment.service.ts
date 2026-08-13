@@ -102,6 +102,17 @@ export async function listPaymentsForInvoice(invoiceId: string): Promise<Student
   });
 }
 
+/** §26 : « consulter ses reçus » côté portail élève. */
+export async function listReceiptsForStudent(
+  studentId: string,
+): Promise<(StudentReceipt & { payment: StudentPayment })[]> {
+  return prisma.studentReceipt.findMany({
+    where: { payment: { invoice: { studentId } } },
+    include: { payment: true },
+    orderBy: { issuedAt: "desc" },
+  });
+}
+
 export async function requireReceipt(id: string): Promise<StudentReceipt & { payment: StudentPayment }> {
   const receipt = await prisma.studentReceipt.findUnique({ where: { id }, include: { payment: true } });
   if (!receipt) {

@@ -66,7 +66,7 @@ export async function getChildTimetable(studentId: string): Promise<TimetableEnt
 }
 
 export async function getChildAnnouncements(studentId: string): Promise<Announcement[]> {
-  return listAnnouncementsForStudent(studentId);
+  return listAnnouncementsForStudent(studentId, "PARENTS");
 }
 
 export async function getChildFinancialSituation(studentId: string): Promise<StudentFinancialSituation> {
