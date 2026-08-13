@@ -59,6 +59,38 @@ export async function requireStudentRecord(id: string): Promise<Student> {
   return student;
 }
 
+export interface CurrentEnrollment {
+  id: string;
+  classroomId: string;
+  classroomName: string;
+  academicYearId: string;
+  academicYearName: string;
+}
+
+/**
+ * Only an actively enrolled student has a current classroom/year — a PROSPECTIVE
+ * student with no Enrollment yet has nothing to derive here (§19). Shared by the ID
+ * card, timetable and announcements lookups (all need "this student's current
+ * classroom" the same way).
+ */
+export async function requireCurrentEnrollment(studentId: string): Promise<CurrentEnrollment> {
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId, deletedAt: null, status: { in: ["ENROLLED", "RE_ENROLLED"] } },
+    orderBy: { enrolledAt: "desc" },
+    include: { classroom: true, academicYear: true },
+  });
+  if (!enrollment) {
+    throw new AppError(400, "STUDENT_NOT_ENROLLED", "Student has no active enrollment");
+  }
+  return {
+    id: enrollment.id,
+    classroomId: enrollment.classroomId,
+    classroomName: enrollment.classroom.name,
+    academicYearId: enrollment.academicYearId,
+    academicYearName: enrollment.academicYear.name,
+  };
+}
+
 export async function createStudent(
   input: CreateStudentInput,
 ): Promise<Omit<Student, "medicalNotes"> & { possibleDuplicates: PossibleDuplicateStudent[] }> {

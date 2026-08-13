@@ -151,7 +151,15 @@ Nouveau module [finance](../apps/api/src/modules/finance/), monté sur `/api/v1/
 - **Caisse** (`CashSession`) : `POST /cash-sessions/open` ouvre une session avec un solde d'ouverture ; une seule session `OPEN` à la fois par périmètre (`campusId` s'il existe, sinon tout le tenant — `campusId` `null` est son propre compartiment), refusé sinon (`CASH_SESSION_ALREADY_OPEN`). `POST /cash-sessions/:id/close` la clôture avec un solde de clôture saisi manuellement, refusé si déjà fermée (`CASH_SESSION_ALREADY_CLOSED`). Contrairement à l'encaissement (§23 tranche 2), ouvrir/fermer une caisse **exige** une fiche `Employee` liée à l'utilisateur (`EMPLOYEE_RECORD_REQUIRED`), même garde-fou que `StudentPayment`.
 - **Limite assumée** : le solde de clôture est saisi par le personnel, pas calculé — `StudentPayment`/`Expense` ne portent pas de `cashSessionId` (le schéma ne prévoit pas ce rattachement), donc aucun rapprochement automatique entre encaissements/dépenses de la période et le comptage en caisse. Un écart éventuel reste une vérification manuelle hors de cette API, pas un contrôle applicatif.
 
-**Restent hors périmètre** (prochaines tranches) : remboursements, paiements électroniques pour les frais scolaires, rattachement `CashSession` aux encaissements/dépenses pour un rapprochement automatique, situation financière consolidée d'un élève, impayés, rapports de recettes/dépenses, export PDF/Excel, génération automatique de factures en masse depuis une grille tarifaire.
+**Restent hors périmètre** (prochaines tranches) : paiements électroniques pour les frais scolaires, rattachement `CashSession` aux encaissements/dépenses pour un rapprochement automatique, rapports de recettes/dépenses, export PDF/Excel, génération automatique de factures en masse depuis une grille tarifaire. Remboursements et situation financière consolidée sont désormais faits — voir la section dédiée ci-dessous.
+
+## Remboursements et situation financière consolidée — §23 tranche 4
+
+Nouveau modèle `StudentPaymentRefund` (`prisma/schema/finance.prisma`, migration `20260812141421_add_student_payment_refund` — RLS activée dans la même migration, même motif que toutes les tables tenant-scoped depuis Phase 2) : append-only, un paiement peut être remboursé partiellement plusieurs fois. `RefundTransaction` (schéma Phase 2) restait structurellement lié à `PaymentTransaction` électronique (FK obligatoire) — inutilisable pour un remboursement espèces sans modifier ce modèle-là ; un modèle dédié était la décision de schéma jusque-là différée.
+
+- **`POST /finance/payments/:paymentId/refunds`** (`finance.write`, [student-payment.service.ts](../apps/api/src/modules/finance/student-payment.service.ts)) : plafonné à `payment.amountCents - somme(refunds existants)` (`REFUND_EXCEEDS_PAYMENT` sinon), exige un `Employee` lié (`EMPLOYEE_RECORD_REQUIRED`, même garde-fou que `recordCashPayment`). Transaction unique (`withTenantSession`) : crée le remboursement, décrémente `StudentInvoice.paidCents`, recalcule le statut (`0 → ISSUED`, sinon `PARTIALLY_PAID`). `GET /finance/payments/:paymentId/refunds` liste l'historique. Une facture `CANCELLED` ne peut structurellement avoir de solde remboursable (garanti par `cancelStudentInvoice`), donc aucune garde spécifique n'était nécessaire pour ce cas.
+- Ça débloque exactement ce que `cancelStudentInvoice` annonçait depuis la tranche 1 (« il faudrait rembourser d'abord ») : un remboursement intégral ramène `paidCents` à 0, et l'annulation redevient possible.
+- **`GET /finance/students/:studentId/financial-situation`** ([financial-situation.service.ts](../apps/api/src/modules/finance/financial-situation.service.ts)) : total facturé/payé/solde restant sur les factures non annulées, plus la liste des impayés — dérivée à la volée (`status ∈ {ISSUED, PARTIALLY_PAID} AND dueAt < now`), pas depuis le statut `OVERDUE` de l'enum, qui reste non piloté (aucun job planifié ajouté, cohérent avec le reste du périmètre minimal du module).
 
 ## Rattachement parent-élève par invitation — §8 (Phase 8 démarrée)
 
@@ -173,7 +181,32 @@ Module [communication](../apps/api/src/modules/communication/) (`/api/v1/communi
 - **Câblage** : `attendance.service.ts:recordRollCall` (une entrée `ABSENT`) et `discipline.service.ts:createIncident` (tout incident créé) appellent `notifyParentsOfStudent` après l'écriture.
 - **Consultation** (`requireAuth` seul, scopé sur `req.user.id` — `Notification` n'est pas un modèle tenant-scoped, un parent peut avoir des notifications de plusieurs établissements) : `GET /communication/notifications` (filtrable `?unreadOnly=true`), `PATCH /communication/notifications/:id/read`.
 
-**Restent hors périmètre** : canaux EMAIL/SMS/PUSH réels, `Announcement` (diffusion générale), `MessageTemplate`/quotas par plan, `SupportTicket`, intégration WhatsApp.
+**Restent hors périmètre** : canaux EMAIL/SMS/PUSH réels, `MessageTemplate`/quotas par plan, `SupportTicket`, intégration WhatsApp. `Announcement` (diffusion générale) est désormais fait — voir la section dédiée ci-dessous.
+
+## Annonces — socle minimal (§28)
+
+Trio [announcement.validation/.service/.controller.ts](../apps/api/src/modules/communication/) ajouté au module `communication` existant. Nouvelle permission **`communication.manage`** (`prisma/seed/data/roles-permissions.ts` et `apps/api/src/test/global-setup.ts`, qui seed indépendamment pour les tests) — accordée à `SCHOOL_OWNER`, `SCHOOL_ADMIN`, `DIRECTOR` ; aucune permission de lecture staff séparée n'existe (créer implique aussi lister/supprimer pour ce périmètre).
+
+- **`POST /communication/announcements`** : `title`/`body`/`audienceScope` (`ALL|STAFF|TEACHERS|PARENTS|STUDENTS|CLASSROOM`, défaut `ALL`) + `classroomId` obligatoire seulement si `audienceScope === CLASSROOM` (refine zod). `GET /communication/announcements` (filtrable `?classroomId=`), `DELETE /communication/announcements/:id` (suppression douce, `deletedAt`).
+- **`listAnnouncementsForStudent(studentId)`** (consommé par le portail parent, voir ci-dessous) : résout la classe courante de l'élève (`requireCurrentEnrollment`, voir §25), filtre `publishedAt <= now`, `expiresAt` nul ou futur, et `audienceScope ∈ {ALL, PARENTS}` ou `CLASSROOM` correspondant à cette classe.
+
+## Portail parent — §25 (lecture seule, Phase 8)
+
+Nouveau module [parent-portal](../apps/api/src/modules/parent-portal/), monté sur `/api/v1/parent-portal`. Toutes les routes : `requireAuth, requireVerifiedStudentRelationship()` (jamais `enforceTenantScope`/`requireTenantMembership` — le parent n'est membre d'aucun tenant côté enfant) ; chemins imbriqués sous `/children/:studentId/...` puisque le résolveur par défaut du middleware lit `req.params.studentId`. Composé uniquement d'appels vers les services déjà existants (`parent-portal.service.ts` n'a aucune logique métier propre) :
+
+- `GET .../attendance` → `attendanceService.listAttendance({studentId, ...})`.
+- `GET .../report-cards`, `GET .../report-cards/:id`, `GET .../report-cards/:id/pdf` → services de `grading`, avec vérification explicite `reportCard.studentId === studentId` (404, jamais 403 — ne jamais confirmer l'existence du bulletin d'un autre élève).
+- `GET .../timetable` → `requireCurrentEnrollment(studentId)` pour la classe/année courantes, puis `timetableService.listTimetables`/`listTimetableEntries`.
+- `GET .../announcements` → `listAnnouncementsForStudent(studentId)`.
+- `GET .../finance/situation` → `getStudentFinancialSituation(studentId)` (import cross-module depuis `finance`, même convention que `finance` impute déjà `students/student.service.ts`).
+- `GET .../receipts/:receiptId/pdf` → vérifie que la facture du paiement du reçu appartient à `studentId` (404 sinon), réutilise `generateReceiptPdf` tel quel.
+
+**Deux changements partagés nécessaires pour rendre tout ça réutilisable sans dupliquer de logique** :
+
+- `requireVerifiedStudentRelationship` ([middleware](../apps/api/src/middleware/requireVerifiedStudentRelationship.ts)) peuple désormais aussi `req.tenant` (même forme qu'`enforceTenantScope`) après avoir trouvé la relation vérifiée — les handlers PDF existants (bulletin, reçu) lisent `req.tenant.name` et étaient jusque-là inutilisables hors d'une route `enforceTenantScope`.
+- `requireCurrentEnrollment(studentId)` existait en privé dans `id-card.service.ts` (§19) ; déplacé et exporté depuis `students/student.service.ts`, réutilisé par le timetable, les annonces, et toujours par la carte scolaire.
+
+**Restent hors périmètre** : portail élève (§26), gestion par le parent de son propre abonnement SaaS/factures/préférences de notification (§9 abonnement familial en libre-service — chantier à part touchant le paiement, différé à plusieurs reprises), devoirs/« homework » (aucun modèle au schéma, décision de schéma non prise).
 
 ## Chaîne d'autorisation backend (implémentée, Phase 2)
 
@@ -200,8 +233,8 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 4 — Site public** : terminée (accueil, tarifs, contact, pages légales, assistant d'inscription établissement de bout en bout, vérifié en conditions réelles contre l'API). Restent hors périmètre : endpoint backend pour le formulaire de contact, connexion effective à l'espace créé (le portail établissement lui-même est Phase 5).
 - **Phase 5 — Gestion de l'établissement** : terminée pour le périmètre retenu (configuration, utilisateurs, personnel, élèves et inscriptions, documents justificatifs, détection de doublons, transferts inter-établissements, import/export CSV, cartes scolaires — voir section dédiée ci-dessus). Restent hors périmètre, par choix : export/import Excel natif, photo sur la carte scolaire.
 - **Phase 6 — Gestion académique** : terminée pour le périmètre retenu. §20 (administration académique), §21 (notes et évaluations) et §22 (présences et discipline) — voir sections dédiées ci-dessus. Restent hors périmètre, par choix : système de notation configurable par tenant, procès-verbaux/conseils de classe.
-- **Phase 7 — Gestion financière** : démarrée. §23 (module financier de l'établissement) en cours par tranches — catégories de frais, grilles tarifaires, cycle de vie de la facture (brouillon → émise → annulée), encaissement espèces (complet/partiel) et reçus PDF, dépenses/catégories de dépenses et caisse (ouverture/clôture) faits ; remboursements, paiements électroniques, situation financière consolidée et rapports restent à faire — voir sections dédiées ci-dessus.
-- **Phase 8 — Portails individuels** : démarrée. §8 (rattachement parent/élève par invitation + code d'activation) et un socle minimal de §28 (notifications `IN_APP` pour absences/incidents) faits — voir sections dédiées ci-dessus. Restent hors périmètre : portail parent complet (§25), portail élève (§26), abonnement familial en libre-service (§9), accès inter-tenant au-delà de la lecture déjà couverte, canaux EMAIL/SMS/PUSH réels, annonces, tickets de support.
+- **Phase 7 — Gestion financière** : démarrée. §23 (module financier de l'établissement) en cours par tranches — catégories de frais, grilles tarifaires, cycle de vie de la facture, encaissement espèces (complet/partiel) et reçus PDF, dépenses/catégories de dépenses et caisse (ouverture/clôture), remboursements et situation financière consolidée faits ; paiements électroniques et rapports de recettes/dépenses restent à faire — voir sections dédiées ci-dessus.
+- **Phase 8 — Portails individuels** : démarrée. §8 (rattachement parent/élève), un socle minimal de §28 (notifications `IN_APP` + annonces) et un portail parent en lecture seule (§25 : présences, bulletins, emploi du temps, annonces, finances scolaires) faits — voir sections dédiées ci-dessus. Restent hors périmètre : portail élève (§26), abonnement familial en libre-service (§9), gestion par le parent de son propre abonnement SaaS/factures, canaux EMAIL/SMS/PUSH réels, tickets de support.
 - Phases 9 à 11 : selon le plan validé, non commencées.
 
 ## Notes d'environnement de développement

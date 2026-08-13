@@ -201,6 +201,17 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const communicationManagePermission = await prisma.permission.upsert({
+    where: { code: "communication.manage" },
+    update: {},
+    create: {
+      code: "communication.manage",
+      module: "communication",
+      descriptionFr: "Gérer les annonces",
+      descriptionEn: "Manage announcements",
+    },
+  });
+
   for (const permission of [
     studentsReadPermission,
     gradesReadPermission,
@@ -229,6 +240,7 @@ export default async function setup(): Promise<void> {
     gradesPublishPermission,
     attendanceReadPermission,
     disciplineReadPermission,
+    communicationManagePermission,
   ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },

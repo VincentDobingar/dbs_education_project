@@ -47,6 +47,13 @@ export function requireVerifiedStudentRelationship(
         return;
       }
 
+      // Same shape enforceTenantScope sets — lets handlers written for staff routes
+      // (e.g. PDF generation reading req.tenant.name) be reused unmodified here.
+      const tenant = await rawPrisma.tenant.findUnique({ where: { id: relationship.tenantId } });
+      if (tenant) {
+        req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status };
+      }
+
       runWithContext({ tenantId: relationship.tenantId, userId: req.user.id }, () => {
         next();
       });

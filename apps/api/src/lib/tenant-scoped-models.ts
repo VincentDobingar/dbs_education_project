@@ -35,6 +35,7 @@ export const TENANT_SCOPED_MODELS = [
   "ExpenseCategory",
   "Expense",
   "CashSession",
+  "StudentPaymentRefund",
   "AssessmentType",
   "Assessment",
   "Grade",

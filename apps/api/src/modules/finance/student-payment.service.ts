@@ -1,4 +1,4 @@
-import type { StudentPayment, StudentReceipt } from "@prisma/client";
+import type { StudentPayment, StudentPaymentRefund, StudentReceipt } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma, withTenantSession } from "../../lib/prisma.js";
@@ -6,7 +6,7 @@ import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { generateReference } from "../payments/reference.js";
 
 import { requireStudentInvoice } from "./student-invoice.service.js";
-import type { RecordCashPaymentInput } from "./student-payment.validation.js";
+import type { RecordCashPaymentInput, RefundStudentPaymentInput } from "./student-payment.validation.js";
 
 export type StudentPaymentWithReceipt = StudentPayment & { receipt: StudentReceipt | null };
 
@@ -108,4 +108,79 @@ export async function requireReceipt(id: string): Promise<StudentReceipt & { pay
     throw new AppError(404, "RECEIPT_NOT_FOUND", `Receipt not found: ${id}`);
   }
   return receipt;
+}
+
+export async function requireStudentPayment(id: string): Promise<StudentPayment> {
+  const payment = await prisma.studentPayment.findUnique({ where: { id } });
+  if (!payment) {
+    throw new AppError(404, "PAYMENT_NOT_FOUND", `Student payment not found: ${id}`);
+  }
+  return payment;
+}
+
+/**
+ * Append-only refund trail (§23) : a payment can be refunded partially, several
+ * times, capped at what hasn't been refunded yet. Unblocks cancelStudentInvoice's
+ * "refund the payments first" guard once an invoice's paidCents reaches 0.
+ */
+export async function refundStudentPayment(
+  paymentId: string,
+  input: RefundStudentPaymentInput,
+  actingUserId: string,
+): Promise<StudentPaymentRefund> {
+  const payment = await requireStudentPayment(paymentId);
+
+  const existingRefunds = await prisma.studentPaymentRefund.findMany({
+    where: { studentPaymentId: paymentId },
+  });
+  const alreadyRefundedCents = existingRefunds.reduce((sum, refund) => sum + refund.amountCents, 0);
+  const refundableCents = payment.amountCents - alreadyRefundedCents;
+  if (input.amountCents > refundableCents) {
+    throw new AppError(
+      400,
+      "REFUND_EXCEEDS_PAYMENT",
+      `Refund of ${input.amountCents} exceeds the refundable amount of ${refundableCents}`,
+    );
+  }
+
+  const refundedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!refundedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can refund a payment",
+    );
+  }
+
+  const tenantId = requireCurrentTenantId();
+
+  return withTenantSession(tenantId, async (tx) => {
+    const refund = await tx.studentPaymentRefund.create({
+      data: {
+        tenantId,
+        studentPaymentId: paymentId,
+        amountCents: input.amountCents,
+        reason: input.reason,
+        refundedByEmployeeId,
+      },
+    });
+
+    const invoice = await tx.studentInvoice.findUniqueOrThrow({ where: { id: payment.studentInvoiceId } });
+    const newPaidCents = Math.max(invoice.paidCents - input.amountCents, 0);
+
+    await tx.studentInvoice.update({
+      where: { id: payment.studentInvoiceId },
+      data: { paidCents: newPaidCents, status: newPaidCents === 0 ? "ISSUED" : "PARTIALLY_PAID" },
+    });
+
+    return refund;
+  });
+}
+
+export async function listRefundsForPayment(paymentId: string): Promise<StudentPaymentRefund[]> {
+  await requireStudentPayment(paymentId);
+  return prisma.studentPaymentRefund.findMany({
+    where: { studentPaymentId: paymentId },
+    orderBy: { refundedAt: "desc" },
+  });
 }

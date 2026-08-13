@@ -15,6 +15,7 @@ import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { familyRouter } from "./modules/family/family.routes.js";
 import { financeRouter } from "./modules/finance/finance.routes.js";
 import { gradingRouter } from "./modules/grading/grading.routes.js";
+import { parentPortalRouter } from "./modules/parent-portal/parent-portal.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { studentRouter } from "./modules/students/student.routes.js";
@@ -53,6 +54,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/tenant-users", tenantUserRouter);
   app.use("/api/v1/family", familyRouter);
   app.use("/api/v1/communication", communicationRouter);
+  app.use("/api/v1/parent-portal", parentPortalRouter);
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ code: "NOT_FOUND", message: "Resource not found" });

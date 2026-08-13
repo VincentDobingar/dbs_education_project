@@ -4,7 +4,7 @@ import { AppError } from "../../lib/errors.js";
 
 import { generateReceiptPdf } from "./receipt-pdf.service.js";
 import * as studentPaymentService from "./student-payment.service.js";
-import { recordCashPaymentSchema } from "./student-payment.validation.js";
+import { recordCashPaymentSchema, refundStudentPaymentSchema } from "./student-payment.validation.js";
 
 export function recordCashPayment(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
@@ -32,6 +32,28 @@ export function getReceipt(req: Request, res: Response, next: NextFunction): voi
   void (async () => {
     const receipt = await studentPaymentService.requireReceipt(req.params.id as string);
     res.status(200).json(receipt);
+  })().catch(next);
+}
+
+export function refundStudentPayment(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.user) {
+      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
+    }
+    const input = refundStudentPaymentSchema.parse(req.body);
+    const refund = await studentPaymentService.refundStudentPayment(
+      req.params.paymentId as string,
+      input,
+      req.user.id,
+    );
+    res.status(201).json(refund);
+  })().catch(next);
+}
+
+export function listRefundsForPayment(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const refunds = await studentPaymentService.listRefundsForPayment(req.params.paymentId as string);
+    res.status(200).json(refunds);
   })().catch(next);
 }
 

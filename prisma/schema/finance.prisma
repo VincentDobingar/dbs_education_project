@@ -107,9 +107,27 @@ model StudentPayment {
   invoice StudentInvoice @relation(fields: [studentInvoiceId], references: [id])
 
   receipt StudentReceipt?
+  refunds StudentPaymentRefund[]
 
   @@index([tenantId])
   @@index([studentInvoiceId])
+}
+
+/// Append-only : un paiement peut etre rembourse partiellement plusieurs fois (§23).
+model StudentPaymentRefund {
+  id                   String   @id @default(cuid())
+  tenantId             String
+  studentPaymentId     String
+  amountCents          Int
+  reason               String
+  refundedByEmployeeId String?
+  refundedAt           DateTime @default(now())
+  createdAt            DateTime @default(now())
+
+  studentPayment StudentPayment @relation(fields: [studentPaymentId], references: [id])
+
+  @@index([tenantId])
+  @@index([studentPaymentId])
 }
 
 model StudentReceipt {

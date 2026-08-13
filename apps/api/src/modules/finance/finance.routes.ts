@@ -47,9 +47,25 @@ financeRouter.get(
   readFinance,
   studentPaymentController.listPaymentsForInvoice,
 );
+financeRouter.get(
+  "/students/:studentId/financial-situation",
+  readFinance,
+  studentInvoiceController.getStudentFinancialSituationHandler,
+);
 
 financeRouter.get("/receipts/:id", readFinance, studentPaymentController.getReceipt);
 financeRouter.get("/receipts/:id/pdf", readFinance, studentPaymentController.getReceiptPdf);
+
+financeRouter.post(
+  "/payments/:paymentId/refunds",
+  writeFinance,
+  studentPaymentController.refundStudentPayment,
+);
+financeRouter.get(
+  "/payments/:paymentId/refunds",
+  readFinance,
+  studentPaymentController.listRefundsForPayment,
+);
 
 financeRouter.post("/expense-categories", writeFinance, expenseCategoryController.createExpenseCategory);
 financeRouter.get("/expense-categories", readFinance, expenseCategoryController.listExpenseCategories);

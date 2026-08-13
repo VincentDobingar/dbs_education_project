@@ -119,6 +119,12 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer le support (plateforme)",
     descriptionEn: "Manage support (platform)",
   },
+  {
+    code: "communication.manage",
+    module: "communication",
+    descriptionFr: "Gérer les annonces",
+    descriptionEn: "Manage announcements",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -144,6 +150,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "hr.manage",
     "tenant.settings.manage",
     "subscriptions.manage",
+    "communication.manage",
   ],
   SCHOOL_ADMIN: [
     "students.read",
@@ -153,6 +160,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "finance.read",
     "tenant.settings.manage",
+    "communication.manage",
   ],
   DIRECTOR: [
     "students.read",
@@ -162,6 +170,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "discipline.write",
     "finance.read",
+    "communication.manage",
   ],
   ACADEMIC_DIRECTOR: [
     "students.read",
