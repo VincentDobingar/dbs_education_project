@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
 import * as auditLogController from "./audit-log.controller.js";
+import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
 
@@ -67,4 +68,56 @@ platformAdminRouter.post(
   requireAuth,
   managePlatform,
   subscriptionAdminController.extendTrial,
+);
+
+platformAdminRouter.get("/countries", requireAuth, readPlatform, referenceDataAdminController.listCountries);
+platformAdminRouter.post(
+  "/countries",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.createCountry,
+);
+platformAdminRouter.patch(
+  "/countries/:id",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.updateCountry,
+);
+
+platformAdminRouter.get(
+  "/currencies",
+  requireAuth,
+  readPlatform,
+  referenceDataAdminController.listCurrencies,
+);
+platformAdminRouter.post(
+  "/currencies",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.createCurrency,
+);
+platformAdminRouter.patch(
+  "/currencies/:id",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.updateCurrency,
+);
+
+platformAdminRouter.get(
+  "/payment-providers",
+  requireAuth,
+  readPlatform,
+  referenceDataAdminController.listPaymentProviders,
+);
+platformAdminRouter.post(
+  "/payment-providers",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.createPaymentProvider,
+);
+platformAdminRouter.patch(
+  "/payment-providers/:id",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.updatePaymentProvider,
 );
