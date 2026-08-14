@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
 import * as auditLogController from "./audit-log.controller.js";
+import * as messageTemplateAdminController from "./message-template-admin.controller.js";
 import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
@@ -184,4 +185,29 @@ platformAdminRouter.post(
   requireAuth,
   manageSupportTickets,
   supportTicketAdminController.addSupportTicketMessage,
+);
+
+platformAdminRouter.get(
+  "/message-templates",
+  requireAuth,
+  readPlatform,
+  messageTemplateAdminController.listMessageTemplates,
+);
+platformAdminRouter.post(
+  "/message-templates",
+  requireAuth,
+  managePlatform,
+  messageTemplateAdminController.createMessageTemplate,
+);
+platformAdminRouter.patch(
+  "/message-templates/:id",
+  requireAuth,
+  managePlatform,
+  messageTemplateAdminController.updateMessageTemplate,
+);
+platformAdminRouter.delete(
+  "/message-templates/:id",
+  requireAuth,
+  managePlatform,
+  messageTemplateAdminController.deleteMessageTemplate,
 );
