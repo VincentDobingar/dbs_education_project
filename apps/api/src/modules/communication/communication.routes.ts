@@ -7,6 +7,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 
 import * as announcementController from "./announcement.controller.js";
 import * as notificationController from "./notification.controller.js";
+import * as supportTicketController from "./support-ticket.controller.js";
 
 export const communicationRouter: Router = Router();
 
@@ -47,4 +48,35 @@ communicationRouter.delete(
   requireTenantMembership,
   manageCommunication,
   announcementController.removeAnnouncement,
+);
+
+// Tickets de support (§31) : tout membre du tenant peut ouvrir un ticket et suivre
+// ses propres tickets — geste self-service de base, pas de permission dédiée.
+communicationRouter.post(
+  "/support-tickets",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  supportTicketController.createSupportTicket,
+);
+communicationRouter.get(
+  "/support-tickets",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  supportTicketController.listMyTickets,
+);
+communicationRouter.get(
+  "/support-tickets/:id",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  supportTicketController.getMyTicket,
+);
+communicationRouter.post(
+  "/support-tickets/:id/messages",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  supportTicketController.addTicketMessage,
 );

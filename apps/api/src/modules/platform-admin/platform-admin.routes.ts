@@ -7,6 +7,7 @@ import * as auditLogController from "./audit-log.controller.js";
 import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
+import * as supportTicketAdminController from "./support-ticket-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
 
 export const platformAdminRouter: Router = Router();
@@ -16,6 +17,18 @@ export const platformAdminRouter: Router = Router();
 // à un tenant précis.
 const readPlatform = requirePlatformRole("SUPER_ADMIN", "PLATFORM_ADMIN", "PLATFORM_AUDITOR");
 const managePlatform = requirePlatformRole("SUPER_ADMIN", "PLATFORM_ADMIN");
+
+// Tickets de support : le seed (prisma/seed/data/roles-permissions.ts) n'accorde la
+// permission platform.support.manage qu'à SUPER_ADMIN et SUPPORT_AGENT (pas
+// PLATFORM_ADMIN) — gardes dédiées plutôt que readPlatform/managePlatform pour
+// respecter cette intention.
+const readPlatformSupport = requirePlatformRole(
+  "SUPER_ADMIN",
+  "PLATFORM_ADMIN",
+  "PLATFORM_AUDITOR",
+  "SUPPORT_AGENT",
+);
+const manageSupportTickets = requirePlatformRole("SUPER_ADMIN", "SUPPORT_AGENT");
 
 platformAdminRouter.get("/tenants", requireAuth, readPlatform, tenantAdminController.listPlatformTenants);
 platformAdminRouter.get("/tenants/:id", requireAuth, readPlatform, tenantAdminController.getPlatformTenant);
@@ -140,4 +153,35 @@ platformAdminRouter.patch(
   requireAuth,
   managePlatform,
   promotionCodeAdminController.updatePromotionCode,
+);
+
+platformAdminRouter.get(
+  "/support-tickets",
+  requireAuth,
+  readPlatformSupport,
+  supportTicketAdminController.listSupportTickets,
+);
+platformAdminRouter.get(
+  "/support-tickets/:id",
+  requireAuth,
+  readPlatformSupport,
+  supportTicketAdminController.getSupportTicket,
+);
+platformAdminRouter.post(
+  "/support-tickets/:id/assign",
+  requireAuth,
+  manageSupportTickets,
+  supportTicketAdminController.assignSupportTicket,
+);
+platformAdminRouter.patch(
+  "/support-tickets/:id/status",
+  requireAuth,
+  manageSupportTickets,
+  supportTicketAdminController.updateSupportTicketStatus,
+);
+platformAdminRouter.post(
+  "/support-tickets/:id/messages",
+  requireAuth,
+  manageSupportTickets,
+  supportTicketAdminController.addSupportTicketMessage,
 );

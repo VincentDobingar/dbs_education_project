@@ -73,6 +73,16 @@ export default async function setup(): Promise<void> {
       scope: "PLATFORM",
     },
   });
+  await prisma.role.upsert({
+    where: { code: "SUPPORT_AGENT" },
+    update: {},
+    create: {
+      code: "SUPPORT_AGENT",
+      nameFr: "Agent support",
+      nameEn: "Support Agent",
+      scope: "PLATFORM",
+    },
+  });
 
   const studentsReadPermission = await prisma.permission.upsert({
     where: { code: "students.read" },
