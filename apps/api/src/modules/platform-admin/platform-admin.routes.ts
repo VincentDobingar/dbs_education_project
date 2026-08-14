@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
 import * as auditLogController from "./audit-log.controller.js";
+import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
@@ -120,4 +121,23 @@ platformAdminRouter.patch(
   requireAuth,
   managePlatform,
   referenceDataAdminController.updatePaymentProvider,
+);
+
+platformAdminRouter.get(
+  "/promotion-codes",
+  requireAuth,
+  readPlatform,
+  promotionCodeAdminController.listPromotionCodes,
+);
+platformAdminRouter.post(
+  "/promotion-codes",
+  requireAuth,
+  managePlatform,
+  promotionCodeAdminController.createPromotionCode,
+);
+platformAdminRouter.patch(
+  "/promotion-codes/:id",
+  requireAuth,
+  managePlatform,
+  promotionCodeAdminController.updatePromotionCode,
 );
