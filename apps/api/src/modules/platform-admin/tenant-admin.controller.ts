@@ -1,25 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { getPlatformRoleCodes } from "../../lib/authorization.js";
-import { AppError } from "../../lib/errors.js";
-
+import { resolveActor } from "./platform-actor.js";
 import * as tenantAdminService from "./tenant-admin.service.js";
 import { justifiedActionSchema, listPlatformTenantsQuerySchema } from "./tenant-admin.validation.js";
-
-async function resolveActor(
-  req: Request,
-  justification: string,
-): Promise<{ actorUserId: string; actorRoleCode?: string; justification: string }> {
-  if (!req.user) {
-    throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
-  }
-  const roleCodes = await getPlatformRoleCodes(req.user.id);
-  return {
-    actorUserId: req.user.id,
-    ...(roleCodes[0] ? { actorRoleCode: roleCodes[0] } : {}),
-    justification,
-  };
-}
 
 export function listPlatformTenants(req: Request, res: Response, next: NextFunction): void {
   void (async () => {

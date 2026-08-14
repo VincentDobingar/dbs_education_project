@@ -4,6 +4,7 @@ import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma } from "../../lib/prisma.js";
 
+import type { PlatformActor } from "./platform-actor.js";
 import type { ListPlatformTenantsQuery } from "./tenant-admin.validation.js";
 
 /** Lecture cross-tenant légitime (§31) : la super-administration voit tous les tenants. */
@@ -30,12 +31,6 @@ export async function requirePlatformTenant(id: string): Promise<Tenant> {
     throw new AppError(404, "TENANT_NOT_FOUND", `Tenant not found: ${id}`);
   }
   return tenant;
-}
-
-export interface PlatformActor {
-  actorUserId: string;
-  actorRoleCode?: string;
-  justification: string;
 }
 
 const SUSPENDABLE_STATUSES = new Set(["VERIFIED", "TRIAL", "ACTIVE"]);

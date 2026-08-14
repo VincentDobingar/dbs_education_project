@@ -4,6 +4,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
 import * as auditLogController from "./audit-log.controller.js";
+import * as subscriptionAdminController from "./subscription-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
 
 export const platformAdminRouter: Router = Router();
@@ -42,3 +43,28 @@ platformAdminRouter.post(
 );
 
 platformAdminRouter.get("/audit-logs", requireAuth, readPlatform, auditLogController.listAuditLogs);
+
+platformAdminRouter.get(
+  "/subscriptions",
+  requireAuth,
+  readPlatform,
+  subscriptionAdminController.listPlatformSubscriptions,
+);
+platformAdminRouter.get(
+  "/subscriptions/:id",
+  requireAuth,
+  readPlatform,
+  subscriptionAdminController.getPlatformSubscription,
+);
+platformAdminRouter.post(
+  "/subscriptions/:id/transition",
+  requireAuth,
+  managePlatform,
+  subscriptionAdminController.forceTransition,
+);
+platformAdminRouter.post(
+  "/subscriptions/:id/extend-trial",
+  requireAuth,
+  managePlatform,
+  subscriptionAdminController.extendTrial,
+);
