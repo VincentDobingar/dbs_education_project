@@ -109,9 +109,11 @@
   "signup.school.subdomainHint": "Your space will be available at {{subdomain}}.edumanage.africa",
   "signup.plan.label": "Selected plan",
   "signup.plan.skip": "Choose a plan later",
+  "signup.plan.promoCode.label": "Promo code (optional)",
   "signup.review.title": "Review your information",
   "signup.success.title": "Your space has been created",
   "signup.success.subtitle": "Your school is pending verification. You can already sign in to your space.",
   "signup.error.subdomainTaken": "This subdomain is already taken, please choose another one.",
+  "signup.error.promoCodeInvalid": "This promo code is invalid, expired, or does not apply to this plan.",
   "signup.error.generic": "Something went wrong. Please try again."
 }

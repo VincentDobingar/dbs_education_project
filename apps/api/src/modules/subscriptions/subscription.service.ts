@@ -34,6 +34,66 @@ async function findOrCreateOwner(tx: Tx, ownerType: SubscriberCategory, ownerRef
 }
 
 /**
+ * Validates a promotion code against the subscription it is being redeemed for
+ * (§31: PromotionCode CRUD is super-admin only, but consuming one during a real
+ * signup/subscription flow is what makes redemptionCount meaningful) and, if
+ * valid, records the PromotionRedemption and bumps the counter — all inside the
+ * caller's transaction so a failed redemption rolls back the subscription too.
+ */
+async function redeemPromotionCode(
+  tx: Tx,
+  code: string,
+  ownerType: SubscriberCategory,
+  subscriptionId: string,
+  redeemedByUserId: string | undefined,
+): Promise<void> {
+  const promotionCode = await tx.promotionCode.findUnique({ where: { code } });
+  if (!promotionCode) {
+    throw new AppError(404, "PROMOTION_CODE_NOT_FOUND", `Unknown promotion code: ${code}`);
+  }
+  if (!promotionCode.isActive) {
+    throw new AppError(409, "PROMOTION_CODE_INACTIVE", `Promotion code is not active: ${code}`);
+  }
+
+  const now = new Date();
+  if (promotionCode.startsAt && now < promotionCode.startsAt) {
+    throw new AppError(409, "PROMOTION_CODE_NOT_STARTED", `Promotion code is not yet active: ${code}`);
+  }
+  if (promotionCode.endsAt && now > promotionCode.endsAt) {
+    throw new AppError(409, "PROMOTION_CODE_EXPIRED", `Promotion code has expired: ${code}`);
+  }
+  if (promotionCode.applicableCategory && promotionCode.applicableCategory !== ownerType) {
+    throw new AppError(
+      422,
+      "PROMOTION_CODE_CATEGORY_MISMATCH",
+      `Promotion code ${code} does not apply to category ${ownerType}`,
+    );
+  }
+  if (
+    promotionCode.maxRedemptions !== null &&
+    promotionCode.redemptionCount >= promotionCode.maxRedemptions
+  ) {
+    throw new AppError(
+      409,
+      "PROMOTION_CODE_EXHAUSTED",
+      `Promotion code has reached its redemption limit: ${code}`,
+    );
+  }
+
+  await tx.promotionRedemption.create({
+    data: {
+      promotionCodeId: promotionCode.id,
+      subscriptionId,
+      ...(redeemedByUserId ? { redeemedByUserId } : {}),
+    },
+  });
+  await tx.promotionCode.update({
+    where: { id: promotionCode.id },
+    data: { redemptionCount: { increment: 1 } },
+  });
+}
+
+/**
  * Recomputes Entitlement rows from the plan's PlanFeature list. Called on every
  * transition (§6: "les droits doivent être recalculés après chaque changement")
  * — controllers must never derive access from the plan directly, only from this
@@ -69,6 +129,8 @@ export interface CreateDraftSubscriptionInput {
   planCode: string;
   fundingSource: Subscription["fundingSource"];
   billingPeriod: Subscription["billingPeriod"];
+  promoCode?: string;
+  redeemedByUserId?: string;
 }
 
 export async function createDraftSubscription(input: CreateDraftSubscriptionInput): Promise<Subscription> {
@@ -102,6 +164,16 @@ export async function createDraftSubscription(input: CreateDraftSubscriptionInpu
     await tx.subscriptionEvent.create({
       data: { subscriptionId: subscription.id, toStatus: "DRAFT" },
     });
+
+    if (input.promoCode) {
+      await redeemPromotionCode(
+        tx,
+        input.promoCode,
+        input.ownerType,
+        subscription.id,
+        input.redeemedByUserId,
+      );
+    }
 
     return subscription;
   });

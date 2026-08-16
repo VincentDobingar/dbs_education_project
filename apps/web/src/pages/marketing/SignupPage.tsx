@@ -36,6 +36,7 @@ const signupSchema = z.object({
   city: z.string().optional(),
   subdomain: z.string().min(3).max(63).regex(SUBDOMAIN_PATTERN),
   planCode: z.string().optional(),
+  promoCode: z.string().optional(),
 });
 
 type SignupValues = z.infer<typeof signupSchema>;
@@ -43,7 +44,7 @@ type SignupValues = z.infer<typeof signupSchema>;
 const STEP_FIELDS: Record<number, (keyof SignupValues)[]> = {
   0: ["email", "password", "firstName", "lastName"],
   1: ["schoolName", "ownershipType", "countryIsoCode", "city", "subdomain"],
-  2: ["planCode"],
+  2: ["planCode", "promoCode"],
 };
 
 const STEP_KEYS = [
@@ -104,6 +105,7 @@ export function SignupPage(): ReactNode {
           subdomain: formValues.subdomain,
           ...(formValues.city ? { city: formValues.city } : {}),
           ...(formValues.planCode ? { planCode: formValues.planCode, billingPeriod: "MONTHLY" } : {}),
+          ...(formValues.planCode && formValues.promoCode ? { promoCode: formValues.promoCode } : {}),
         },
         tokens.accessToken,
       );
@@ -112,6 +114,11 @@ export function SignupPage(): ReactNode {
       if (error instanceof ApiError && error.code === "SUBDOMAIN_TAKEN") {
         setSubmitError(t("signup.error.subdomainTaken"));
         setStep(1);
+        return;
+      }
+      if (error instanceof ApiError && error.code.startsWith("PROMOTION_CODE_")) {
+        setSubmitError(t("signup.error.promoCodeInvalid"));
+        setStep(2);
         return;
       }
       setSubmitError(t("signup.error.generic"));
@@ -205,6 +212,11 @@ export function SignupPage(): ReactNode {
               <input type="radio" value="" defaultChecked {...register("planCode")} />
               {t("signup.plan.skip")}
             </label>
+            {values.planCode ? (
+              <Field label={t("signup.plan.promoCode.label")}>
+                <input type="text" className="input" {...register("promoCode")} />
+              </Field>
+            ) : null}
           </fieldset>
         ) : null}
 

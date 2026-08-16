@@ -43,6 +43,8 @@ export function createSchoolSubscription(req: Request, res: Response, next: Next
       planCode: input.planCode,
       fundingSource: "SELF_PAID",
       billingPeriod: input.billingPeriod,
+      ...(input.promoCode ? { promoCode: input.promoCode } : {}),
+      ...(req.user ? { redeemedByUserId: req.user.id } : {}),
     });
 
     res.status(201).json(subscription);

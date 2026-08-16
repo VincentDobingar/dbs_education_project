@@ -85,6 +85,7 @@ export async function onboardTenant(userId: string, input: OnboardTenantInput): 
       planCode: input.planCode,
       fundingSource: "SELF_PAID",
       billingPeriod: input.billingPeriod ?? "MONTHLY",
+      ...(input.promoCode ? { promoCode: input.promoCode, redeemedByUserId: userId } : {}),
     });
   }
 

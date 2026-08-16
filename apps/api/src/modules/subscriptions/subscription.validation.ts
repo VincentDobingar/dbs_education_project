@@ -5,6 +5,7 @@ const BILLING_PERIODS = ["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL", "SCHOOL
 export const createSchoolSubscriptionSchema = z.object({
   planCode: z.string().min(1),
   billingPeriod: z.enum(BILLING_PERIODS),
+  promoCode: z.string().min(1).optional(),
 });
 
 export const cancelSubscriptionSchema = z.object({

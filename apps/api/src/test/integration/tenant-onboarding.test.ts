@@ -11,8 +11,13 @@ import { buildTestApp, type TestResponseBody } from "../test-app.js";
 describe("tenant onboarding (§14)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
+  const createdPromotionCodeIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.promotionRedemption.deleteMany({
+      where: { promotionCodeId: { in: createdPromotionCodeIds } },
+    });
+    await testAdminPrisma.promotionCode.deleteMany({ where: { id: { in: createdPromotionCodeIds } } });
     await testAdminPrisma.subscription.deleteMany({
       where: { owner: { tenantId: { in: createdTenantIds } } },
     });
@@ -114,5 +119,108 @@ describe("tenant onboarding (§14)", () => {
     const miniApp = buildTestApp(requireAuth);
     const authCheck = await request(miniApp).get("/protected").set("Authorization", `Bearer ${token}`);
     expect(authCheck.status).toBe(200);
+  });
+
+  describe("consommation de codes promotionnels (§31 tranche 8)", () => {
+    async function createPromotionCode(overrides: Record<string, unknown> = {}) {
+      const promotionCode = await testAdminPrisma.promotionCode.create({
+        data: {
+          code: `PROMO-${uniqueSuffix()}`,
+          discountType: "PERCENTAGE",
+          discountValue: 10,
+          isActive: true,
+          ...overrides,
+        },
+      });
+      createdPromotionCodeIds.push(promotionCode.id);
+      return promotionCode;
+    }
+
+    it("redeems a valid promo code and increments its redemption count", async () => {
+      const promotionCode = await createPromotionCode();
+      const user = await createUser("founder-promo");
+      const token = signAccessToken({ sub: user.id });
+      const payload = onboardingPayload({
+        planCode: "SCHOOL_ESSENTIAL",
+        billingPeriod: "MONTHLY",
+        promoCode: promotionCode.code,
+      });
+
+      const response = await request(app)
+        .post("/api/v1/tenants/onboarding")
+        .set("Authorization", `Bearer ${token}`)
+        .send(payload);
+
+      expect(response.status).toBe(201);
+      const body = response.body as { tenant: { id: string }; subscription: { id: string } | null };
+      createdTenantIds.push(body.tenant.id);
+      expect(body.subscription).not.toBeNull();
+
+      const redemption = await testAdminPrisma.promotionRedemption.findUnique({
+        where: {
+          promotionCodeId_subscriptionId: {
+            promotionCodeId: promotionCode.id,
+            subscriptionId: body.subscription?.id ?? "",
+          },
+        },
+      });
+      expect(redemption).not.toBeNull();
+      expect(redemption?.redeemedByUserId).toBe(user.id);
+
+      const updatedCode = await testAdminPrisma.promotionCode.findUniqueOrThrow({
+        where: { id: promotionCode.id },
+      });
+      expect(updatedCode.redemptionCount).toBe(1);
+    });
+
+    it("rejects an unknown promo code", async () => {
+      const user = await createUser("founder-promo-unknown");
+      const token = signAccessToken({ sub: user.id });
+      const payload = onboardingPayload({
+        planCode: "SCHOOL_ESSENTIAL",
+        billingPeriod: "MONTHLY",
+        promoCode: `PROMO-DOES-NOT-EXIST-${uniqueSuffix()}`,
+      });
+
+      const response = await request(app)
+        .post("/api/v1/tenants/onboarding")
+        .set("Authorization", `Bearer ${token}`)
+        .send(payload);
+
+      expect(response.status).toBe(404);
+      expect((response.body as TestResponseBody).code).toBe("PROMOTION_CODE_NOT_FOUND");
+    });
+
+    it("rejects a promo code that has reached its redemption limit", async () => {
+      const promotionCode = await createPromotionCode({ maxRedemptions: 1, redemptionCount: 1 });
+      const user = await createUser("founder-promo-exhausted");
+      const token = signAccessToken({ sub: user.id });
+      const payload = onboardingPayload({
+        planCode: "SCHOOL_ESSENTIAL",
+        billingPeriod: "MONTHLY",
+        promoCode: promotionCode.code,
+      });
+
+      const response = await request(app)
+        .post("/api/v1/tenants/onboarding")
+        .set("Authorization", `Bearer ${token}`)
+        .send(payload);
+
+      expect(response.status).toBe(409);
+      expect((response.body as TestResponseBody).code).toBe("PROMOTION_CODE_EXHAUSTED");
+    });
+
+    it("rejects a promo code submitted without a planCode", async () => {
+      const user = await createUser("founder-promo-no-plan");
+      const token = signAccessToken({ sub: user.id });
+      const payload = onboardingPayload({ promoCode: `PROMO-${uniqueSuffix()}` });
+
+      const response = await request(app)
+        .post("/api/v1/tenants/onboarding")
+        .set("Authorization", `Bearer ${token}`)
+        .send(payload);
+
+      expect(response.status).toBe(400);
+    });
   });
 });

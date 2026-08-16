@@ -29,6 +29,7 @@ export interface OnboardTenantInput {
   city?: string;
   planCode?: string;
   billingPeriod?: string;
+  promoCode?: string;
 }
 
 export interface OnboardTenantResult {

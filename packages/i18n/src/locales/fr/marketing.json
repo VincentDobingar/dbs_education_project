@@ -109,9 +109,11 @@
   "signup.school.subdomainHint": "Votre espace sera accessible à l'adresse {{subdomain}}.edumanage.africa",
   "signup.plan.label": "Formule choisie",
   "signup.plan.skip": "Choisir une formule plus tard",
+  "signup.plan.promoCode.label": "Code promo (optionnel)",
   "signup.review.title": "Vérifiez vos informations",
   "signup.success.title": "Votre espace a été créé",
   "signup.success.subtitle": "Votre établissement est en attente de vérification. Vous pouvez déjà vous connecter à votre espace.",
   "signup.error.subdomainTaken": "Ce sous-domaine est déjà utilisé, choisissez-en un autre.",
+  "signup.error.promoCodeInvalid": "Ce code promo n'est pas valide, a expiré, ou ne s'applique pas à cette formule.",
   "signup.error.generic": "Une erreur est survenue. Merci de réessayer."
 }
