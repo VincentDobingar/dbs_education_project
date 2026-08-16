@@ -9,6 +9,7 @@ import * as messageTemplateAdminController from "./message-template-admin.contro
 import * as organizationAdminController from "./organization-admin.controller.js";
 import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
+import * as statsAdminController from "./stats-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
 import * as supportTicketAdminController from "./support-ticket-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
@@ -272,3 +273,5 @@ platformAdminRouter.post(
   managePlatform,
   licenseAdminController.revokeLicense,
 );
+
+platformAdminRouter.get("/stats/overview", requireAuth, readPlatform, statsAdminController.getStatsOverview);
