@@ -24,6 +24,7 @@
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "otplib": "^13.4.1",
     "pdfkit": "^0.19.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",

@@ -14,6 +14,7 @@ export default defineConfig({
       REDIS_URL: "redis://localhost:6379",
       JWT_ACCESS_SECRET: "test-access-secret-please-change-please-change",
       JWT_REFRESH_SECRET: "test-refresh-secret-please-change-please-change",
+      MFA_ENCRYPTION_KEY: "4a9c6f4c773330c2e844b085fe7fcc74178960db3e944c0abaa020a41d810b04",
     },
   },
 });

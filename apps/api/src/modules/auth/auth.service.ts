@@ -8,11 +8,15 @@ import {
   hashPhoneVerificationCode,
   PHONE_VERIFICATION_TTL_MS,
 } from "../../lib/account-verification.js";
+import { decrypt } from "../../lib/encryption.js";
 import { AppError } from "../../lib/errors.js";
-import { signAccessToken } from "../../lib/jwt.js";
+import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from "../../lib/jwt.js";
+import { verifyTotpCode } from "../../lib/mfa.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { prisma } from "../../lib/prisma.js";
 import { generateRefreshToken, hashRefreshToken, REFRESH_TOKEN_TTL_MS } from "../../lib/refresh-token.js";
+
+import { consumeMfaRecoveryCode } from "./mfa.service.js";
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -21,6 +25,13 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface MfaChallenge {
+  mfaRequired: true;
+  challengeToken: string;
+}
+
+export type LoginResult = AuthTokens | MfaChallenge;
 
 interface SessionMeta {
   userAgent?: string;
@@ -190,7 +201,7 @@ async function createSession(userId: string, meta: SessionMeta): Promise<AuthTok
   return { accessToken: signAccessToken({ sub: userId }), refreshToken: token };
 }
 
-export async function login(email: string, password: string, meta: SessionMeta): Promise<AuthTokens> {
+export async function login(email: string, password: string, meta: SessionMeta): Promise<LoginResult> {
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
@@ -224,6 +235,38 @@ export async function login(email: string, password: string, meta: SessionMeta):
     where: { id: user.id },
     data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
   });
+
+  // §34 : mot de passe correct mais un second facteur reste à vérifier — pas de session
+  // tant que verifyMfaChallenge n'a pas validé un code TOTP ou de secours.
+  if (user.mfaEnabled) {
+    return { mfaRequired: true, challengeToken: signMfaChallengeToken(user.id) };
+  }
+
+  return createSession(user.id, meta);
+}
+
+export async function verifyMfaChallenge(
+  challengeToken: string,
+  code: string,
+  meta: SessionMeta,
+): Promise<AuthTokens> {
+  let userId: string;
+  try {
+    userId = verifyMfaChallengeToken(challengeToken).sub;
+  } catch {
+    throw new AppError(401, "INVALID_MFA_CHALLENGE", "Invalid or expired MFA challenge");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.mfaEnabled || !user.mfaSecretCiphertext) {
+    throw new AppError(401, "INVALID_MFA_CHALLENGE", "Invalid or expired MFA challenge");
+  }
+
+  const validTotp = await verifyTotpCode(decrypt(user.mfaSecretCiphertext), code);
+  const validRecovery = validTotp ? false : await consumeMfaRecoveryCode(user.id, code);
+  if (!validTotp && !validRecovery) {
+    throw new AppError(401, "INVALID_MFA_CODE", "Incorrect authentication code");
+  }
 
   return createSession(user.id, meta);
 }

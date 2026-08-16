@@ -40,11 +40,16 @@ model User {
   /// fois consomme — sa seule presence ne suffit donc pas a rejouer une verification.
   emailVerificationTokenHash String?    @unique
   emailVerificationExpiresAt DateTime?
-  /// Code numerique hache avec l'id utilisateur en sel (evite toute collision entre deux
-  /// codes a 6 chiffres identiques attribues a des comptes differents) — verification
-  /// "si activee" (§34) : n'existe que si un telephone a ete renseigne.
+  /// Code numerique hache avec l'email en sel (evite toute collision entre deux codes a
+  /// 6 chiffres identiques attribues a des comptes differents, utilisable des l'inscription
+  /// avant meme que l'id utilisateur existe) — verification "si activee" (§34) : n'existe
+  /// que si un telephone a ete renseigne.
   phoneVerificationCodeHash  String?
   phoneVerificationExpiresAt DateTime?
+  /// Secret TOTP chiffre (§34) — seule donnee de ce schema qui doit rester reversible
+  /// (il faut le relire pour verifier un code), contrairement a tous les autres champs
+  /// *Hash de ce modele qui sont a sens unique. Present des `setupMfa` (avant confirmation),
+  /// `mfaEnabled` ne bascule qu'apres verification d'un premier code (`enableMfa`).
   mfaEnabled                 Boolean    @default(false)
   mfaSecretCiphertext        String?
   failedLoginAttempts        Int        @default(0)
@@ -54,12 +59,29 @@ model User {
   createdAt                  DateTime   @default(now())
   updatedAt                  DateTime   @updatedAt
 
-  profile     UserProfile?
-  memberships TenantMembership[]
-  roles       UserRole[]
-  sessions    Session[]
+  profile          UserProfile?
+  memberships      TenantMembership[]
+  roles            UserRole[]
+  sessions         Session[]
+  mfaRecoveryCodes MfaRecoveryCode[]
 
   @@index([status])
+}
+
+/// Codes de secours MFA (§34) — generes une fois a l'activation (`enableMfa`), haches
+/// (jamais en clair), a usage unique. Sans eux, perdre l'appareil TOTP rendrait le compte
+/// irrecuperable (aucun fournisseur email/SMS reel dans ce code pour un canal de secours
+/// alternatif — meme limite que le reste de §34).
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserProfile {

@@ -9,6 +9,7 @@ import {
   verifyEmailSchema,
   verifyPhoneSchema,
 } from "./auth.validation.js";
+import { verifyMfaChallengeSchema } from "./mfa.validation.js";
 
 export function register(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
@@ -61,6 +62,17 @@ export function login(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = loginSchema.parse(req.body);
     const tokens = await authService.login(input.email, input.password, {
+      ...(req.headers["user-agent"] ? { userAgent: req.headers["user-agent"] } : {}),
+      ...(req.ip ? { ipAddress: req.ip } : {}),
+    });
+    res.status(200).json(tokens);
+  })().catch(next);
+}
+
+export function verifyMfaChallenge(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = verifyMfaChallengeSchema.parse(req.body);
+    const tokens = await authService.verifyMfaChallenge(input.challengeToken, input.code, {
       ...(req.headers["user-agent"] ? { userAgent: req.headers["user-agent"] } : {}),
       ...(req.ip ? { ipAddress: req.ip } : {}),
     });
