@@ -4,7 +4,9 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
 import * as auditLogController from "./audit-log.controller.js";
+import * as licenseAdminController from "./license-admin.controller.js";
 import * as messageTemplateAdminController from "./message-template-admin.controller.js";
+import * as organizationAdminController from "./organization-admin.controller.js";
 import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
@@ -210,4 +212,63 @@ platformAdminRouter.delete(
   requireAuth,
   managePlatform,
   messageTemplateAdminController.deleteMessageTemplate,
+);
+
+platformAdminRouter.get(
+  "/organizations",
+  requireAuth,
+  readPlatform,
+  organizationAdminController.listOrganizations,
+);
+platformAdminRouter.post(
+  "/organizations",
+  requireAuth,
+  managePlatform,
+  organizationAdminController.createOrganization,
+);
+platformAdminRouter.patch(
+  "/organizations/:id",
+  requireAuth,
+  managePlatform,
+  organizationAdminController.updateOrganization,
+);
+platformAdminRouter.delete(
+  "/organizations/:id",
+  requireAuth,
+  managePlatform,
+  organizationAdminController.deleteOrganization,
+);
+
+platformAdminRouter.get(
+  "/license-batches",
+  requireAuth,
+  readPlatform,
+  licenseAdminController.listLicenseBatches,
+);
+platformAdminRouter.get(
+  "/license-batches/:id",
+  requireAuth,
+  readPlatform,
+  licenseAdminController.getLicenseBatch,
+);
+platformAdminRouter.post(
+  "/license-batches",
+  requireAuth,
+  managePlatform,
+  licenseAdminController.createLicenseBatch,
+);
+
+platformAdminRouter.get("/licenses", requireAuth, readPlatform, licenseAdminController.listLicenses);
+platformAdminRouter.get("/licenses/:id", requireAuth, readPlatform, licenseAdminController.getLicense);
+platformAdminRouter.post(
+  "/licenses/:id/assign",
+  requireAuth,
+  managePlatform,
+  licenseAdminController.assignLicense,
+);
+platformAdminRouter.post(
+  "/licenses/:id/revoke",
+  requireAuth,
+  managePlatform,
+  licenseAdminController.revokeLicense,
 );
