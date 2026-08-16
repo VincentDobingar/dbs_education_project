@@ -136,6 +136,22 @@ model TenantSetting {
   @@index([tenantId])
 }
 
+/// §31 "parametres globaux" : meme forme cle/valeur que TenantSetting (extensible
+/// sans migration a chaque nouveau parametre : duree d'essai par defaut, contact
+/// support, message de maintenance...), mais sans ancrage a un tenant (portee
+/// plateforme, jamais scopee). Ce n'est volontairement PAS un TenantSetting avec
+/// tenantId nul : un `@@unique([tenantId, key])` degenererait (Postgres traite
+/// deux NULL comme non egaux dans un index unique, cf. le meme piege deja gere
+/// pour MessageTemplate) — `key` porte donc directement sa propre contrainte
+/// unique ici.
+model PlatformSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
 model Campus {
   id        String    @id @default(cuid())
   tenantId  String

@@ -7,6 +7,7 @@ import * as auditLogController from "./audit-log.controller.js";
 import * as licenseAdminController from "./license-admin.controller.js";
 import * as messageTemplateAdminController from "./message-template-admin.controller.js";
 import * as organizationAdminController from "./organization-admin.controller.js";
+import * as platformSettingAdminController from "./platform-setting-admin.controller.js";
 import * as promotionCodeAdminController from "./promotion-code-admin.controller.js";
 import * as referenceDataAdminController from "./reference-data-admin.controller.js";
 import * as statsAdminController from "./stats-admin.controller.js";
@@ -275,3 +276,28 @@ platformAdminRouter.post(
 );
 
 platformAdminRouter.get("/stats/overview", requireAuth, readPlatform, statsAdminController.getStatsOverview);
+
+platformAdminRouter.get(
+  "/platform-settings",
+  requireAuth,
+  readPlatform,
+  platformSettingAdminController.listPlatformSettings,
+);
+platformAdminRouter.get(
+  "/platform-settings/:key",
+  requireAuth,
+  readPlatform,
+  platformSettingAdminController.getPlatformSetting,
+);
+platformAdminRouter.put(
+  "/platform-settings/:key",
+  requireAuth,
+  managePlatform,
+  platformSettingAdminController.upsertPlatformSetting,
+);
+platformAdminRouter.delete(
+  "/platform-settings/:key",
+  requireAuth,
+  managePlatform,
+  platformSettingAdminController.deletePlatformSetting,
+);
