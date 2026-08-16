@@ -29,21 +29,30 @@ enum RoleScope {
 }
 
 model User {
-  id                  String     @id @default(cuid())
-  email               String     @unique
-  phone               String?    @unique
-  passwordHash        String
-  status              UserStatus @default(PENDING)
-  emailVerifiedAt     DateTime?
-  phoneVerifiedAt     DateTime?
-  mfaEnabled          Boolean    @default(false)
-  mfaSecretCiphertext String?
-  failedLoginAttempts Int        @default(0)
-  lockedUntil         DateTime?
-  lastLoginAt         DateTime?
-  deletedAt           DateTime?
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                         String     @id @default(cuid())
+  email                      String     @unique
+  phone                      String?    @unique
+  passwordHash               String
+  status                     UserStatus @default(PENDING)
+  emailVerifiedAt            DateTime?
+  phoneVerifiedAt            DateTime?
+  /// Jeton hache (jamais en clair), a usage unique, envoye "par lien" (§34). Efface une
+  /// fois consomme — sa seule presence ne suffit donc pas a rejouer une verification.
+  emailVerificationTokenHash String?    @unique
+  emailVerificationExpiresAt DateTime?
+  /// Code numerique hache avec l'id utilisateur en sel (evite toute collision entre deux
+  /// codes a 6 chiffres identiques attribues a des comptes differents) — verification
+  /// "si activee" (§34) : n'existe que si un telephone a ete renseigne.
+  phoneVerificationCodeHash  String?
+  phoneVerificationExpiresAt DateTime?
+  mfaEnabled                 Boolean    @default(false)
+  mfaSecretCiphertext        String?
+  failedLoginAttempts        Int        @default(0)
+  lockedUntil                DateTime?
+  lastLoginAt                DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
 
   profile     UserProfile?
   memberships TenantMembership[]
@@ -133,15 +142,15 @@ model RolePermission {
 /// ajoute un index unique partiel (`WHERE "tenantId" IS NULL`) pour empecher les
 /// doublons de role plateforme par utilisateur.
 model UserRole {
-  id           String    @id @default(cuid())
-  userId       String
-  roleId       String
-  tenantId     String?
-  grantedAt    DateTime  @default(now())
-  grantedById  String?
-  expiresAt    DateTime? // acces exceptionnel temporaire (§31 : intervention super-admin)
-  justification String?  // obligatoire pour un MANUAL_GRANT ou une intervention super-admin
-  createdAt    DateTime  @default(now())
+  id            String    @id @default(cuid())
+  userId        String
+  roleId        String
+  tenantId      String?
+  grantedAt     DateTime  @default(now())
+  grantedById   String?
+  expiresAt     DateTime? // acces exceptionnel temporaire (§31 : intervention super-admin)
+  justification String? // obligatoire pour un MANUAL_GRANT ou une intervention super-admin
+  createdAt     DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)

@@ -1,5 +1,13 @@
 import type { User } from "@prisma/client";
 
+import {
+  EMAIL_VERIFICATION_TTL_MS,
+  generateEmailVerificationToken,
+  generatePhoneVerificationCode,
+  hashEmailVerificationToken,
+  hashPhoneVerificationCode,
+  PHONE_VERIFICATION_TTL_MS,
+} from "../../lib/account-verification.js";
 import { AppError } from "../../lib/errors.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
@@ -24,26 +32,146 @@ export interface RegisterInput {
   password: string;
   firstName: string;
   lastName: string;
+  phone?: string | undefined;
 }
 
-export async function registerUser(input: RegisterInput): Promise<User> {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+export interface RegisterResult {
+  user: User;
+  emailVerificationToken: string;
+  phoneVerificationCode?: string;
+}
 
+/**
+ * §34 : le compte reste PENDING tant que l'email (ou le téléphone, si renseigné — §15
+ * accepte l'un ou l'autre) n'est pas vérifié ; `login` refuse déjà tout statut différent
+ * d'ACTIVE. Aucun fournisseur email/SMS réel n'existe dans ce code (même limite que
+ * Mobile Money §24 et les codes d'activation §8) : le jeton/code est donc renvoyé en
+ * clair une seule fois dans la réponse d'inscription, documenté plutôt que simulé
+ * silencieusement — l'appelant (ou un futur relais staff) le transmet manuellement.
+ */
+export async function registerUser(input: RegisterInput): Promise<RegisterResult> {
+  const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw new AppError(409, "EMAIL_ALREADY_REGISTERED", "An account with this email already exists");
   }
 
-  const passwordHash = await hashPassword(input.password);
+  if (input.phone) {
+    const existingPhone = await prisma.user.findUnique({ where: { phone: input.phone } });
+    if (existingPhone) {
+      throw new AppError(409, "PHONE_ALREADY_REGISTERED", "An account with this phone already exists");
+    }
+  }
 
-  return prisma.user.create({
+  const passwordHash = await hashPassword(input.password);
+  const { token: emailVerificationToken, hash: emailVerificationTokenHash } =
+    generateEmailVerificationToken();
+  const phoneVerificationCode = input.phone ? generatePhoneVerificationCode() : undefined;
+
+  const user = await prisma.user.create({
     data: {
       email: input.email,
       passwordHash,
-      // TODO(Phase 3): require email verification (§34) before granting ACTIVE status.
-      status: "ACTIVE",
+      ...(input.phone ? { phone: input.phone } : {}),
+      emailVerificationTokenHash,
+      emailVerificationExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+      ...(phoneVerificationCode
+        ? {
+            phoneVerificationCodeHash: hashPhoneVerificationCode(input.email, phoneVerificationCode),
+            phoneVerificationExpiresAt: new Date(Date.now() + PHONE_VERIFICATION_TTL_MS),
+          }
+        : {}),
       profile: { create: { firstName: input.firstName, lastName: input.lastName } },
     },
   });
+
+  return { user, emailVerificationToken, ...(phoneVerificationCode ? { phoneVerificationCode } : {}) };
+}
+
+export async function verifyEmail(token: string): Promise<User> {
+  const tokenHash = hashEmailVerificationToken(token);
+  const user = await prisma.user.findUnique({ where: { emailVerificationTokenHash: tokenHash } });
+  if (!user) {
+    throw new AppError(404, "VERIFICATION_TOKEN_NOT_FOUND", "Invalid or already used verification token");
+  }
+  if (!user.emailVerificationExpiresAt || user.emailVerificationExpiresAt < new Date()) {
+    throw new AppError(410, "VERIFICATION_TOKEN_EXPIRED", "Verification token has expired");
+  }
+
+  return prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerifiedAt: new Date(),
+      emailVerificationTokenHash: null,
+      emailVerificationExpiresAt: null,
+      ...(user.status === "PENDING" ? { status: "ACTIVE" } : {}),
+    },
+  });
+}
+
+export async function verifyPhone(email: string, code: string): Promise<User> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.phoneVerificationCodeHash) {
+    throw new AppError(404, "VERIFICATION_CODE_NOT_FOUND", "No pending phone verification for this account");
+  }
+  if (!user.phoneVerificationExpiresAt || user.phoneVerificationExpiresAt < new Date()) {
+    throw new AppError(410, "VERIFICATION_CODE_EXPIRED", "Verification code has expired");
+  }
+  if (hashPhoneVerificationCode(email, code) !== user.phoneVerificationCodeHash) {
+    throw new AppError(401, "INVALID_VERIFICATION_CODE", "Incorrect verification code");
+  }
+
+  return prisma.user.update({
+    where: { id: user.id },
+    data: {
+      phoneVerifiedAt: new Date(),
+      phoneVerificationCodeHash: null,
+      phoneVerificationExpiresAt: null,
+      ...(user.status === "PENDING" ? { status: "ACTIVE" } : {}),
+    },
+  });
+}
+
+export async function resendEmailVerification(email: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    throw new AppError(404, "USER_NOT_FOUND", `No account with email: ${email}`);
+  }
+  if (user.emailVerifiedAt) {
+    throw new AppError(409, "EMAIL_ALREADY_VERIFIED", "This email is already verified");
+  }
+
+  const { token, hash } = generateEmailVerificationToken();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerificationTokenHash: hash,
+      emailVerificationExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+    },
+  });
+  return token;
+}
+
+export async function resendPhoneVerification(email: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    throw new AppError(404, "USER_NOT_FOUND", `No account with email: ${email}`);
+  }
+  if (!user.phone) {
+    throw new AppError(400, "PHONE_NOT_SET", "This account has no phone number on file");
+  }
+  if (user.phoneVerifiedAt) {
+    throw new AppError(409, "PHONE_ALREADY_VERIFIED", "This phone number is already verified");
+  }
+
+  const code = generatePhoneVerificationCode();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      phoneVerificationCodeHash: hashPhoneVerificationCode(email, code),
+      phoneVerificationExpiresAt: new Date(Date.now() + PHONE_VERIFICATION_TTL_MS),
+    },
+  });
+  return code;
 }
 
 async function createSession(userId: string, meta: SessionMeta): Promise<AuthTokens> {

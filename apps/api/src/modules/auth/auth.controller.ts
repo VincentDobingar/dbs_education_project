@@ -1,13 +1,59 @@
 import type { NextFunction, Request, Response } from "express";
 
 import * as authService from "./auth.service.js";
-import { loginSchema, refreshSchema, registerSchema } from "./auth.validation.js";
+import {
+  loginSchema,
+  refreshSchema,
+  registerSchema,
+  resendVerificationSchema,
+  verifyEmailSchema,
+  verifyPhoneSchema,
+} from "./auth.validation.js";
 
 export function register(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = registerSchema.parse(req.body);
-    const user = await authService.registerUser(input);
-    res.status(201).json({ id: user.id, email: user.email });
+    const result = await authService.registerUser(input);
+    res.status(201).json({
+      id: result.user.id,
+      email: result.user.email,
+      status: result.user.status,
+      // §34 : pas de fournisseur email/SMS réel — voir le commentaire sur registerUser.
+      emailVerificationToken: result.emailVerificationToken,
+      ...(result.phoneVerificationCode ? { phoneVerificationCode: result.phoneVerificationCode } : {}),
+    });
+  })().catch(next);
+}
+
+export function verifyEmail(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = verifyEmailSchema.parse(req.body);
+    const user = await authService.verifyEmail(input.token);
+    res.status(200).json({ id: user.id, status: user.status });
+  })().catch(next);
+}
+
+export function verifyPhone(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = verifyPhoneSchema.parse(req.body);
+    const user = await authService.verifyPhone(input.email, input.code);
+    res.status(200).json({ id: user.id, status: user.status });
+  })().catch(next);
+}
+
+export function resendEmailVerification(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = resendVerificationSchema.parse(req.body);
+    const emailVerificationToken = await authService.resendEmailVerification(input.email);
+    res.status(200).json({ emailVerificationToken });
+  })().catch(next);
+}
+
+export function resendPhoneVerification(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = resendVerificationSchema.parse(req.body);
+    const phoneVerificationCode = await authService.resendPhoneVerification(input.email);
+    res.status(200).json({ phoneVerificationCode });
   })().catch(next);
 }
 
