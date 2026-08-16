@@ -14,6 +14,7 @@ import * as statsAdminController from "./stats-admin.controller.js";
 import * as subscriptionAdminController from "./subscription-admin.controller.js";
 import * as supportTicketAdminController from "./support-ticket-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
+import * as tenantElevationAdminController from "./tenant-elevation-admin.controller.js";
 
 export const platformAdminRouter: Router = Router();
 
@@ -60,6 +61,25 @@ platformAdminRouter.post(
   requireAuth,
   managePlatform,
   tenantAdminController.reactivateTenant,
+);
+
+platformAdminRouter.get(
+  "/tenants/:id/elevations",
+  requireAuth,
+  readPlatform,
+  tenantElevationAdminController.listTenantElevations,
+);
+platformAdminRouter.post(
+  "/tenants/:id/elevate",
+  requireAuth,
+  managePlatform,
+  tenantElevationAdminController.elevateInTenant,
+);
+platformAdminRouter.post(
+  "/tenants/:id/elevations/:userRoleId/revoke",
+  requireAuth,
+  managePlatform,
+  tenantElevationAdminController.revokeElevation,
 );
 
 platformAdminRouter.get("/audit-logs", requireAuth, readPlatform, auditLogController.listAuditLogs);

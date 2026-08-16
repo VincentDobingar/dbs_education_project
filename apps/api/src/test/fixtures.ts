@@ -48,9 +48,16 @@ export async function addMembership(userId: string, tenantId: string): Promise<v
   await testAdminPrisma.tenantMembership.create({ data: { userId, tenantId, status: "ACTIVE" } });
 }
 
-export async function grantRole(userId: string, roleCode: string, tenantId: string | null): Promise<void> {
+export async function grantRole(
+  userId: string,
+  roleCode: string,
+  tenantId: string | null,
+  expiresAt?: Date,
+): Promise<void> {
   const role = await testAdminPrisma.role.findUniqueOrThrow({ where: { code: roleCode } });
-  await testAdminPrisma.userRole.create({ data: { userId, roleId: role.id, tenantId } });
+  await testAdminPrisma.userRole.create({
+    data: { userId, roleId: role.id, tenantId, ...(expiresAt !== undefined ? { expiresAt } : {}) },
+  });
 }
 
 export async function createStudent(tenantId: string, matriculePrefix = "MAT") {
