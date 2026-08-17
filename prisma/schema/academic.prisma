@@ -173,6 +173,7 @@ model Subject {
   timetableEntries   TimetableEntry[]
   assessments        Assessment[]
   reportCardItems    ReportCardItem[]
+  homeworks          Homework[]
 
   @@unique([tenantId, code])
   @@index([tenantId])

@@ -1,5 +1,6 @@
 import type {
   Announcement,
+  Homework,
   ReportCard,
   Student,
   StudentPayment,
@@ -16,6 +17,7 @@ import { listReceiptsForStudent, requireReceipt } from "../finance/student-payme
 import { generateReportCardPdf } from "../grading/report-card-pdf.service.js";
 import * as reportCardService from "../grading/report-card.service.js";
 import type { ReportCardWithItems } from "../grading/report-card.service.js";
+import { listHomeworkForStudent } from "../homework/homework.service.js";
 import { listTimetableEntries, listTimetables } from "../school-config/timetable.service.js";
 import { getStudent, requireCurrentEnrollment } from "../students/student.service.js";
 import type { CurrentEnrollment } from "../students/student.service.js";
@@ -107,6 +109,7 @@ export async function getMyReceiptPdf(
 
 const RECENT_REPORT_CARDS_LIMIT = 3;
 const RECENT_ANNOUNCEMENTS_LIMIT = 5;
+const UPCOMING_HOMEWORK_LIMIT = 5;
 
 /** Schéma : TimetableEntry.dayOfWeek 0 = lundi ... 6 = dimanche — JS Date#getDay() est 0 = dimanche. */
 function schemaDayOfWeek(date: Date): number {
@@ -118,6 +121,7 @@ export interface StudentDashboard {
   todayClasses: TimetableEntry[];
   recentReportCards: ReportCard[];
   announcements: Announcement[];
+  upcomingHomework: Homework[];
   subscription: Subscription | null;
 }
 
@@ -125,8 +129,7 @@ export interface StudentDashboard {
  * §18 "Élève" : bundle read-only des endpoints déjà exposés individuellement par ce
  * module, pour éviter un aller-retour par bloc côté client. "Calendrier" (§18) reste
  * hors périmètre — aucun modèle d'événements/jours fériés n'existe (même gap déjà
- * noté en §20) ; "devoirs" de même (aucun modèle Homework, décision de schéma non
- * prise, voir docs/architecture.md).
+ * noté en §20).
  */
 export async function getMyDashboard(studentId: string): Promise<StudentDashboard> {
   const profile = await getStudentProfile(studentId);
@@ -135,7 +138,7 @@ export async function getMyDashboard(studentId: string): Promise<StudentDashboar
     ? (await getMyTimetable(studentId)).filter((entry) => entry.dayOfWeek === schemaDayOfWeek(new Date()))
     : [];
 
-  const [recentReportCards, announcements, subscription] = await Promise.all([
+  const [recentReportCards, announcements, upcomingHomework, subscription] = await Promise.all([
     reportCardService
       .listReportCards({ studentId })
       .then((reportCards) => reportCards.slice(0, RECENT_REPORT_CARDS_LIMIT)),
@@ -146,8 +149,14 @@ export async function getMyDashboard(studentId: string): Promise<StudentDashboar
           items.slice(0, RECENT_ANNOUNCEMENTS_LIMIT),
         )
       : Promise.resolve([]),
+    // Même garde qu'au-dessus : listHomeworkForStudent exige une inscription active.
+    profile.currentEnrollment
+      ? listHomeworkForStudent(studentId).then((items) =>
+          items.filter((h) => h.dueAt >= new Date()).slice(0, UPCOMING_HOMEWORK_LIMIT),
+        )
+      : Promise.resolve([]),
     findSubscriptionForOwner({ studentId }),
   ]);
 
-  return { profile, todayClasses, recentReportCards, announcements, subscription };
+  return { profile, todayClasses, recentReportCards, announcements, upcomingHomework, subscription };
 }

@@ -82,6 +82,13 @@ export function getChildAnnouncements(req: Request, res: Response, next: NextFun
   })().catch(next);
 }
 
+export function getChildHomework(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const homework = await parentPortalService.getChildHomework(req.params.studentId as string);
+    res.status(200).json(homework);
+  })().catch(next);
+}
+
 export function getChildFinancialSituation(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const situation = await parentPortalService.getChildFinancialSituation(req.params.studentId as string);

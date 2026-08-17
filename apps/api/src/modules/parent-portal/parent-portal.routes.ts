@@ -53,6 +53,12 @@ parentPortalRouter.get(
   parentPortalController.getChildAnnouncements,
 );
 parentPortalRouter.get(
+  "/children/:studentId/homework",
+  requireAuth,
+  verifiedChild,
+  parentPortalController.getChildHomework,
+);
+parentPortalRouter.get(
   "/children/:studentId/finance/situation",
   requireAuth,
   verifiedChild,

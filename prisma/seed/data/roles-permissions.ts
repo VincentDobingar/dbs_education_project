@@ -137,6 +137,18 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer la bibliothèque",
     descriptionEn: "Manage the library",
   },
+  {
+    code: "homework.read",
+    module: "homework",
+    descriptionFr: "Consulter les devoirs",
+    descriptionEn: "View homework",
+  },
+  {
+    code: "homework.write",
+    module: "homework",
+    descriptionFr: "Assigner des devoirs",
+    descriptionEn: "Assign homework",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -165,6 +177,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "communication.manage",
     "library.read",
     "library.write",
+    "homework.read",
+    "homework.write",
   ],
   SCHOOL_ADMIN: [
     "students.read",
@@ -176,6 +190,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "tenant.settings.manage",
     "communication.manage",
     "library.read",
+    "homework.read",
   ],
   DIRECTOR: [
     "students.read",
@@ -186,6 +201,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.write",
     "finance.read",
     "communication.manage",
+    "homework.read",
   ],
   ACADEMIC_DIRECTOR: [
     "students.read",
@@ -194,6 +210,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "grades.publish",
     "attendance.read",
     "discipline.read",
+    "homework.read",
+    "homework.write",
   ],
   SECRETARY: ["students.read", "students.write"],
   ACCOUNTANT: ["finance.read", "finance.write"],
@@ -206,6 +224,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "attendance.write",
     "discipline.read",
     "discipline.write",
+    "homework.read",
+    "homework.write",
   ],
   SUPERVISOR: ["attendance.read", "attendance.write", "discipline.read", "discipline.write"],
   LIBRARIAN: ["library.read", "library.write"],
@@ -217,6 +237,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "finance.read",
     "library.read",
+    "homework.read",
   ],
 
   PARENT: [],

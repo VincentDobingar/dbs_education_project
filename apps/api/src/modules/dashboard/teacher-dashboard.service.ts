@@ -1,9 +1,10 @@
-import type { Announcement, Assessment, TeacherAssignment, TimetableEntry } from "@prisma/client";
+import type { Announcement, Assessment, Homework, TeacherAssignment, TimetableEntry } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 
 const UPCOMING_ASSESSMENTS_LIMIT = 10;
+const UPCOMING_HOMEWORK_LIMIT = 10;
 const RECENT_ANNOUNCEMENTS_LIMIT = 10;
 const STAFF_FACING_AUDIENCES = ["ALL", "STAFF", "TEACHERS"] as const;
 
@@ -21,6 +22,7 @@ export interface TeacherDashboard {
   todayClasses: TimetableEntry[];
   classesNeedingRollCall: ClassroomToRollCall[];
   upcomingAssessments: Assessment[];
+  upcomingHomework: Homework[];
   announcements: Announcement[];
 }
 
@@ -102,7 +104,7 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
   const assignedClassroomIds = [...new Set(classAssignments.map((assignment) => assignment.classroomId))];
   const assignedSubjectIds = [...new Set(classAssignments.map((assignment) => assignment.subjectId))];
 
-  const [upcomingAssessments, announcements] = await Promise.all([
+  const [upcomingAssessments, upcomingHomework, announcements] = await Promise.all([
     prisma.assessment.findMany({
       where: {
         deletedAt: null,
@@ -113,6 +115,16 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
       },
       orderBy: { scheduledAt: "asc" },
       take: UPCOMING_ASSESSMENTS_LIMIT,
+    }),
+    prisma.homework.findMany({
+      where: {
+        deletedAt: null,
+        classroomId: { in: assignedClassroomIds },
+        subjectId: { in: assignedSubjectIds },
+        dueAt: { gte: new Date() },
+      },
+      orderBy: { dueAt: "asc" },
+      take: UPCOMING_HOMEWORK_LIMIT,
     }),
     prisma.announcement.findMany({
       where: { deletedAt: null, audienceScope: { in: [...STAFF_FACING_AUDIENCES] } },
@@ -127,6 +139,7 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
     todayClasses,
     classesNeedingRollCall,
     upcomingAssessments,
+    upcomingHomework,
     announcements,
   };
 }

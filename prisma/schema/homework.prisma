@@ -1,0 +1,59 @@
+// Devoirs et dépôt de travaux (§18/§21/§25/§26 : "devoirs" listés dans le tableau de
+// bord, les modules notes/portails, mais jamais un modèle dédié jusqu'ici — décision
+// de schéma prise ici : un Homework distinct d'Assessment/Grade, sans note chiffrée,
+// pour l'énoncé + l'échéance + le dépôt de travail, pas l'évaluation elle-même.
+
+/// classroomId reste un champ nu (pas de relation Prisma), même choix que
+/// Attendance.classroomId/Assessment.classroomId ailleurs dans ce schéma — vérifié
+/// côté service, jamais une relation Prisma pour ce FK précis dans ce code.
+model Homework {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  classroomId         String
+  subjectId           String
+  createdByEmployeeId String?
+  title               String
+  instructions        String?
+  dueAt               DateTime
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  submissions HomeworkSubmission[]
+
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+enum HomeworkSubmissionStatus {
+  ON_TIME
+  LATE
+}
+
+/// content/fileUrl : au moins l'un des deux exigé côté service (validation Zod),
+/// jamais au niveau du schéma. fileUrl suit le même choix que StudentDocument (§19) :
+/// une URL fournie par le client, cette API ne manipule jamais les octets du fichier.
+/// Une contrainte unique (homeworkId, studentId) plutôt qu'un historique : un
+/// redépôt met à jour la soumission existante (upsert), jamais un doublon.
+model HomeworkSubmission {
+  id          String                   @id @default(cuid())
+  tenantId    String
+  homeworkId  String
+  studentId   String
+  content     String?
+  fileUrl     String?
+  status      HomeworkSubmissionStatus
+  submittedAt DateTime                 @default(now())
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  homework Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([homeworkId, studentId])
+  @@index([tenantId])
+  @@index([homeworkId])
+  @@index([studentId])
+}

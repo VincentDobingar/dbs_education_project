@@ -16,6 +16,7 @@ import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { familyRouter } from "./modules/family/family.routes.js";
 import { financeRouter } from "./modules/finance/finance.routes.js";
 import { gradingRouter } from "./modules/grading/grading.routes.js";
+import { homeworkRouter } from "./modules/homework/homework.routes.js";
 import { libraryRouter } from "./modules/library/library.routes.js";
 import { parentPortalRouter } from "./modules/parent-portal/parent-portal.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
@@ -54,6 +55,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/finance", financeRouter);
   app.use("/api/v1/dashboard", dashboardRouter);
   app.use("/api/v1/library", libraryRouter);
+  app.use("/api/v1/homework", homeworkRouter);
   app.use("/api/v1/students", studentRouter);
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);

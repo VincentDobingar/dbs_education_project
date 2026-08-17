@@ -74,6 +74,7 @@ model Student {
   reportCards           ReportCard[]
   invoices              StudentInvoice[]
   libraryLoans          LibraryLoan[]
+  homeworkSubmissions   HomeworkSubmission[]
 
   @@unique([tenantId, matricule])
   @@index([tenantId])

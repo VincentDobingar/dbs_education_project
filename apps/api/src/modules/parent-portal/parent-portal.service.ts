@@ -1,4 +1,11 @@
-import type { Announcement, Attendance, ReportCard, Subscription, TimetableEntry } from "@prisma/client";
+import type {
+  Announcement,
+  Attendance,
+  Homework,
+  ReportCard,
+  Subscription,
+  TimetableEntry,
+} from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma } from "../../lib/prisma.js";
@@ -18,6 +25,7 @@ import { requireReceipt } from "../finance/student-payment.service.js";
 import { generateReportCardPdf } from "../grading/report-card-pdf.service.js";
 import * as reportCardService from "../grading/report-card.service.js";
 import type { ReportCardWithItems } from "../grading/report-card.service.js";
+import { listHomeworkForStudent } from "../homework/homework.service.js";
 import { listTimetableEntries, listTimetables } from "../school-config/timetable.service.js";
 import { requireCurrentEnrollment } from "../students/student.service.js";
 import { findSubscriptionForOwner } from "../subscriptions/subscription.service.js";
@@ -73,6 +81,12 @@ export async function getChildTimetable(studentId: string): Promise<TimetableEnt
 
 export async function getChildAnnouncements(studentId: string): Promise<Announcement[]> {
   return listAnnouncementsForStudent(studentId, "PARENTS");
+}
+
+/** §25 : lecture seule — le dépôt du travail reste une action de l'élève, jamais du
+ * parent, mêmes devoirs que listHomeworkForStudent (§26). */
+export async function getChildHomework(studentId: string): Promise<Homework[]> {
+  return listHomeworkForStudent(studentId);
 }
 
 export async function getChildFinancialSituation(studentId: string): Promise<StudentFinancialSituation> {
