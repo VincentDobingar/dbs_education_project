@@ -255,6 +255,28 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  const libraryReadPermission = await prisma.permission.upsert({
+    where: { code: "library.read" },
+    update: {},
+    create: {
+      code: "library.read",
+      module: "library",
+      descriptionFr: "Consulter la bibliothèque",
+      descriptionEn: "View the library",
+    },
+  });
+
+  const libraryWritePermission = await prisma.permission.upsert({
+    where: { code: "library.write" },
+    update: {},
+    create: {
+      code: "library.write",
+      module: "library",
+      descriptionFr: "Gérer la bibliothèque",
+      descriptionEn: "Manage the library",
+    },
+  });
+
   for (const permission of [
     studentsReadPermission,
     gradesReadPermission,
@@ -284,6 +306,8 @@ export default async function setup(): Promise<void> {
     attendanceReadPermission,
     disciplineReadPermission,
     communicationManagePermission,
+    libraryReadPermission,
+    libraryWritePermission,
   ]) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: permission.id } },

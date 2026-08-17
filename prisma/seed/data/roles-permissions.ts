@@ -125,6 +125,18 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer les annonces",
     descriptionEn: "Manage announcements",
   },
+  {
+    code: "library.read",
+    module: "library",
+    descriptionFr: "Consulter la bibliothèque",
+    descriptionEn: "View the library",
+  },
+  {
+    code: "library.write",
+    module: "library",
+    descriptionFr: "Gérer la bibliothèque",
+    descriptionEn: "Manage the library",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -151,6 +163,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "tenant.settings.manage",
     "subscriptions.manage",
     "communication.manage",
+    "library.read",
+    "library.write",
   ],
   SCHOOL_ADMIN: [
     "students.read",
@@ -161,6 +175,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "finance.read",
     "tenant.settings.manage",
     "communication.manage",
+    "library.read",
   ],
   DIRECTOR: [
     "students.read",
@@ -193,9 +208,16 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.write",
   ],
   SUPERVISOR: ["attendance.read", "attendance.write", "discipline.read", "discipline.write"],
-  LIBRARIAN: [],
+  LIBRARIAN: ["library.read", "library.write"],
   TRANSPORT_MANAGER: [],
-  TENANT_AUDITOR: ["students.read", "grades.read", "attendance.read", "discipline.read", "finance.read"],
+  TENANT_AUDITOR: [
+    "students.read",
+    "grades.read",
+    "attendance.read",
+    "discipline.read",
+    "finance.read",
+    "library.read",
+  ],
 
   PARENT: [],
   STUDENT: [],

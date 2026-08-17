@@ -1,0 +1,59 @@
+// Bibliothèque (§29 : un des 12 modules complémentaires listés, seul choisi pour le
+// MVP — "implémenter uniquement les modules validés"). Catalogue de livres + emprunts.
+
+enum BookStatus {
+  AVAILABLE
+  ARCHIVED
+}
+
+enum LibraryLoanStatus {
+  ACTIVE
+  RETURNED
+  LOST
+}
+
+/// Catégorie en texte libre plutôt qu'un modèle dédié — même choix que Student.gender,
+/// pas assez de valeur ajoutée pour une 3e ressource CRUD dans ce module MVP.
+model Book {
+  id          String     @id @default(cuid())
+  tenantId    String
+  isbn        String?
+  title       String
+  author      String
+  category    String?
+  totalCopies Int        @default(1)
+  status      BookStatus @default(AVAILABLE)
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  loans LibraryLoan[]
+
+  @@index([tenantId])
+}
+
+/// "Exemplaires disponibles" dérivé à la volée (totalCopies - emprunts ACTIVE), jamais
+/// un compteur stocké séparément qui pourrait diverger. Pas de contrainte unique sur
+/// (bookId, studentId, status) : vérifiée côté service au moment de l'emprunt plutôt
+/// qu'en base, pour un message d'erreur applicatif clair (même choix que
+/// TeacherAssignment/timetable ailleurs dans ce code).
+model LibraryLoan {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  bookId             String
+  studentId          String
+  issuedByEmployeeId String?
+  borrowedAt         DateTime          @default(now())
+  dueAt              DateTime
+  returnedAt         DateTime?
+  status             LibraryLoanStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([bookId])
+  @@index([studentId])
+}

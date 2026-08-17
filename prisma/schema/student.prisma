@@ -61,18 +61,19 @@ model Student {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  enrollments             Enrollment[]
-  documents               StudentDocument[]
-  transfers               StudentTransfer[]
-  attendances             Attendance[]
-  disciplinaryIncidents   DisciplinaryIncident[]
-  parentRelationships     ParentStudentRelationship[]
-  userLink                StudentUserLink?
-  subscriptionOwner       SubscriptionOwner?
-  activationInvitations   ActivationInvitation[]
-  grades                  Grade[]
-  reportCards             ReportCard[]
-  invoices                StudentInvoice[]
+  enrollments           Enrollment[]
+  documents             StudentDocument[]
+  transfers             StudentTransfer[]
+  attendances           Attendance[]
+  disciplinaryIncidents DisciplinaryIncident[]
+  parentRelationships   ParentStudentRelationship[]
+  userLink              StudentUserLink?
+  subscriptionOwner     SubscriptionOwner?
+  activationInvitations ActivationInvitation[]
+  grades                Grade[]
+  reportCards           ReportCard[]
+  invoices              StudentInvoice[]
+  libraryLoans          LibraryLoan[]
 
   @@unique([tenantId, matricule])
   @@index([tenantId])
@@ -106,14 +107,14 @@ model Enrollment {
 }
 
 model StudentDocument {
-  id             String   @id @default(cuid())
-  tenantId       String
-  studentId      String
-  category       String // ex: BIRTH_CERTIFICATE, PREVIOUS_TRANSCRIPT, ID_PHOTO
-  fileUrl        String
+  id               String    @id @default(cuid())
+  tenantId         String
+  studentId        String
+  category         String // ex: BIRTH_CERTIFICATE, PREVIOUS_TRANSCRIPT, ID_PHOTO
+  fileUrl          String
   uploadedByUserId String?
-  deletedAt      DateTime?
-  createdAt      DateTime @default(now())
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -125,17 +126,17 @@ model StudentDocument {
 /// dataScope decrit precisement ce qui a ete autorise a transiter, et ce champ est
 /// rempli/valide par un humain autorise, jamais par defaut.
 model StudentTransfer {
-  id              String         @id @default(cuid())
-  studentId       String
-  fromTenantId    String
-  toTenantId      String?
+  id                String         @id @default(cuid())
+  studentId         String
+  fromTenantId      String
+  toTenantId        String?
   requestedByUserId String?
-  status          TransferStatus @default(REQUESTED)
-  requestedAt     DateTime       @default(now())
-  decidedAt       DateTime?
-  dataScope       Json?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  status            TransferStatus @default(REQUESTED)
+  requestedAt       DateTime       @default(now())
+  decidedAt         DateTime?
+  dataScope         Json?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   student Student @relation(fields: [studentId], references: [id])
 
@@ -145,17 +146,17 @@ model StudentTransfer {
 }
 
 model Attendance {
-  id                  String            @id @default(cuid())
-  tenantId            String
-  studentId           String
-  classroomId         String
-  subjectId           String?
-  date                DateTime
-  status              AttendanceStatus
-  justificationNote   String?
+  id                   String           @id @default(cuid())
+  tenantId             String
+  studentId            String
+  classroomId          String
+  subjectId            String?
+  date                 DateTime
+  status               AttendanceStatus
+  justificationNote    String?
   recordedByEmployeeId String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -165,9 +166,9 @@ model Attendance {
 }
 
 model DisciplinaryIncident {
-  id                  String           @id @default(cuid())
-  tenantId            String
-  studentId           String
+  id                   String           @id @default(cuid())
+  tenantId             String
+  studentId            String
   occurredAt           DateTime
   description          String
   severity             IncidentSeverity
