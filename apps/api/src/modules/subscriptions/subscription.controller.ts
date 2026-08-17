@@ -15,6 +15,7 @@ import {
   cancelSubscriptionSchema,
   createFamilySubscriptionSchema,
   createSchoolSubscriptionSchema,
+  createStudentSubscriptionSchema,
 } from "./subscription.validation.js";
 
 function requireTenantId(req: Request): string {
@@ -51,6 +52,19 @@ async function requireFamilySubscription(familyAccountId: string): Promise<Subsc
 
   if (!subscription) {
     throw new AppError(404, "NO_SUBSCRIPTION", "This family account has no subscription yet");
+  }
+
+  return subscription;
+}
+
+/** Same reasoning as requireFamilySubscription — studentId already comes from
+ * requireLinkedStudent (route param verified against StudentUserLink), never a
+ * client-supplied id used without that check. */
+async function requireStudentSubscription(studentId: string): Promise<Subscription> {
+  const subscription = await subscriptionService.findSubscriptionForOwner({ studentId });
+
+  if (!subscription) {
+    throw new AppError(404, "NO_SUBSCRIPTION", "This student has no subscription yet");
   }
 
   return subscription;
@@ -258,6 +272,115 @@ export function recordFamilyCashPayment(req: Request, res: Response, next: NextF
     const familyAccount = await requireFamilyAccountForUser(userId);
     const input = recordCashPaymentSchema.parse(req.body);
     const subscription = await requireFamilySubscription(familyAccount.id);
+
+    await paymentService.assertPaymentIntentBelongsToSubscription(input.paymentIntentId, subscription.id);
+
+    const transaction = await paymentService.recordManualCashPayment({
+      paymentIntentId: input.paymentIntentId,
+    });
+
+    res.status(200).json(transaction);
+  })().catch(next);
+}
+
+// §26 : abonnement individuel de l'élève, même pipeline que "family" — résolu par
+// studentId (posé par requireLinkedStudent sur la route, jamais un id fourni par le
+// client sans cette vérification préalable) plutôt que familyAccountId. Pas de
+// FamilyAccount intermédiaire ici : un abonnement STUDENT est à siège unique, propre
+// à cet élève, sans notion de "childrenCovered".
+
+export function createStudentSubscription(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const userId = requireUserId(req);
+    const studentId = req.params.studentId as string;
+    const input = createStudentSubscriptionSchema.parse(req.body);
+
+    const subscription = await subscriptionService.createDraftSubscription({
+      ownerType: "STUDENT",
+      ownerRef: { studentId },
+      planCode: input.planCode,
+      fundingSource: "SELF_PAID",
+      billingPeriod: input.billingPeriod,
+      ...(input.promoCode ? { promoCode: input.promoCode } : {}),
+      redeemedByUserId: userId,
+    });
+
+    res.status(201).json(subscription);
+  })().catch(next);
+}
+
+export function getStudentSubscription(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const subscription = await requireStudentSubscription(studentId);
+    res.status(200).json(subscription);
+  })().catch(next);
+}
+
+export function cancelStudentSubscription(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const userId = requireUserId(req);
+    const studentId = req.params.studentId as string;
+    const input = cancelSubscriptionSchema.parse(req.body);
+    const subscription = await requireStudentSubscription(studentId);
+
+    if (subscription.id !== req.params.id) {
+      res
+        .status(404)
+        .json({ code: "SUBSCRIPTION_NOT_FOUND", message: "Subscription not found for this student" });
+      return;
+    }
+
+    const updated = await subscriptionService.transitionSubscription(subscription.id, "CANCELLED", {
+      ...(input.reason ? { reason: input.reason } : {}),
+      actorUserId: userId,
+    });
+
+    res.status(200).json(updated);
+  })().catch(next);
+}
+
+export function createStudentInvoice(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const input = createInvoiceSchema.parse(req.body);
+    const subscription = await requireStudentSubscription(studentId);
+
+    const invoice = await paymentService.createInvoiceForSubscription({
+      subscriptionId: subscription.id,
+      currencyIsoCode: input.currencyIsoCode,
+      billingName: input.billingName,
+      billingEmail: input.billingEmail,
+      ...(input.countryIsoCode ? { countryIsoCode: input.countryIsoCode } : {}),
+    });
+
+    res.status(201).json(invoice);
+  })().catch(next);
+}
+
+export function createStudentPaymentIntent(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const input = createPaymentIntentSchema.parse(req.body);
+    const subscription = await requireStudentSubscription(studentId);
+
+    await paymentService.assertInvoiceBelongsToSubscription(input.invoiceId, subscription.id);
+
+    const intent = await paymentService.createPaymentIntent({
+      invoiceId: input.invoiceId,
+      providerCode: input.providerCode,
+      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
+    });
+
+    res.status(201).json(intent);
+  })().catch(next);
+}
+
+export function recordStudentCashPayment(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const input = recordCashPaymentSchema.parse(req.body);
+    const subscription = await requireStudentSubscription(studentId);
 
     await paymentService.assertPaymentIntentBelongsToSubscription(input.paymentIntentId, subscription.id);
 

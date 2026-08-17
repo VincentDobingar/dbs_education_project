@@ -385,6 +385,22 @@ export default async function setup(): Promise<void> {
     });
   }
 
+  // §26 : même besoin côté abonnement individuel de l'élève, pour STUDENT_BASIC.
+  const studentBasic = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { code: "STUDENT_BASIC" } });
+  const existingStudentPrice = await prisma.planPrice.findFirst({
+    where: { planId: studentBasic.id, countryId: null, currencyId: currency.id, billingPeriod: "MONTHLY" },
+  });
+  if (!existingStudentPrice) {
+    await prisma.planPrice.create({
+      data: {
+        planId: studentBasic.id,
+        currencyId: currency.id,
+        billingPeriod: "MONTHLY",
+        amountCents: 1_500,
+      },
+    });
+  }
+
   await prisma.planFeature.upsert({
     where: { planId_featureCode: { planId: schoolEssential.id, featureCode: "report_card.download" } },
     update: { isIncluded: true, quotaLimit: null },

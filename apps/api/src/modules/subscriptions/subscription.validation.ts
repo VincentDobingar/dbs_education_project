@@ -15,6 +15,13 @@ export const createFamilySubscriptionSchema = z.object({
   promoCode: z.string().min(1).optional(),
 });
 
+/** §26 : même forme que createFamilySubscriptionSchema — l'élève souscrit pour lui-même. */
+export const createStudentSubscriptionSchema = z.object({
+  planCode: z.string().min(1),
+  billingPeriod: z.enum(BILLING_PERIODS),
+  promoCode: z.string().min(1).optional(),
+});
+
 export const cancelSubscriptionSchema = z.object({
   reason: z.string().min(1).optional(),
 });

@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
+import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
@@ -80,3 +81,48 @@ subscriptionRouter.post(
   subscriptionController.createFamilyPaymentIntent,
 );
 subscriptionRouter.post("/family/cash-payment", requireAuth, subscriptionController.recordFamilyCashPayment);
+
+// §26 : abonnement individuel de l'élève — même raisonnement que /family (jamais
+// enforceTenantScope/requireTenantMembership, l'élève n'est pas membre du tenant
+// côté staff), résolu par studentId via requireLinkedStudent plutôt que
+// requireFamilyAccountForUser (un même User peut être lié à plusieurs Student au
+// fil des transferts, §10 — d'où le paramètre explicite plutôt qu'une résolution
+// implicite "mon unique compte").
+const linkedStudentForSubscription = requireLinkedStudent();
+
+subscriptionRouter.post(
+  "/student/:studentId",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.createStudentSubscription,
+);
+subscriptionRouter.get(
+  "/student/:studentId",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.getStudentSubscription,
+);
+subscriptionRouter.post(
+  "/student/:studentId/:id/cancel",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.cancelStudentSubscription,
+);
+subscriptionRouter.post(
+  "/student/:studentId/invoice",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.createStudentInvoice,
+);
+subscriptionRouter.post(
+  "/student/:studentId/payment-intent",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.createStudentPaymentIntent,
+);
+subscriptionRouter.post(
+  "/student/:studentId/cash-payment",
+  requireAuth,
+  linkedStudentForSubscription,
+  subscriptionController.recordStudentCashPayment,
+);
