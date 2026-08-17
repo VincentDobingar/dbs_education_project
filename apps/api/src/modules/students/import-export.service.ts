@@ -1,6 +1,7 @@
 import { parse } from "csv-parse/sync";
 import { ZodError } from "zod";
 
+import { escapeCsvField } from "../../lib/csv.js";
 import { AppError } from "../../lib/errors.js";
 
 import { createStudent, listStudents } from "./student.service.js";
@@ -92,18 +93,6 @@ const EXPORT_COLUMNS = ["matricule", "firstName", "lastName", "dateOfBirth", "ge
  * listStudents already exposes to any students.read caller — never emergency
  * contacts, photoUrl, or medicalNotes, regardless of who is asking.
  */
-function escapeCsvField(value: string): string {
-  let escaped = value;
-  if (/^[=+\-@]/.test(escaped)) {
-    // Neutralizes formula injection if this file is opened in a spreadsheet app.
-    escaped = `'${escaped}`;
-  }
-  if (/["\n\r,]/.test(escaped)) {
-    escaped = `"${escaped.replace(/"/g, '""')}"`;
-  }
-  return escaped;
-}
-
 export async function exportStudentsToCsv(): Promise<string> {
   const students = await listStudents();
 

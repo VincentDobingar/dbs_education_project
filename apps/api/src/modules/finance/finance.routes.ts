@@ -10,6 +10,7 @@ import * as expenseCategoryController from "./expense-category.controller.js";
 import * as expenseController from "./expense.controller.js";
 import * as feeCategoryController from "./fee-category.controller.js";
 import * as feeStructureController from "./fee-structure.controller.js";
+import * as financialReportController from "./financial-report.controller.js";
 import * as studentInvoiceController from "./student-invoice.controller.js";
 import * as studentPaymentController from "./student-payment.controller.js";
 
@@ -79,3 +80,10 @@ financeRouter.post("/cash-sessions/open", writeFinance, cashSessionController.op
 financeRouter.post("/cash-sessions/:id/close", writeFinance, cashSessionController.closeCashSession);
 financeRouter.get("/cash-sessions", readFinance, cashSessionController.listCashSessions);
 financeRouter.get("/cash-sessions/:id", readFinance, cashSessionController.getCashSession);
+
+financeRouter.get("/reports/revenue", readFinance, financialReportController.getRevenueReport);
+financeRouter.get("/reports/revenue/csv", readFinance, financialReportController.getRevenueReportCsv);
+financeRouter.get("/reports/revenue/pdf", readFinance, financialReportController.getRevenueReportPdf);
+financeRouter.get("/reports/expenses", readFinance, financialReportController.getExpenseReport);
+financeRouter.get("/reports/expenses/csv", readFinance, financialReportController.getExpenseReportCsv);
+financeRouter.get("/reports/expenses/pdf", readFinance, financialReportController.getExpenseReportPdf);
