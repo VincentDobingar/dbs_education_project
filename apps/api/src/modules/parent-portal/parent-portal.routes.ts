@@ -12,6 +12,10 @@ export const parentPortalRouter: Router = Router();
 // verrouille le tenant à celui de l'enfant, jamais enforceTenantScope/requireTenantMembership.
 const verifiedChild = requireVerifiedStudentRelationship();
 
+// Pas de :studentId ici — agrège tous les enfants vérifiés du parent, chacun sous
+// son propre verrouillage de tenant (voir parent-portal.service.ts#getParentDashboard).
+parentPortalRouter.get("/dashboard", requireAuth, parentPortalController.getDashboard);
+
 parentPortalRouter.get(
   "/children/:studentId/attendance",
   requireAuth,

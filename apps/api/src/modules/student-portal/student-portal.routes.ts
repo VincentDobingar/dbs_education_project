@@ -13,6 +13,12 @@ export const studentPortalRouter: Router = Router();
 const linkedStudent = requireLinkedStudent();
 
 studentPortalRouter.get(
+  "/students/:studentId/dashboard",
+  requireAuth,
+  linkedStudent,
+  studentPortalController.getDashboard,
+);
+studentPortalRouter.get(
   "/students/:studentId/profile",
   requireAuth,
   linkedStudent,

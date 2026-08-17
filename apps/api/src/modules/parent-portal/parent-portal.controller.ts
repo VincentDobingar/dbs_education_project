@@ -15,6 +15,16 @@ function requireTenant(req: Request): NonNullable<Request["tenant"]> {
   return req.tenant;
 }
 
+export function getDashboard(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.user) {
+      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
+    }
+    const dashboard = await parentPortalService.getParentDashboard(req.user.id);
+    res.status(200).json(dashboard);
+  })().catch(next);
+}
+
 export function getChildAttendance(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const query = listChildAttendanceQuerySchema.parse(req.query);

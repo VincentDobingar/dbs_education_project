@@ -10,6 +10,7 @@ import { logger } from "./lib/logger.js";
 import { attendanceRouter } from "./modules/attendance/attendance.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { communicationRouter } from "./modules/communication/communication.routes.js";
+import { dashboardRouter } from "./modules/dashboard/dashboard.routes.js";
 import { disciplineRouter } from "./modules/discipline/discipline.routes.js";
 import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { familyRouter } from "./modules/family/family.routes.js";
@@ -50,6 +51,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/attendance", attendanceRouter);
   app.use("/api/v1/discipline", disciplineRouter);
   app.use("/api/v1/finance", financeRouter);
+  app.use("/api/v1/dashboard", dashboardRouter);
   app.use("/api/v1/students", studentRouter);
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);

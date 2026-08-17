@@ -1,8 +1,12 @@
 import type { Announcement, Attendance, ReportCard, TimetableEntry } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
+import { rawPrisma } from "../../lib/prisma.js";
+import { runWithContext } from "../../lib/tenant-context.js";
 import * as attendanceService from "../attendance/attendance.service.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
+import type { VerifiedChild } from "../family/parent-student-relationship.service.js";
+import { listVerifiedChildrenForParent } from "../family/parent-student-relationship.service.js";
 import {
   getStudentFinancialSituation,
   type StudentFinancialSituation,
@@ -85,4 +89,78 @@ export async function getChildReceiptPdf(
     throw new AppError(404, "RECEIPT_NOT_FOUND", `Receipt not found: ${receiptId}`);
   }
   return generateReceiptPdf(receiptId, tenantName);
+}
+
+const RECENT_ATTENDANCE_LIMIT = 5;
+const RECENT_ANNOUNCEMENTS_LIMIT = 5;
+
+export interface ParentDashboardChild {
+  student: VerifiedChild["student"];
+  tenantName: string;
+  recentAttendance: Attendance[];
+  latestReportCard: ReportCard | null;
+  financialSituation: StudentFinancialSituation;
+  announcements: Announcement[];
+}
+
+/**
+ * §18 "Parent" : un enfant par tenant potentiellement différent (§9) — chaque bloc
+ * tourne sous `runWithContext` verrouillé sur LE tenant de cet enfant, exactement
+ * comme `requireVerifiedStudentRelationship` le fait pour les routes à un seul
+ * enfant ; jamais un contexte tenant partagé pour toute la liste. "Abonnement du
+ * parent / prochaine échéance" (§18) reste hors périmètre : un abonnement PARENT
+ * s'ancre à un `FamilyAccount` (schéma), mais §9 (abonnement familial en libre-
+ * service) n'a jamais été construit — aucune ligne `FamilyAccount` n'existe en
+ * pratique pour l'exposer, l'inventer donnerait un abonnement toujours vide.
+ */
+export async function getParentDashboard(parentUserId: string): Promise<ParentDashboardChild[]> {
+  const children = await listVerifiedChildrenForParent(parentUserId);
+
+  return Promise.all(
+    children.map((child) =>
+      runWithContext({ tenantId: child.student.tenantId, userId: parentUserId }, async () => {
+        const tenant = await rawPrisma.tenant.findUnique({ where: { id: child.student.tenantId } });
+
+        let hasCurrentEnrollment = true;
+        try {
+          await requireCurrentEnrollment(child.student.id);
+        } catch (err) {
+          if (!(err instanceof AppError && err.code === "STUDENT_NOT_ENROLLED")) {
+            throw err;
+          }
+          hasCurrentEnrollment = false;
+        }
+
+        const [recentAttendance, reportCards, financialSituation, announcements] = await Promise.all([
+          attendanceService
+            .listAttendance({ studentId: child.student.id })
+            .then((rows) => rows.slice(0, RECENT_ATTENDANCE_LIMIT)),
+          reportCardService.listReportCards({ studentId: child.student.id }),
+          getStudentFinancialSituation(child.student.id),
+          hasCurrentEnrollment
+            ? listAnnouncementsForStudent(child.student.id, "PARENTS").then((items) =>
+                items.slice(0, RECENT_ANNOUNCEMENTS_LIMIT),
+              )
+            : Promise.resolve([]),
+        ]);
+
+        // listReportCards orders by classRank, meaningless across different periods —
+        // "latest" here means most recently generated, not top-ranked.
+        const latestReportCard = reportCards.reduce<ReportCard | null>(
+          (latest, reportCard) =>
+            !latest || reportCard.generatedAt > latest.generatedAt ? reportCard : latest,
+          null,
+        );
+
+        return {
+          student: child.student,
+          tenantName: tenant?.name ?? child.student.tenantId,
+          recentAttendance,
+          latestReportCard,
+          financialSituation,
+          announcements,
+        };
+      }),
+    ),
+  );
 }

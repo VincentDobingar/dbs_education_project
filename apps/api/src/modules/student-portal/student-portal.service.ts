@@ -4,6 +4,7 @@ import type {
   Student,
   StudentPayment,
   StudentReceipt,
+  Subscription,
   TimetableEntry,
 } from "@prisma/client";
 
@@ -18,6 +19,7 @@ import type { ReportCardWithItems } from "../grading/report-card.service.js";
 import { listTimetableEntries, listTimetables } from "../school-config/timetable.service.js";
 import { getStudent, requireCurrentEnrollment } from "../students/student.service.js";
 import type { CurrentEnrollment } from "../students/student.service.js";
+import { findSubscriptionForOwner } from "../subscriptions/subscription.service.js";
 
 import type { ListMyReportCardsQuery } from "./student-portal.validation.js";
 
@@ -101,4 +103,51 @@ export async function getMyReceiptPdf(
     throw new AppError(404, "RECEIPT_NOT_FOUND", `Receipt not found: ${receiptId}`);
   }
   return generateReceiptPdf(receiptId, tenantName);
+}
+
+const RECENT_REPORT_CARDS_LIMIT = 3;
+const RECENT_ANNOUNCEMENTS_LIMIT = 5;
+
+/** Schéma : TimetableEntry.dayOfWeek 0 = lundi ... 6 = dimanche — JS Date#getDay() est 0 = dimanche. */
+function schemaDayOfWeek(date: Date): number {
+  return (date.getUTCDay() + 6) % 7;
+}
+
+export interface StudentDashboard {
+  profile: StudentProfile;
+  todayClasses: TimetableEntry[];
+  recentReportCards: ReportCard[];
+  announcements: Announcement[];
+  subscription: Subscription | null;
+}
+
+/**
+ * §18 "Élève" : bundle read-only des endpoints déjà exposés individuellement par ce
+ * module, pour éviter un aller-retour par bloc côté client. "Calendrier" (§18) reste
+ * hors périmètre — aucun modèle d'événements/jours fériés n'existe (même gap déjà
+ * noté en §20) ; "devoirs" de même (aucun modèle Homework, décision de schéma non
+ * prise, voir docs/architecture.md).
+ */
+export async function getMyDashboard(studentId: string): Promise<StudentDashboard> {
+  const profile = await getStudentProfile(studentId);
+
+  const todayClasses = profile.currentEnrollment
+    ? (await getMyTimetable(studentId)).filter((entry) => entry.dayOfWeek === schemaDayOfWeek(new Date()))
+    : [];
+
+  const [recentReportCards, announcements, subscription] = await Promise.all([
+    reportCardService
+      .listReportCards({ studentId })
+      .then((reportCards) => reportCards.slice(0, RECENT_REPORT_CARDS_LIMIT)),
+    // listAnnouncementsForStudent requires a current enrollment (to resolve CLASSROOM-
+    // scoped announcements) — a PROSPECTIVE student without one yet simply sees none.
+    profile.currentEnrollment
+      ? listAnnouncementsForStudent(studentId, "STUDENTS").then((items) =>
+          items.slice(0, RECENT_ANNOUNCEMENTS_LIMIT),
+        )
+      : Promise.resolve([]),
+    findSubscriptionForOwner({ studentId }),
+  ]);
+
+  return { profile, todayClasses, recentReportCards, announcements, subscription };
 }

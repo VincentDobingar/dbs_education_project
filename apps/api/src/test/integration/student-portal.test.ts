@@ -259,6 +259,20 @@ describe("portail élève — lecture (§26)", () => {
       true,
     );
 
+    // §18 "Élève" : bundle des mêmes données, sans abonnement (aucun n'a été créé ici).
+    const dashboard = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/dashboard`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(dashboard.status).toBe(200);
+    const dashboardBody = dashboard.body as {
+      profile: { student: { id: string } };
+      recentReportCards: { id: string }[];
+      subscription: unknown;
+    };
+    expect(dashboardBody.profile.student.id).toBe(studentId);
+    expect(dashboardBody.recentReportCards.some((r) => r.id === reportCard.id)).toBe(true);
+    expect(dashboardBody.subscription).toBeNull();
+
     const reportCards = await request(app)
       .get(`/api/v1/student-portal/students/${studentId}/report-cards`)
       .set("Authorization", `Bearer ${studentToken}`);

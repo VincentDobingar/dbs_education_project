@@ -12,6 +12,13 @@ function requireTenant(req: Request): NonNullable<Request["tenant"]> {
   return req.tenant;
 }
 
+export function getDashboard(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const dashboard = await studentPortalService.getMyDashboard(req.params.studentId as string);
+    res.status(200).json(dashboard);
+  })().catch(next);
+}
+
 export function getProfile(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const profile = await studentPortalService.getStudentProfile(req.params.studentId as string);

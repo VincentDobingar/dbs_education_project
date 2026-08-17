@@ -251,6 +251,28 @@ describe("portail parent — lecture (§25)", () => {
     expect(attendance.status).toBe(200);
     expect((attendance.body as { status: string }[]).some((a) => a.status === "ABSENT")).toBe(true);
 
+    // §18 "Parent" : agrège tous les enfants vérifiés en un seul appel, chacun sous
+    // son propre verrouillage de tenant — un étranger n'a bien sûr aucun enfant.
+    const strangerDashboard = await request(app)
+      .get("/api/v1/parent-portal/dashboard")
+      .set("Authorization", `Bearer ${strangerToken}`);
+    expect(strangerDashboard.status).toBe(200);
+    expect(strangerDashboard.body).toEqual([]);
+
+    const parentDashboard = await request(app)
+      .get("/api/v1/parent-portal/dashboard")
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(parentDashboard.status).toBe(200);
+    const dashboardChildren = parentDashboard.body as {
+      student: { id: string };
+      tenantName: string;
+      recentAttendance: { status: string }[];
+    }[];
+    const childDashboard = dashboardChildren.find((c) => c.student.id === studentId);
+    expect(childDashboard).toBeTruthy();
+    expect(childDashboard?.tenantName).toBe(tenant.name);
+    expect(childDashboard?.recentAttendance.some((a) => a.status === "ABSENT")).toBe(true);
+
     const reportCards = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/report-cards`)
       .set("Authorization", `Bearer ${parentToken}`);
