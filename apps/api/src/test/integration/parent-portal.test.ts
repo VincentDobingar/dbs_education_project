@@ -252,23 +252,24 @@ describe("portail parent — lecture (§25)", () => {
     expect((attendance.body as { status: string }[]).some((a) => a.status === "ABSENT")).toBe(true);
 
     // §18 "Parent" : agrège tous les enfants vérifiés en un seul appel, chacun sous
-    // son propre verrouillage de tenant — un étranger n'a bien sûr aucun enfant.
+    // son propre verrouillage de tenant — un étranger n'a bien sûr aucun enfant ni
+    // abonnement familial (§9).
     const strangerDashboard = await request(app)
       .get("/api/v1/parent-portal/dashboard")
       .set("Authorization", `Bearer ${strangerToken}`);
     expect(strangerDashboard.status).toBe(200);
-    expect(strangerDashboard.body).toEqual([]);
+    expect(strangerDashboard.body).toEqual({ children: [], subscription: null });
 
     const parentDashboard = await request(app)
       .get("/api/v1/parent-portal/dashboard")
       .set("Authorization", `Bearer ${parentToken}`);
     expect(parentDashboard.status).toBe(200);
-    const dashboardChildren = parentDashboard.body as {
-      student: { id: string };
-      tenantName: string;
-      recentAttendance: { status: string }[];
-    }[];
-    const childDashboard = dashboardChildren.find((c) => c.student.id === studentId);
+    const dashboardBody = parentDashboard.body as {
+      children: { student: { id: string }; tenantName: string; recentAttendance: { status: string }[] }[];
+      subscription: unknown;
+    };
+    expect(dashboardBody.subscription).toBeNull();
+    const childDashboard = dashboardBody.children.find((c) => c.student.id === studentId);
     expect(childDashboard).toBeTruthy();
     expect(childDashboard?.tenantName).toBe(tenant.name);
     expect(childDashboard?.recentAttendance.some((a) => a.status === "ABSENT")).toBe(true);

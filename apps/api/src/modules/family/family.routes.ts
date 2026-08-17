@@ -6,6 +6,7 @@ import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
 import * as activationController from "./activation-invitation.controller.js";
+import * as familyAccountController from "./family-account.controller.js";
 import * as relationshipController from "./parent-student-relationship.controller.js";
 import * as studentUserLinkController from "./student-user-link.controller.js";
 
@@ -64,3 +65,9 @@ familyRouter.post(
 familyRouter.post("/activation/redeem", requireAuth, activationController.redeemActivation);
 familyRouter.get("/children", requireAuth, relationshipController.listMyChildren);
 familyRouter.get("/linked-students", requireAuth, studentUserLinkController.listLinkedStudents);
+
+// §9 : abonnement familial en libre-service — le parent n'est membre d'aucun
+// tenant, même chaîne que le reste du bloc bénéficiaire ci-dessus.
+familyRouter.post("/family-account", requireAuth, familyAccountController.createFamilyAccount);
+familyRouter.get("/family-account", requireAuth, familyAccountController.getFamilyAccount);
+familyRouter.patch("/family-account", requireAuth, familyAccountController.updateFamilyAccount);

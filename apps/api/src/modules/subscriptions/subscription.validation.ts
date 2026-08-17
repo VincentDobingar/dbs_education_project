@@ -8,6 +8,13 @@ export const createSchoolSubscriptionSchema = z.object({
   promoCode: z.string().min(1).optional(),
 });
 
+/** §9 : même forme que createSchoolSubscriptionSchema — seul l'ownerRef diffère côté service. */
+export const createFamilySubscriptionSchema = z.object({
+  planCode: z.string().min(1),
+  billingPeriod: z.enum(BILLING_PERIODS),
+  promoCode: z.string().min(1).optional(),
+});
+
 export const cancelSubscriptionSchema = z.object({
   reason: z.string().min(1).optional(),
 });

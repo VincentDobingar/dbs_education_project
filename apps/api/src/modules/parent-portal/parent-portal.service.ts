@@ -1,10 +1,11 @@
-import type { Announcement, Attendance, ReportCard, TimetableEntry } from "@prisma/client";
+import type { Announcement, Attendance, ReportCard, Subscription, TimetableEntry } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma } from "../../lib/prisma.js";
 import { runWithContext } from "../../lib/tenant-context.js";
 import * as attendanceService from "../attendance/attendance.service.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
+import { requireFamilyAccountForUser } from "../family/family-account.service.js";
 import type { VerifiedChild } from "../family/parent-student-relationship.service.js";
 import { listVerifiedChildrenForParent } from "../family/parent-student-relationship.service.js";
 import {
@@ -19,6 +20,7 @@ import * as reportCardService from "../grading/report-card.service.js";
 import type { ReportCardWithItems } from "../grading/report-card.service.js";
 import { listTimetableEntries, listTimetables } from "../school-config/timetable.service.js";
 import { requireCurrentEnrollment } from "../students/student.service.js";
+import { findSubscriptionForOwner } from "../subscriptions/subscription.service.js";
 
 import type { ListChildAttendanceQuery, ListChildReportCardsQuery } from "./parent-portal.validation.js";
 
@@ -103,20 +105,36 @@ export interface ParentDashboardChild {
   announcements: Announcement[];
 }
 
+export interface ParentDashboard {
+  children: ParentDashboardChild[];
+  subscription: Subscription | null;
+}
+
 /**
  * §18 "Parent" : un enfant par tenant potentiellement différent (§9) — chaque bloc
  * tourne sous `runWithContext` verrouillé sur LE tenant de cet enfant, exactement
  * comme `requireVerifiedStudentRelationship` le fait pour les routes à un seul
- * enfant ; jamais un contexte tenant partagé pour toute la liste. "Abonnement du
- * parent / prochaine échéance" (§18) reste hors périmètre : un abonnement PARENT
- * s'ancre à un `FamilyAccount` (schéma), mais §9 (abonnement familial en libre-
- * service) n'a jamais été construit — aucune ligne `FamilyAccount` n'existe en
- * pratique pour l'exposer, l'inventer donnerait un abonnement toujours vide.
+ * enfant ; jamais un contexte tenant partagé pour toute la liste. `subscription`
+ * reste `null` si le parent n'a pas encore créé de `FamilyAccount` (§9 self-service,
+ * désormais possible via `POST /family/family-account` — avant, cette ligne
+ * n'existait jamais en pratique).
  */
-export async function getParentDashboard(parentUserId: string): Promise<ParentDashboardChild[]> {
-  const children = await listVerifiedChildrenForParent(parentUserId);
+export async function getParentDashboard(parentUserId: string): Promise<ParentDashboard> {
+  const [children, familyAccount] = await Promise.all([
+    listVerifiedChildrenForParent(parentUserId),
+    requireFamilyAccountForUser(parentUserId).catch((err) => {
+      if (err instanceof AppError && err.code === "FAMILY_ACCOUNT_NOT_FOUND") {
+        return null;
+      }
+      throw err;
+    }),
+  ]);
 
-  return Promise.all(
+  const subscription = familyAccount
+    ? await findSubscriptionForOwner({ familyAccountId: familyAccount.id })
+    : null;
+
+  const childDashboards = await Promise.all(
     children.map((child) =>
       runWithContext({ tenantId: child.student.tenantId, userId: parentUserId }, async () => {
         const tenant = await rawPrisma.tenant.findUnique({ where: { id: child.student.tenantId } });
@@ -163,4 +181,6 @@ export async function getParentDashboard(parentUserId: string): Promise<ParentDa
       }),
     ),
   );
+
+  return { children: childDashboards, subscription };
 }

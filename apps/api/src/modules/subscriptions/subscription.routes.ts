@@ -66,3 +66,17 @@ subscriptionRouter.post(
   requirePermission("finance.write"),
   subscriptionController.recordSchoolCashPayment,
 );
+
+// §9 : abonnement familial en libre-service — le parent n'est membre d'aucun
+// tenant, jamais enforceTenantScope/requireTenantMembership (même raisonnement
+// que /school ci-dessus, résolu par familyAccountId plutôt que tenantId).
+subscriptionRouter.post("/family", requireAuth, subscriptionController.createFamilySubscription);
+subscriptionRouter.get("/family", requireAuth, subscriptionController.getFamilySubscription);
+subscriptionRouter.post("/family/:id/cancel", requireAuth, subscriptionController.cancelFamilySubscription);
+subscriptionRouter.post("/family/invoice", requireAuth, subscriptionController.createFamilyInvoice);
+subscriptionRouter.post(
+  "/family/payment-intent",
+  requireAuth,
+  subscriptionController.createFamilyPaymentIntent,
+);
+subscriptionRouter.post("/family/cash-payment", requireAuth, subscriptionController.recordFamilyCashPayment);

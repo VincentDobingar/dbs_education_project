@@ -11,6 +11,7 @@ import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
 import type { CreateInvitationInput, ListInvitationsQuery } from "./activation-invitation.validation.js";
+import { assertChildLimitNotReached } from "./family-account.service.js";
 
 export interface CreatedInvitation {
   invitation: ActivationInvitation;
@@ -165,6 +166,15 @@ export async function redeemActivation(
         "This parent is already linked to this student",
       );
     }
+
+    // §9 : le plafond d'un abonnement familial se compte sur TOUS les enfants
+    // vérifiés du parent, tous tenants confondus — ParentStudentRelationship n'a
+    // pas de RLS (même précédent que TenantDomain), donc ce count() n'est pas
+    // limité au tenant verrouillé par cette session malgré le `tx` en cours.
+    const verifiedChildrenCount = await tx.parentStudentRelationship.count({
+      where: { parentUserId: actingUserId, status: "VERIFIED", revokedAt: null },
+    });
+    await assertChildLimitNotReached(actingUserId, verifiedChildrenCount);
 
     const relationship = existingRelationship
       ? await tx.parentStudentRelationship.update({

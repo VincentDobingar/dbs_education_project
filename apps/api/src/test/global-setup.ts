@@ -345,6 +345,22 @@ export default async function setup(): Promise<void> {
     });
   }
 
+  // §9 : le flux d'abonnement familial en libre-service a besoin d'un prix pour PARENT_BASIC.
+  const parentBasic = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { code: "PARENT_BASIC" } });
+  const existingParentPrice = await prisma.planPrice.findFirst({
+    where: { planId: parentBasic.id, countryId: null, currencyId: currency.id, billingPeriod: "MONTHLY" },
+  });
+  if (!existingParentPrice) {
+    await prisma.planPrice.create({
+      data: {
+        planId: parentBasic.id,
+        currencyId: currency.id,
+        billingPeriod: "MONTHLY",
+        amountCents: 2_000,
+      },
+    });
+  }
+
   await prisma.planFeature.upsert({
     where: { planId_featureCode: { planId: schoolEssential.id, featureCode: "report_card.download" } },
     update: { isIncluded: true, quotaLimit: null },
