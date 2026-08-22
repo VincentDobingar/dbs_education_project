@@ -21,6 +21,19 @@ communicationRouter.patch(
   notificationController.markNotificationRead,
 );
 
+// Préférences par canal (§28) : même absence de scope tenant que /notifications
+// ci-dessus, gouverné par NotificationPreference (userId, channel, category).
+communicationRouter.get(
+  "/notification-preferences",
+  requireAuth,
+  notificationController.listNotificationPreferences,
+);
+communicationRouter.put(
+  "/notification-preferences/:channel/:category",
+  requireAuth,
+  notificationController.upsertNotificationPreference,
+);
+
 // Personnel de l'établissement : gestion des annonces (§28), même chaîne que les
 // autres modules tenant-scoped.
 const manageCommunication = requirePermission("communication.manage");

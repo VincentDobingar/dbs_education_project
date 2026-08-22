@@ -1,4 +1,4 @@
-import type { Notification, Prisma } from "@prisma/client";
+import type { Notification, NotificationChannel, NotificationPreference, Prisma } from "@prisma/client";
 
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
@@ -16,14 +16,29 @@ export interface NotifyParentsInput {
 }
 
 /**
+ * Seul EMAIL est gardé par une préférence pour l'instant : IN_APP reste la source de
+ * vérité (§28, jamais désactivable — la ligne "IN_APP" n'est même pas exposée par
+ * upsertNotificationPreference ci-dessous) et SMS/PUSH ne sont consommés par aucun
+ * appelant de notifyParentsOfStudent — exposer un opt-out qui ne changerait jamais
+ * rien serait un contrôle fabriqué, jamais fait dans ce code.
+ */
+async function findEmailDisabledUserIds(userIds: string[], category: string): Promise<Set<string>> {
+  const disabled = await prisma.notificationPreference.findMany({
+    where: { userId: { in: userIds }, channel: "EMAIL", category, isEnabled: false },
+    select: { userId: true },
+  });
+  return new Set(disabled.map((preference) => preference.userId));
+}
+
+/**
  * IN_APP reste la source de vérité (§28) : le parent voit toujours la notification
  * via GET /communication/notifications, quoi qu'il arrive avec l'email ci-dessous.
- * En plus de l'IN_APP, une copie email part vers chaque parent (sendEmail no-ope
- * tant qu'aucun fournisseur SMTP n'est configuré, lib/notification-channels.ts).
- * Pas de gestion de préférence par canal ici : NotificationPreference existe au
- * schéma mais aucune interface ne le pilote encore — hors périmètre de cette
- * tranche, tout parent vérifié reçoit la copie email par défaut.
- * Silencieux si l'élève n'a aucun parent VERIFIED — ce n'est pas une erreur.
+ * En plus de l'IN_APP, une copie email part vers chaque parent qui n'a pas désactivé
+ * la catégorie `input.type` pour le canal EMAIL (NotificationPreference, opt-out —
+ * absence de ligne = activé par défaut, jamais un opt-in implicite inversé).
+ * sendEmail no-ope tant qu'aucun fournisseur SMTP n'est configuré
+ * (lib/notification-channels.ts). Silencieux si l'élève n'a aucun parent VERIFIED —
+ * ce n'est pas une erreur.
  */
 export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise<void> {
   const tenantId = requireCurrentTenantId();
@@ -52,10 +67,16 @@ export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise
 
   const parents = await prisma.user.findMany({
     where: { id: { in: relationships.map((relationship) => relationship.parentUserId) } },
-    select: { email: true },
+    select: { id: true, email: true },
   });
+  const emailDisabled = await findEmailDisabledUserIds(
+    parents.map((parent) => parent.id),
+    input.type,
+  );
   for (const parent of parents) {
-    sendEmail({ to: parent.email, subject: input.title ?? "New notification", text: input.body });
+    if (!emailDisabled.has(parent.id)) {
+      sendEmail({ to: parent.email, subject: input.title ?? "New notification", text: input.body });
+    }
   }
 }
 
@@ -80,4 +101,27 @@ async function requireOwnNotification(id: string, userId: string): Promise<Notif
 export async function markNotificationRead(id: string, userId: string): Promise<Notification> {
   await requireOwnNotification(id, userId);
   return prisma.notification.update({ where: { id }, data: { status: "READ", readAt: new Date() } });
+}
+
+/** NotificationPreference n'a pas de tenantId (comme Notification) : ne renvoie que les
+ * lignes explicitement écrites par l'utilisateur — l'absence d'une (channel, category)
+ * dans cette liste veut dire "activé par défaut", jamais matérialisée en base. */
+export async function listNotificationPreferences(userId: string): Promise<NotificationPreference[]> {
+  return prisma.notificationPreference.findMany({
+    where: { userId },
+    orderBy: [{ channel: "asc" }, { category: "asc" }],
+  });
+}
+
+export async function upsertNotificationPreference(
+  userId: string,
+  channel: NotificationChannel,
+  category: string,
+  isEnabled: boolean,
+): Promise<NotificationPreference> {
+  return prisma.notificationPreference.upsert({
+    where: { userId_channel_category: { userId, channel, category } },
+    create: { userId, channel, category, isEnabled },
+    update: { isEnabled },
+  });
 }

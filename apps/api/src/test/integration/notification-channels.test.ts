@@ -189,6 +189,100 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
     expect(callTo(email, parent.email)?.text).toContain("incident");
   }, 30000);
 
+  it("lets a parent opt out of the EMAIL copy for a notification category (NotificationPreference)", async () => {
+    const email = registerFakeEmail();
+
+    const { tenant, subdomain } = await createTenant("ChannelsTenant");
+    createdTenantIds.push(tenant.id);
+
+    const admin = await createUser("chan-pref-admin");
+    createdUserIds.push(admin.id);
+    await addMembership(admin.id, tenant.id);
+    await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const teacherUser = await createUser("chan-pref-teacher");
+    createdUserIds.push(teacherUser.id);
+    await addMembership(teacherUser.id, tenant.id);
+    await grantRole(teacherUser.id, "TEACHER", tenant.id);
+    const teacherToken = signAccessToken({ sub: teacherUser.id });
+
+    const student = await createStudent(tenant.id, "CHANPREF");
+
+    const parent = await createUser("chan-pref-parent");
+    createdUserIds.push(parent.id);
+    const parentToken = signAccessToken({ sub: parent.id });
+
+    const invitation = await request(app)
+      .post("/api/v1/family/invitations")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId: student.id, beneficiaryCategory: "PARENT", invitedEmail: parent.email });
+    const redeemed = await request(app)
+      .post("/api/v1/family/activation/redeem")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({ code: (invitation.body as { code: string }).code });
+    expect(redeemed.status).toBe(200);
+    email.mockClear();
+
+    const rejectedChannel = await request(app)
+      .put("/api/v1/communication/notification-preferences/SMS/discipline.incident")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({ isEnabled: false });
+    expect(rejectedChannel.status).toBe(400);
+
+    const optOut = await request(app)
+      .put("/api/v1/communication/notification-preferences/EMAIL/discipline.incident")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({ isEnabled: false });
+    expect(optOut.status).toBe(200);
+    expect(optOut.body).toMatchObject({
+      channel: "EMAIL",
+      category: "discipline.incident",
+      isEnabled: false,
+    });
+
+    const listed = await request(app)
+      .get("/api/v1/communication/notification-preferences")
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(listed.status).toBe(200);
+    expect(listed.body as { channel: string; category: string; isEnabled: boolean }[]).toEqual([
+      expect.objectContaining({ channel: "EMAIL", category: "discipline.incident", isEnabled: false }),
+    ]);
+
+    const firstIncident = await request(app)
+      .post("/api/v1/discipline/incidents")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId: student.id,
+        occurredAt: new Date().toISOString().slice(0, 10),
+        description: "Retard répété",
+        severity: "MINOR",
+      });
+    expect(firstIncident.status).toBe(201);
+    expect(callTo(email, parent.email)).toBeUndefined();
+
+    const optIn = await request(app)
+      .put("/api/v1/communication/notification-preferences/EMAIL/discipline.incident")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({ isEnabled: true });
+    expect(optIn.status).toBe(200);
+
+    const secondIncident = await request(app)
+      .post("/api/v1/discipline/incidents")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId: student.id,
+        occurredAt: new Date().toISOString().slice(0, 10),
+        description: "Bagarre",
+        severity: "SEVERE",
+      });
+    expect(secondIncident.status).toBe(201);
+    expect(callTo(email, parent.email)?.text).toContain("SEVERE");
+  }, 30000);
+
   it("notifies the ticket author by email + SMS when platform staff replies, never for an internal note", async () => {
     const email = registerFakeEmail();
     const sms = registerFakeSms();
