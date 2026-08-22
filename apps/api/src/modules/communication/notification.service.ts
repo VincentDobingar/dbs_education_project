@@ -1,4 +1,10 @@
-import type { Notification, NotificationChannel, NotificationPreference, Prisma } from "@prisma/client";
+import type {
+  MessageTemplate,
+  Notification,
+  NotificationChannel,
+  NotificationPreference,
+  Prisma,
+} from "@prisma/client";
 
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
@@ -31,14 +37,48 @@ async function findEmailDisabledUserIds(userIds: string[], category: string): Pr
 }
 
 /**
+ * MessageTemplate a un tenantId nullable (global vs personnalisé par établissement,
+ * §31 tranche 6) : le modèle propre au tenant l'emporte s'il existe, sinon on retombe
+ * sur le modèle global — jamais l'inverse. Retourne `null` si aucun des deux n'existe
+ * (aucun modèle géré pour cette catégorie), auquel cas l'appelant retombe sur le texte
+ * en dur passé par `input` — comportement inchangé pour toute catégorie non modélisée.
+ */
+async function resolveMessageTemplate(
+  tenantId: string,
+  category: string,
+  channel: NotificationChannel,
+): Promise<MessageTemplate | null> {
+  const scoped = await prisma.messageTemplate.findFirst({ where: { tenantId, code: category, channel } });
+  if (scoped) {
+    return scoped;
+  }
+  return prisma.messageTemplate.findFirst({ where: { tenantId: null, code: category, channel } });
+}
+
+/**
+ * Un seul emplacement de substitution, volontairement pas un moteur de gabarit
+ * complet : `input.body` porte déjà le détail concret (nom d'élève, sévérité...)
+ * calculé par l'appelant (attendance.service.ts, discipline.service.ts) — le modèle
+ * ne fait qu'habiller ce texte (formule de politesse, branding établissement), jamais
+ * le remplacer. Le modèle sans `{{message}}` reste un texte statique tel quel.
+ */
+function renderTemplateBody(template: MessageTemplate, locale: string, message: string): string {
+  const body = locale === "en" ? template.bodyEn : template.bodyFr;
+  return body.replace("{{message}}", message);
+}
+
+/**
  * IN_APP reste la source de vérité (§28) : le parent voit toujours la notification
- * via GET /communication/notifications, quoi qu'il arrive avec l'email ci-dessous.
- * En plus de l'IN_APP, une copie email part vers chaque parent qui n'a pas désactivé
- * la catégorie `input.type` pour le canal EMAIL (NotificationPreference, opt-out —
- * absence de ligne = activé par défaut, jamais un opt-in implicite inversé).
- * sendEmail no-ope tant qu'aucun fournisseur SMTP n'est configuré
- * (lib/notification-channels.ts). Silencieux si l'élève n'a aucun parent VERIFIED —
- * ce n'est pas une erreur.
+ * via GET /communication/notifications, quoi qu'il arrive avec l'email ci-dessous —
+ * jamais habillée par un `MessageTemplate`, c'est l'enregistrement exact de ce qui
+ * s'est passé. En plus de l'IN_APP, une copie email part vers chaque parent qui n'a
+ * pas désactivé la catégorie `input.type` pour le canal EMAIL (NotificationPreference,
+ * opt-out — absence de ligne = activé par défaut, jamais un opt-in implicite inversé),
+ * habillée par le `MessageTemplate` EMAIL de cette catégorie s'il en existe un (sujet
+ * et corps fr/en selon `UserProfile.locale` du parent), sinon `input.title`/`input.body`
+ * tels quels comme avant. sendEmail no-ope tant qu'aucun fournisseur SMTP n'est
+ * configuré (lib/notification-channels.ts). Silencieux si l'élève n'a aucun parent
+ * VERIFIED — ce n'est pas une erreur.
  */
 export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise<void> {
   const tenantId = requireCurrentTenantId();
@@ -67,16 +107,24 @@ export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise
 
   const parents = await prisma.user.findMany({
     where: { id: { in: relationships.map((relationship) => relationship.parentUserId) } },
-    select: { id: true, email: true },
+    select: { id: true, email: true, profile: { select: { locale: true } } },
   });
-  const emailDisabled = await findEmailDisabledUserIds(
-    parents.map((parent) => parent.id),
-    input.type,
-  );
+  const [emailDisabled, template] = await Promise.all([
+    findEmailDisabledUserIds(
+      parents.map((parent) => parent.id),
+      input.type,
+    ),
+    resolveMessageTemplate(tenantId, input.type, "EMAIL"),
+  ]);
   for (const parent of parents) {
-    if (!emailDisabled.has(parent.id)) {
-      sendEmail({ to: parent.email, subject: input.title ?? "New notification", text: input.body });
+    if (emailDisabled.has(parent.id)) {
+      continue;
     }
+    const subject = template?.subject ?? input.title ?? "New notification";
+    const text = template
+      ? renderTemplateBody(template, parent.profile?.locale ?? "fr", input.body)
+      : input.body;
+    sendEmail({ to: parent.email, subject, text });
   }
 }
 

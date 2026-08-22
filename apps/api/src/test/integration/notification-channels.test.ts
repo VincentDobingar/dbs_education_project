@@ -31,6 +31,11 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
   });
 
   afterAll(async () => {
+    await testAdminPrisma.messageTemplate.deleteMany({
+      where: {
+        OR: [{ tenantId: { in: createdTenantIds } }, { tenantId: null, code: "discipline.incident" }],
+      },
+    });
     await testAdminPrisma.disciplinaryIncident.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.parentStudentRelationship.deleteMany({
       where: { tenantId: { in: createdTenantIds } },
@@ -281,6 +286,103 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
       });
     expect(secondIncident.status).toBe(201);
     expect(callTo(email, parent.email)?.text).toContain("SEVERE");
+  }, 30000);
+
+  it("dresses the EMAIL copy with a MessageTemplate (global, then tenant override, locale-aware)", async () => {
+    const email = registerFakeEmail();
+
+    const { tenant, subdomain } = await createTenant("ChannelsTenant");
+    createdTenantIds.push(tenant.id);
+
+    const admin = await createUser("chan-tpl-admin");
+    createdUserIds.push(admin.id);
+    await addMembership(admin.id, tenant.id);
+    await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const teacherUser = await createUser("chan-tpl-teacher");
+    createdUserIds.push(teacherUser.id);
+    await addMembership(teacherUser.id, tenant.id);
+    await grantRole(teacherUser.id, "TEACHER", tenant.id);
+    const teacherToken = signAccessToken({ sub: teacherUser.id });
+
+    const student = await createStudent(tenant.id, "CHANTPL");
+
+    const parent = await createUser("chan-tpl-parent");
+    createdUserIds.push(parent.id);
+    const parentToken = signAccessToken({ sub: parent.id });
+    await testAdminPrisma.userProfile.update({ where: { userId: parent.id }, data: { locale: "en" } });
+
+    await testAdminPrisma.messageTemplate.create({
+      data: {
+        tenantId: null,
+        code: "discipline.incident",
+        channel: "EMAIL",
+        subject: "Global: incident notice",
+        bodyFr: "Cher parent, {{message}} Cordialement.",
+        bodyEn: "Dear parent, {{message}} Regards.",
+      },
+    });
+
+    const invitation = await request(app)
+      .post("/api/v1/family/invitations")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId: student.id, beneficiaryCategory: "PARENT", invitedEmail: parent.email });
+    const redeemed = await request(app)
+      .post("/api/v1/family/activation/redeem")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({ code: (invitation.body as { code: string }).code });
+    expect(redeemed.status).toBe(200);
+    email.mockClear();
+
+    const globalTemplateIncident = await request(app)
+      .post("/api/v1/discipline/incidents")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId: student.id,
+        occurredAt: new Date().toISOString().slice(0, 10),
+        description: "Retard répété",
+        severity: "MINOR",
+      });
+    expect(globalTemplateIncident.status).toBe(201);
+
+    const globalCall = callTo(email, parent.email);
+    expect(globalCall?.subject).toBe("Global: incident notice");
+    expect(globalCall?.text).toContain("Dear parent,");
+    expect(globalCall?.text).toContain("Regards.");
+    expect(globalCall?.text).toContain("MINOR");
+
+    await testAdminPrisma.messageTemplate.create({
+      data: {
+        tenantId: tenant.id,
+        code: "discipline.incident",
+        channel: "EMAIL",
+        subject: "Tenant-specific: incident notice",
+        bodyFr: "Bonjour, {{message}} — l'équipe de l'établissement.",
+        bodyEn: "Hello, {{message}} — the school team.",
+      },
+    });
+    email.mockClear();
+
+    const tenantTemplateIncident = await request(app)
+      .post("/api/v1/discipline/incidents")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId: student.id,
+        occurredAt: new Date().toISOString().slice(0, 10),
+        description: "Bagarre",
+        severity: "SEVERE",
+      });
+    expect(tenantTemplateIncident.status).toBe(201);
+
+    const tenantCall = callTo(email, parent.email);
+    expect(tenantCall?.subject).toBe("Tenant-specific: incident notice");
+    expect(tenantCall?.text).toContain("Hello,");
+    expect(tenantCall?.text).toContain("the school team.");
+    expect(tenantCall?.text).toContain("SEVERE");
   }, 30000);
 
   it("notifies the ticket author by email + SMS when platform staff replies, never for an internal note", async () => {
