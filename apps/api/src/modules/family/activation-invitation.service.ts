@@ -5,8 +5,10 @@ import {
   generateActivationCode,
   hashActivationCode,
 } from "../../lib/activation-code.js";
+import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
+import { sendSms } from "../../lib/sms-provider/send-sms.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
@@ -19,9 +21,11 @@ export interface CreatedInvitation {
 }
 
 /**
- * The code is handed back in the response, once, in clear text (§8). No real
- * email/SMS delivery is wired up anywhere in this codebase yet (same limitation as
- * Mobile Money, §24) — staff transmit it manually until a real channel exists.
+ * The code is handed back in the response, once, in clear text (§8), AND sent via
+ * sendEmail/sendSms (§28) to whichever of invitedEmail/invitedPhone was given —
+ * both channels coexist: sendEmail/sendSms no-op until a real SMTP/Twilio provider
+ * is configured (lib/notification-channels.ts), so "staff transmit it manually"
+ * remains the fallback exactly as before until one actually is.
  */
 export async function createInvitation(
   input: CreateInvitationInput,
@@ -48,6 +52,20 @@ export async function createInvitation(
   await prisma.activationCode.create({
     data: { invitationId: invitation.id, codeHash: hash, expiresAt },
   });
+
+  if (invitation.invitedEmail) {
+    sendEmail({
+      to: invitation.invitedEmail,
+      subject: "Your EduManage activation code",
+      text: `You've been invited to access EduManage. Your activation code is: ${code}\nThis code expires on ${expiresAt.toISOString()}.`,
+    });
+  }
+  if (invitation.invitedPhone) {
+    sendSms({
+      to: invitation.invitedPhone,
+      body: `Your EduManage activation code is: ${code} (expires ${expiresAt.toISOString().slice(0, 10)})`,
+    });
+  }
 
   return { invitation, code };
 }

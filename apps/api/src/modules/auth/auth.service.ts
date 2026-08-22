@@ -8,6 +8,7 @@ import {
   hashPhoneVerificationCode,
   PHONE_VERIFICATION_TTL_MS,
 } from "../../lib/account-verification.js";
+import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { decrypt } from "../../lib/encryption.js";
 import { AppError } from "../../lib/errors.js";
 import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from "../../lib/jwt.js";
@@ -15,6 +16,7 @@ import { verifyTotpCode } from "../../lib/mfa.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { prisma } from "../../lib/prisma.js";
 import { generateRefreshToken, hashRefreshToken, REFRESH_TOKEN_TTL_MS } from "../../lib/refresh-token.js";
+import { sendSms } from "../../lib/sms-provider/send-sms.js";
 
 import { consumeMfaRecoveryCode } from "./mfa.service.js";
 
@@ -55,10 +57,12 @@ export interface RegisterResult {
 /**
  * §34 : le compte reste PENDING tant que l'email (ou le téléphone, si renseigné — §15
  * accepte l'un ou l'autre) n'est pas vérifié ; `login` refuse déjà tout statut différent
- * d'ACTIVE. Aucun fournisseur email/SMS réel n'existe dans ce code (même limite que
- * Mobile Money §24 et les codes d'activation §8) : le jeton/code est donc renvoyé en
- * clair une seule fois dans la réponse d'inscription, documenté plutôt que simulé
- * silencieusement — l'appelant (ou un futur relais staff) le transmet manuellement.
+ * d'ACTIVE. Le jeton/code est renvoyé en clair une seule fois dans la réponse
+ * d'inscription (documenté plutôt que simulé silencieusement) ET envoyé via
+ * sendEmail/sendSms (§28) — les deux coexistent : sendEmail/sendSms no-opent tant
+ * qu'aucun fournisseur SMTP/Twilio n'est configuré (voir lib/notification-channels.ts),
+ * donc le comportement précédent ("l'appelant transmet manuellement") reste
+ * inchangé jusqu'à ce qu'un fournisseur soit réellement branché.
  */
 export async function registerUser(input: RegisterInput): Promise<RegisterResult> {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
@@ -94,6 +98,15 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
       profile: { create: { firstName: input.firstName, lastName: input.lastName } },
     },
   });
+
+  sendEmail({
+    to: user.email,
+    subject: "Verify your email address",
+    text: `Your EduManage verification token is: ${emailVerificationToken}\n\nUse it to confirm your account.`,
+  });
+  if (phoneVerificationCode && user.phone) {
+    sendSms({ to: user.phone, body: `Your EduManage verification code is: ${phoneVerificationCode}` });
+  }
 
   return { user, emailVerificationToken, ...(phoneVerificationCode ? { phoneVerificationCode } : {}) };
 }
@@ -159,6 +172,13 @@ export async function resendEmailVerification(email: string): Promise<string> {
       emailVerificationExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
     },
   });
+
+  sendEmail({
+    to: user.email,
+    subject: "Verify your email address",
+    text: `Your EduManage verification token is: ${token}\n\nUse it to confirm your account.`,
+  });
+
   return token;
 }
 
@@ -182,6 +202,9 @@ export async function resendPhoneVerification(email: string): Promise<string> {
       phoneVerificationExpiresAt: new Date(Date.now() + PHONE_VERIFICATION_TTL_MS),
     },
   });
+
+  sendSms({ to: user.phone, body: `Your EduManage verification code is: ${code}` });
+
   return code;
 }
 

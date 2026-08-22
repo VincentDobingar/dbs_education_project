@@ -1,5 +1,6 @@
 import type { Notification, Prisma } from "@prisma/client";
 
+import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -15,9 +16,13 @@ export interface NotifyParentsInput {
 }
 
 /**
- * IN_APP uniquement pour cette tranche (§28) : aucun fournisseur EMAIL/SMS/PUSH réel
- * n'est câblé nulle part dans ce code (même limite assumée que Mobile Money, §24).
- * Un parent vérifié voit la notification via GET /communication/notifications.
+ * IN_APP reste la source de vérité (§28) : le parent voit toujours la notification
+ * via GET /communication/notifications, quoi qu'il arrive avec l'email ci-dessous.
+ * En plus de l'IN_APP, une copie email part vers chaque parent (sendEmail no-ope
+ * tant qu'aucun fournisseur SMTP n'est configuré, lib/notification-channels.ts).
+ * Pas de gestion de préférence par canal ici : NotificationPreference existe au
+ * schéma mais aucune interface ne le pilote encore — hors périmètre de cette
+ * tranche, tout parent vérifié reçoit la copie email par défaut.
  * Silencieux si l'élève n'a aucun parent VERIFIED — ce n'est pas une erreur.
  */
 export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise<void> {
@@ -44,6 +49,14 @@ export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise
       ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
     })),
   });
+
+  const parents = await prisma.user.findMany({
+    where: { id: { in: relationships.map((relationship) => relationship.parentUserId) } },
+    select: { email: true },
+  });
+  for (const parent of parents) {
+    sendEmail({ to: parent.email, subject: input.title ?? "New notification", text: input.body });
+  }
 }
 
 export async function listNotificationsForUser(
