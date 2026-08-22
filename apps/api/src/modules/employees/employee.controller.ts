@@ -1,7 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 
 import * as employeeService from "./employee.service.js";
-import { createEmployeeSchema, updateEmployeeSchema } from "./employee.validation.js";
+import {
+  createEmployeeSchema,
+  employeeWorkloadQuerySchema,
+  updateEmployeeSchema,
+} from "./employee.validation.js";
 
 export function createEmployee(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
@@ -37,5 +41,13 @@ export function archiveEmployee(req: Request, res: Response, next: NextFunction)
   void (async () => {
     const employee = await employeeService.archiveEmployee(req.params.id as string);
     res.status(200).json(employee);
+  })().catch(next);
+}
+
+export function getEmployeeWorkload(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const query = employeeWorkloadQuerySchema.parse(req.query);
+    const workload = await employeeService.getEmployeeWorkload(req.params.id as string, query.academicYearId);
+    res.status(200).json(workload);
   })().catch(next);
 }

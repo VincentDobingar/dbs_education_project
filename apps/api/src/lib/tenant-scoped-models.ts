@@ -45,6 +45,8 @@ export const TENANT_SCOPED_MODELS = [
   "EmploymentContract",
   "LeaveRequest",
   "EmployeeAttendance",
+  "PerformanceEvaluation",
+  "EmployeeDocument",
   "TenantMembership",
   "TenantDomain",
   "TenantSetting",

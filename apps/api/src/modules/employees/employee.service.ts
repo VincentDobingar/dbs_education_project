@@ -1,4 +1,4 @@
-import type { Employee } from "@prisma/client";
+import type { Employee, TeacherAssignment } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma, rawPrisma } from "../../lib/prisma.js";
@@ -89,4 +89,34 @@ export async function updateEmployee(id: string, input: UpdateEmployeeInput): Pr
 export async function archiveEmployee(id: string): Promise<Employee> {
   await getEmployee(id);
   return prisma.employee.update({ where: { id }, data: { deletedAt: new Date(), status: "TERMINATED" } });
+}
+
+export interface EmployeeWorkload {
+  assignments: TeacherAssignment[];
+  totalHoursPerWeek: number;
+}
+
+/**
+ * "Charges horaires" (§27) : `TeacherAssignment.hoursPerWeek` (§20, administration
+ * académique) porte déjà cette donnée par affectation matière/classe/année — pas de
+ * nouveau modèle, juste l'agrégat pour un employé qu'aucun endpoint n'exposait encore.
+ * Un employé sans aucune affectation (personnel non enseignant) obtient 0, pas une erreur.
+ */
+export async function getEmployeeWorkload(
+  employeeId: string,
+  academicYearId?: string,
+): Promise<EmployeeWorkload> {
+  await getEmployee(employeeId);
+
+  const assignments = await prisma.teacherAssignment.findMany({
+    where: { employeeId, ...(academicYearId ? { academicYearId } : {}) },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const totalHoursPerWeek = assignments.reduce(
+    (sum, assignment) => sum + (assignment.hoursPerWeek?.toNumber() ?? 0),
+    0,
+  );
+
+  return { assignments, totalHoursPerWeek };
 }

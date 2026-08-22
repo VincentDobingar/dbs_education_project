@@ -20,3 +20,8 @@ export const updateEmployeeSchema = z.object({
   status: z.enum(EMPLOYEE_STATUSES).optional(),
 });
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
+
+export const employeeWorkloadQuerySchema = z.object({
+  academicYearId: z.string().min(1).optional(),
+});
+export type EmployeeWorkloadQuery = z.infer<typeof employeeWorkloadQuerySchema>;

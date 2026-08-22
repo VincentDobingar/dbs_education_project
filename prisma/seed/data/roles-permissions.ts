@@ -96,6 +96,12 @@ export const PERMISSIONS = [
   },
   { code: "hr.manage", module: "hr", descriptionFr: "Gérer le personnel", descriptionEn: "Manage staff" },
   {
+    code: "hr.salary.manage",
+    module: "hr",
+    descriptionFr: "Gérer les contrats et données salariales",
+    descriptionEn: "Manage contracts and salary data",
+  },
+  {
     code: "tenant.settings.manage",
     module: "tenant",
     descriptionFr: "Gérer les paramètres de l'établissement",
@@ -172,6 +178,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "finance.read",
     "finance.write",
     "hr.manage",
+    "hr.salary.manage",
     "tenant.settings.manage",
     "subscriptions.manage",
     "communication.manage",
@@ -215,7 +222,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
   ],
   SECRETARY: ["students.read", "students.write"],
   ACCOUNTANT: ["finance.read", "finance.write"],
-  HR_MANAGER: ["hr.manage"],
+  HR_MANAGER: ["hr.manage", "hr.salary.manage"],
   TEACHER: [
     "students.read",
     "grades.read",

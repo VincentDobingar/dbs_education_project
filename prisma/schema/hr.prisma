@@ -49,6 +49,8 @@ model Employee {
   contracts           EmploymentContract[]
   leaveRequests        LeaveRequest[]
   attendances          EmployeeAttendance[]
+  evaluations          PerformanceEvaluation[]
+  documents            EmployeeDocument[]
   teacherAssignments   TeacherAssignment[]
   timetableEntries     TimetableEntry[]
 
@@ -110,4 +112,43 @@ model EmployeeAttendance {
 
   @@unique([employeeId, date])
   @@index([tenantId])
+}
+
+/// Note libre (pas d'echelle imposee, §27 ne fixe aucun bareme standard) —
+/// evaluatedByEmployeeId reste optionnel : une evaluation externe (consultant,
+/// direction reseau) n'a pas forcement de fiche Employee dans ce tenant.
+model PerformanceEvaluation {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  employeeId            String
+  evaluatedByEmployeeId String?
+  periodStart           DateTime
+  periodEnd             DateTime
+  score                 Int?
+  comments              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+}
+
+/// Meme forme que StudentDocument (student.prisma) : metadonnees seulement, le
+/// fichier est deja televerse ailleurs (URL fournie par l'appelant).
+model EmployeeDocument {
+  id               String    @id @default(cuid())
+  tenantId         String
+  employeeId       String
+  category         String
+  fileUrl          String
+  uploadedByUserId String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
 }
