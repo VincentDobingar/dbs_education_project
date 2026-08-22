@@ -1,8 +1,10 @@
 import type { Prisma, SupportTicket, SupportTicketMessage } from "@prisma/client";
 
 import { recordAuditLog } from "../../lib/audit-log.js";
+import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
+import { sendSms } from "../../lib/sms-provider/send-sms.js";
 
 import type { PlatformActor } from "./platform-actor.js";
 import type {
@@ -117,6 +119,31 @@ export async function updateSupportTicketStatus(
   return updated;
 }
 
+/**
+ * Ferme le dernier point noté hors périmètre pour §31 tranche 5 : une réponse de
+ * staff n'était visible qu'en rouvrant le ticket. Même canaux que §28
+ * (sendEmail/sendSms, no-op tant qu'aucun fournisseur n'est configuré) — jamais pour
+ * une note interne (isInternalNote), qui ne doit jamais atteindre l'auteur du ticket.
+ */
+async function notifyTicketAuthorOfReply(ticket: SupportTicket, body: string): Promise<void> {
+  const author = await prisma.user.findUnique({
+    where: { id: ticket.createdByUserId },
+    select: { email: true, phone: true },
+  });
+  if (!author) {
+    return;
+  }
+
+  sendEmail({
+    to: author.email,
+    subject: `New reply on your support ticket: ${ticket.subject}`,
+    text: body,
+  });
+  if (author.phone) {
+    sendSms({ to: author.phone, body: `New reply on your support ticket "${ticket.subject}": ${body}` });
+  }
+}
+
 export async function addSupportTicketMessage(
   id: string,
   input: AddSupportTicketMessageInput,
@@ -139,5 +166,10 @@ export async function addSupportTicketMessage(
   await auditSupportTicket(actor, "support_ticket.message", ticket, undefined, {
     isInternalNote: message.isInternalNote,
   });
+
+  if (!message.isInternalNote) {
+    await notifyTicketAuthorOfReply(ticket, message.body);
+  }
+
   return message;
 }

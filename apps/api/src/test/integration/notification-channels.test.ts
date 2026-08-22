@@ -188,4 +188,50 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
 
     expect(callTo(email, parent.email)?.text).toContain("incident");
   }, 30000);
+
+  it("notifies the ticket author by email + SMS when platform staff replies, never for an internal note", async () => {
+    const email = registerFakeEmail();
+    const sms = registerFakeSms();
+
+    const { tenant, subdomain } = await createTenant("ChannelsTenant");
+    createdTenantIds.push(tenant.id);
+
+    const owner = await createUser("chan-ticket-owner");
+    createdUserIds.push(owner.id);
+    await addMembership(owner.id, tenant.id);
+    await grantRole(owner.id, "SCHOOL_OWNER", tenant.id);
+    const ownerToken = signAccessToken({ sub: owner.id });
+
+    const ownerPhone = `+237698${uniqueSuffix().slice(0, 6)}`;
+    await testAdminPrisma.user.update({ where: { id: owner.id }, data: { phone: ownerPhone } });
+
+    const superAdmin = await createUser("chan-ticket-super");
+    createdUserIds.push(superAdmin.id);
+    await grantRole(superAdmin.id, "SUPER_ADMIN", null);
+    const superAdminToken = signAccessToken({ sub: superAdmin.id });
+
+    const ticket = await request(app)
+      .post("/api/v1/communication/support-tickets")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ subject: "Question de facturation" });
+    expect(ticket.status).toBe(201);
+    const ticketId = (ticket.body as { id: string }).id;
+
+    const internalNote = await request(app)
+      .post(`/api/v1/platform/support-tickets/${ticketId}/messages`)
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({ body: "Internal note, never sent to the customer", isInternalNote: true });
+    expect(internalNote.status).toBe(201);
+    expect(callTo(email, owner.email)).toBeUndefined();
+
+    const reply = await request(app)
+      .post(`/api/v1/platform/support-tickets/${ticketId}/messages`)
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({ body: "Here is the reply to your billing question" });
+    expect(reply.status).toBe(201);
+
+    expect(callTo(email, owner.email)?.text).toContain("Here is the reply");
+    expect(smsCallTo(sms, ownerPhone)?.body).toContain("Here is the reply");
+  }, 20000);
 });
