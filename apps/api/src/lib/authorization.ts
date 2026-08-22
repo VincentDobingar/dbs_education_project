@@ -24,6 +24,12 @@ export async function getPlatformRoleCodes(userId: string): Promise<string[]> {
   return activeRoleCodes(userId, null);
 }
 
+/** Finalisation Phase 2 : le(s) rôle(s) tenant actifs d'un utilisateur, pour la piste
+ * d'audit des actions tenant-internes sensibles (actorRoleCode). */
+export async function getTenantRoleCodes(userId: string, tenantId: string): Promise<string[]> {
+  return activeRoleCodes(userId, tenantId);
+}
+
 export async function userHasPermission(
   userId: string,
   tenantId: string | null,

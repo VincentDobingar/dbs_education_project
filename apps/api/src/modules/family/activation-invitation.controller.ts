@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
 
 import * as activationService from "./activation-invitation.service.js";
 import {
@@ -30,7 +31,8 @@ export function listInvitations(req: Request, res: Response, next: NextFunction)
 
 export function revokeInvitation(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    const invitation = await activationService.revokeInvitation(req.params.id as string);
+    const actor = await resolveTenantActor(req);
+    const invitation = await activationService.revokeInvitation(req.params.id as string, actor);
     res.status(200).json(invitation);
   })().catch(next);
 }

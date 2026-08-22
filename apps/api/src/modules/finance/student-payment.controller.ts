@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
 
 import { generateReceiptPdf } from "./receipt-pdf.service.js";
 import * as studentPaymentService from "./student-payment.service.js";
@@ -37,14 +38,12 @@ export function getReceipt(req: Request, res: Response, next: NextFunction): voi
 
 export function refundStudentPayment(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    if (!req.user) {
-      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
-    }
     const input = refundStudentPaymentSchema.parse(req.body);
+    const actor = await resolveTenantActor(req);
     const refund = await studentPaymentService.refundStudentPayment(
       req.params.paymentId as string,
       input,
-      req.user.id,
+      actor,
     );
     res.status(201).json(refund);
   })().catch(next);

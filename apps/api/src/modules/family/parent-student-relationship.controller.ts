@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
 
 import * as relationshipService from "./parent-student-relationship.service.js";
 import {
@@ -18,14 +19,12 @@ export function listRelationships(req: Request, res: Response, next: NextFunctio
 
 export function revokeRelationship(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    if (!req.user) {
-      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
-    }
     const input = revokeRelationshipSchema.parse(req.body);
+    const actor = await resolveTenantActor(req);
     const relationship = await relationshipService.revokeRelationship(
       req.params.id as string,
       input.reason,
-      req.user.id,
+      actor,
     );
     res.status(200).json(relationship);
   })().catch(next);

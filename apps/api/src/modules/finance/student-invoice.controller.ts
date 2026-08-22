@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
+
 import { getStudentFinancialSituation } from "./financial-situation.service.js";
 import * as studentInvoiceService from "./student-invoice.service.js";
 import { createStudentInvoiceSchema, listStudentInvoicesQuerySchema } from "./student-invoice.validation.js";
@@ -36,7 +38,8 @@ export function issueStudentInvoice(req: Request, res: Response, next: NextFunct
 
 export function cancelStudentInvoice(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    const invoice = await studentInvoiceService.cancelStudentInvoice(req.params.id as string);
+    const actor = await resolveTenantActor(req);
+    const invoice = await studentInvoiceService.cancelStudentInvoice(req.params.id as string, actor);
     res.status(200).json(invoice);
   })().catch(next);
 }

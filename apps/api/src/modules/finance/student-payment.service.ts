@@ -1,7 +1,9 @@
 import type { StudentPayment, StudentPaymentRefund, StudentReceipt } from "@prisma/client";
 
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, withTenantSession } from "../../lib/prisma.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { generateReference } from "../payments/reference.js";
 
@@ -133,11 +135,13 @@ export async function requireStudentPayment(id: string): Promise<StudentPayment>
  * Append-only refund trail (§23) : a payment can be refunded partially, several
  * times, capped at what hasn't been refunded yet. Unblocks cancelStudentInvoice's
  * "refund the payments first" guard once an invoice's paidCents reaches 0.
+ * Finalisation Phase 2 : action tenant-interne financièrement sensible — auditée,
+ * `reason` (déjà obligatoire au schéma) alimente aussi `justification`.
  */
 export async function refundStudentPayment(
   paymentId: string,
   input: RefundStudentPaymentInput,
-  actingUserId: string,
+  actor: TenantActor,
 ): Promise<StudentPaymentRefund> {
   const payment = await requireStudentPayment(paymentId);
 
@@ -154,7 +158,7 @@ export async function refundStudentPayment(
     );
   }
 
-  const refundedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  const refundedByEmployeeId = await resolveActingEmployeeId(actor.actorUserId);
   if (!refundedByEmployeeId) {
     throw new AppError(
       403,
@@ -165,8 +169,8 @@ export async function refundStudentPayment(
 
   const tenantId = requireCurrentTenantId();
 
-  return withTenantSession(tenantId, async (tx) => {
-    const refund = await tx.studentPaymentRefund.create({
+  const refund = await withTenantSession(tenantId, async (tx) => {
+    const created = await tx.studentPaymentRefund.create({
       data: {
         tenantId,
         studentPaymentId: paymentId,
@@ -184,8 +188,21 @@ export async function refundStudentPayment(
       data: { paidCents: newPaidCents, status: newPaidCents === 0 ? "ISSUED" : "PARTIALLY_PAID" },
     });
 
-    return refund;
+    return created;
   });
+
+  await recordAuditLog({
+    tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "student_payment.refund",
+    entityType: "StudentPaymentRefund",
+    entityId: refund.id,
+    afterData: { amountCents: refund.amountCents, studentPaymentId: paymentId },
+    justification: input.reason,
+  });
+
+  return refund;
 }
 
 export async function listRefundsForPayment(paymentId: string): Promise<StudentPaymentRefund[]> {

@@ -1,7 +1,9 @@
 import type { StudentInvoice, StudentInvoiceItem } from "@prisma/client";
 
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { generateReference } from "../payments/reference.js";
 import { requireStudentRecord } from "../students/student.service.js";
@@ -90,9 +92,10 @@ export async function issueStudentInvoice(id: string): Promise<StudentInvoice> {
 /**
  * "Annulation contrôlée" (§23) : only a not-yet-paid invoice can be cancelled directly.
  * An invoice with any payment recorded must be refunded first (out of scope for this
- * slice — payment recording and refunds land in the next one).
+ * slice — payment recording and refunds land in the next one). Finalisation Phase 2 :
+ * a financially sensitive tenant action — auditée.
  */
-export async function cancelStudentInvoice(id: string): Promise<StudentInvoice> {
+export async function cancelStudentInvoice(id: string, actor: TenantActor): Promise<StudentInvoice> {
   const invoice = await requireStudentInvoice(id);
   if (invoice.status === "CANCELLED") {
     throw new AppError(409, "INVOICE_ALREADY_CANCELLED", "Invoice is already cancelled");
@@ -105,5 +108,18 @@ export async function cancelStudentInvoice(id: string): Promise<StudentInvoice> 
     );
   }
 
-  return prisma.studentInvoice.update({ where: { id }, data: { status: "CANCELLED" } });
+  const cancelled = await prisma.studentInvoice.update({ where: { id }, data: { status: "CANCELLED" } });
+
+  await recordAuditLog({
+    tenantId: cancelled.tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "student_invoice.cancel",
+    entityType: "StudentInvoice",
+    entityId: cancelled.id,
+    beforeData: { status: invoice.status },
+    afterData: { status: cancelled.status },
+  });
+
+  return cancelled;
 }

@@ -2,9 +2,11 @@ import { randomBytes } from "node:crypto";
 
 import type { MembershipStatus, Role } from "@prisma/client";
 
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { hashPassword } from "../../lib/password.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import type { InviteTenantUserInput } from "./tenant-user.validation.js";
@@ -124,7 +126,10 @@ async function requireMembership(userId: string): Promise<void> {
   }
 }
 
-export async function grantTenantRole(userId: string, roleCode: string): Promise<void> {
+/** Finalisation Phase 2 : attribuer/révoquer un rôle ou changer le statut d'un
+ * membership est une action tenant-interne sensible (RBAC) — auditée via
+ * `recordAuditLog`, contrairement au reste de ce fichier (invitation, lecture). */
+export async function grantTenantRole(userId: string, roleCode: string, actor: TenantActor): Promise<void> {
   const tenantId = requireCurrentTenantId();
   await requireMembership(userId);
   const role = await requireTenantRole(roleCode);
@@ -136,10 +141,20 @@ export async function grantTenantRole(userId: string, roleCode: string): Promise
     throw new AppError(409, "ROLE_ALREADY_GRANTED", `User already has role ${roleCode} on this tenant`);
   }
 
-  await rawPrisma.userRole.create({ data: { userId, roleId: role.id, tenantId } });
+  const userRole = await rawPrisma.userRole.create({ data: { userId, roleId: role.id, tenantId } });
+
+  await recordAuditLog({
+    tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "tenant_user.role_grant",
+    entityType: "UserRole",
+    entityId: userRole.id,
+    afterData: { userId, roleCode },
+  });
 }
 
-export async function revokeTenantRole(userId: string, roleCode: string): Promise<void> {
+export async function revokeTenantRole(userId: string, roleCode: string, actor: TenantActor): Promise<void> {
   const tenantId = requireCurrentTenantId();
   await requireMembership(userId);
   const role = await requireTenantRole(roleCode);
@@ -152,14 +167,43 @@ export async function revokeTenantRole(userId: string, roleCode: string): Promis
   }
 
   await rawPrisma.userRole.delete({ where: { id: existing.id } });
+
+  await recordAuditLog({
+    tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "tenant_user.role_revoke",
+    entityType: "UserRole",
+    entityId: existing.id,
+    beforeData: { userId, roleCode },
+  });
 }
 
-export async function updateMembershipStatus(userId: string, status: MembershipStatus): Promise<void> {
+export async function updateMembershipStatus(
+  userId: string,
+  status: MembershipStatus,
+  actor: TenantActor,
+): Promise<void> {
   await requireMembership(userId);
   const tenantId = requireCurrentTenantId();
 
-  await prisma.tenantMembership.update({
+  const before = await prisma.tenantMembership.findUniqueOrThrow({
+    where: { userId_tenantId: { userId, tenantId } },
+  });
+
+  const updated = await prisma.tenantMembership.update({
     where: { userId_tenantId: { userId, tenantId } },
     data: { status },
+  });
+
+  await recordAuditLog({
+    tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "tenant_user.membership_status_update",
+    entityType: "TenantMembership",
+    entityId: updated.id,
+    beforeData: { status: before.status },
+    afterData: { status: updated.status },
   });
 }

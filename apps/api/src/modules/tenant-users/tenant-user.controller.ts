@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
+
 import * as tenantUserService from "./tenant-user.service.js";
 import {
   grantRoleSchema,
@@ -25,14 +27,20 @@ export function listTenantUsers(_req: Request, res: Response, next: NextFunction
 export function grantRole(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = grantRoleSchema.parse(req.body);
-    await tenantUserService.grantTenantRole(req.params.userId as string, input.roleCode);
+    const actor = await resolveTenantActor(req);
+    await tenantUserService.grantTenantRole(req.params.userId as string, input.roleCode, actor);
     res.status(204).send();
   })().catch(next);
 }
 
 export function revokeRole(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    await tenantUserService.revokeTenantRole(req.params.userId as string, req.params.roleCode as string);
+    const actor = await resolveTenantActor(req);
+    await tenantUserService.revokeTenantRole(
+      req.params.userId as string,
+      req.params.roleCode as string,
+      actor,
+    );
     res.status(204).send();
   })().catch(next);
 }
@@ -40,7 +48,8 @@ export function revokeRole(req: Request, res: Response, next: NextFunction): voi
 export function updateMembershipStatus(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = updateMembershipStatusSchema.parse(req.body);
-    await tenantUserService.updateMembershipStatus(req.params.userId as string, input.status);
+    const actor = await resolveTenantActor(req);
+    await tenantUserService.updateMembershipStatus(req.params.userId as string, input.status, actor);
     res.status(204).send();
   })().catch(next);
 }

@@ -1,7 +1,9 @@
 import type { ParentStudentRelationship, StudentStatus } from "@prisma/client";
 
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 
 import type { ListRelationshipsQuery } from "./parent-student-relationship.validation.js";
 
@@ -20,21 +22,44 @@ async function requireRelationship(id: string): Promise<ParentStudentRelationshi
   return relationship;
 }
 
-/** §9 : révocation d'un lien incorrect, motif obligatoire (revokedReason). */
+/**
+ * §9 : révocation d'un lien incorrect, motif obligatoire (revokedReason). Finalisation
+ * Phase 2 : action tenant-interne sensible, auditée — `reason` alimente aussi
+ * `justification` sur l'entrée d'audit, il n'y a qu'un seul motif à porter.
+ */
 export async function revokeRelationship(
   id: string,
   reason: string,
-  actingUserId: string,
+  actor: TenantActor,
 ): Promise<ParentStudentRelationship> {
   const relationship = await requireRelationship(id);
   if (relationship.status === "REVOKED" || relationship.revokedAt) {
     throw new AppError(409, "RELATIONSHIP_ALREADY_REVOKED", "This relationship is already revoked");
   }
 
-  return prisma.parentStudentRelationship.update({
+  const revoked = await prisma.parentStudentRelationship.update({
     where: { id },
-    data: { status: "REVOKED", revokedAt: new Date(), revokedById: actingUserId, revokedReason: reason },
+    data: {
+      status: "REVOKED",
+      revokedAt: new Date(),
+      revokedById: actor.actorUserId,
+      revokedReason: reason,
+    },
   });
+
+  await recordAuditLog({
+    tenantId: revoked.tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "parent_student_relationship.revoke",
+    entityType: "ParentStudentRelationship",
+    entityId: revoked.id,
+    beforeData: { status: relationship.status },
+    afterData: { status: revoked.status, revokedReason: reason },
+    justification: reason,
+  });
+
+  return revoked;
 }
 
 export interface VerifiedChild {

@@ -5,10 +5,12 @@ import {
   generateActivationCode,
   hashActivationCode,
 } from "../../lib/activation-code.js";
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
 import { sendSms } from "../../lib/sms-provider/send-sms.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
@@ -85,7 +87,9 @@ async function requireInvitation(id: string): Promise<ActivationInvitation> {
   return invitation;
 }
 
-export async function revokeInvitation(id: string): Promise<ActivationInvitation> {
+/** Finalisation Phase 2 : révoquer une invitation d'activation est une action
+ * tenant-interne sensible (§8, coupe l'accès d'un futur bénéficiaire) — auditée. */
+export async function revokeInvitation(id: string, actor: TenantActor): Promise<ActivationInvitation> {
   const invitation = await requireInvitation(id);
   if (invitation.status === "USED") {
     throw new AppError(409, "INVITATION_ALREADY_USED", "This invitation has already been used");
@@ -99,7 +103,23 @@ export async function revokeInvitation(id: string): Promise<ActivationInvitation
     data: { revokedAt: new Date() },
   });
 
-  return prisma.activationInvitation.update({ where: { id }, data: { status: "REVOKED" } });
+  const revoked = await prisma.activationInvitation.update({
+    where: { id },
+    data: { status: "REVOKED" },
+  });
+
+  await recordAuditLog({
+    tenantId: revoked.tenantId,
+    actorUserId: actor.actorUserId,
+    ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+    action: "activation_invitation.revoke",
+    entityType: "ActivationInvitation",
+    entityId: revoked.id,
+    beforeData: { status: invitation.status },
+    afterData: { status: revoked.status },
+  });
+
+  return revoked;
 }
 
 export interface RedeemedActivation {
