@@ -101,23 +101,32 @@ async function redeemPromotionCode(
  */
 async function recalculateEntitlements(tx: Tx, subscription: Subscription): Promise<void> {
   const isActiveLike = ACTIVE_LIKE_STATUSES.has(subscription.status);
+  // §6 : « la période de grâce doit offrir un accès limité » — jusqu'ici GRACE_PERIOD
+  // se comportait exactement comme ACTIVE (même isActiveLike). Une fonctionnalité déjà
+  // plafonnée (quotaLimit non nul) voit son quota gelé à 0 pendant la grâce : plus
+  // aucune nouvelle consommation, sans pour autant retirer la fonctionnalité du plan
+  // (isEnabled reste vrai) ni toucher aux fonctionnalités illimitées, qui ne sont pas
+  // la ressource que la grâce cherche à protéger.
+  const isGracePeriod = subscription.status === "GRACE_PERIOD";
   const features = await tx.planFeature.findMany({ where: { planId: subscription.planId } });
 
   for (const feature of features) {
+    const quotaLimit = isGracePeriod && feature.quotaLimit !== null ? 0 : feature.quotaLimit;
+
     await tx.entitlement.upsert({
       where: {
         subscriptionId_featureCode: { subscriptionId: subscription.id, featureCode: feature.featureCode },
       },
       update: {
         isEnabled: isActiveLike && feature.isIncluded,
-        quotaLimit: feature.quotaLimit,
+        quotaLimit,
         computedAt: new Date(),
       },
       create: {
         subscriptionId: subscription.id,
         featureCode: feature.featureCode,
         isEnabled: isActiveLike && feature.isIncluded,
-        quotaLimit: feature.quotaLimit,
+        quotaLimit,
       },
     });
   }
