@@ -39,6 +39,46 @@ describe("tenant onboarding (§14)", () => {
     };
   }
 
+  // Reproduit exactement l'assistant d'inscription public (SignupPage.tsx) :
+  // register -> verify-email (jeton renvoyé par register, §34 sans fournisseur
+  // email réel) -> login -> onboarding. Contrairement aux autres tests de ce
+  // fichier, qui créent l'utilisateur directement via createUser()/signAccessToken
+  // en contournant tout le flux HTTP réel, celui-ci l'exerce intégralement — c'est
+  // le seul test qui aurait détecté que login rejette un compte encore PENDING.
+  it("registers, verifies the email token from the registration response, logs in, then onboards — mirrors the public signup wizard exactly", async () => {
+    const email = `founder-e2e-${uniqueSuffix()}@example.test`;
+    const password = "Sup3r-Secret-Passw0rd!";
+
+    const registered = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ email, password, firstName: "Awa", lastName: "Ngo" });
+    expect(registered.status).toBe(201);
+    const registeredBody = registered.body as { status: string; emailVerificationToken: string };
+    expect(registeredBody.status).toBe("PENDING");
+
+    const prematureLogin = await request(app).post("/api/v1/auth/login").send({ email, password });
+    expect(prematureLogin.status).toBe(403);
+    expect((prematureLogin.body as TestResponseBody).code).toBe("ACCOUNT_NOT_ACTIVE");
+
+    const verified = await request(app)
+      .post("/api/v1/auth/verify-email")
+      .send({ token: registeredBody.emailVerificationToken });
+    expect(verified.status).toBe(200);
+    expect((verified.body as { status: string }).status).toBe("ACTIVE");
+
+    const loggedIn = await request(app).post("/api/v1/auth/login").send({ email, password });
+    expect(loggedIn.status).toBe(200);
+    const { accessToken } = loggedIn.body as { accessToken: string };
+
+    const payload = onboardingPayload();
+    const onboarded = await request(app)
+      .post("/api/v1/tenants/onboarding")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send(payload);
+    expect(onboarded.status).toBe(201);
+    createdTenantIds.push((onboarded.body as { tenant: { id: string } }).tenant.id);
+  }, 15000);
+
   it("rejects an unauthenticated request", async () => {
     const response = await request(app).post("/api/v1/tenants/onboarding").send(onboardingPayload());
 

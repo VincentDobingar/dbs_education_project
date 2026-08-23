@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
-import { login, onboardTenant, registerAccount } from "../../lib/api.js";
+import { login, onboardTenant, registerAccount, verifyEmail } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 
 const COUNTRIES = [
@@ -89,12 +89,17 @@ export function SignupPage(): ReactNode {
   const onSubmit = handleSubmit(async (formValues) => {
     setSubmitError(null);
     try {
-      await registerAccount({
+      const registered = await registerAccount({
         email: formValues.email,
         password: formValues.password,
         firstName: formValues.firstName,
         lastName: formValues.lastName,
       });
+      // Le compte démarre PENDING (§34, vérification email obligatoire) — login le
+      // refuserait sinon. Aucun fournisseur email réel n'étant branché par défaut, le
+      // jeton renvoyé par l'inscription est consommé immédiatement plutôt que
+      // d'attendre un email qui ne partira jamais.
+      await verifyEmail(registered.emailVerificationToken);
       const tokens = await login(formValues.email, formValues.password);
       const onboarded = await onboardTenant(
         {

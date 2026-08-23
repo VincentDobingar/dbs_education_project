@@ -7,8 +7,22 @@ export interface RegisterInput {
   lastName: string;
 }
 
-export function registerAccount(input: RegisterInput): Promise<{ id: string; email: string }> {
+export interface RegisterResult {
+  id: string;
+  email: string;
+  status: string;
+  // §34 : aucun fournisseur email réel par défaut — le jeton est renvoyé ici pour
+  // que l'appelant puisse le consommer immédiatement (ex. l'assistant d'inscription
+  // établissement), plutôt que de rester bloqué en attente d'un email jamais envoyé.
+  emailVerificationToken: string;
+}
+
+export function registerAccount(input: RegisterInput): Promise<RegisterResult> {
   return apiRequest("/auth/register", { method: "POST", body: input });
+}
+
+export function verifyEmail(token: string): Promise<{ id: string; status: string }> {
+  return apiRequest("/auth/verify-email", { method: "POST", body: { token } });
 }
 
 export interface AuthTokens {
