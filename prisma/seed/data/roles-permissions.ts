@@ -155,6 +155,18 @@ export const PERMISSIONS = [
     descriptionFr: "Assigner des devoirs",
     descriptionEn: "Assign homework",
   },
+  {
+    code: "elearning.read",
+    module: "elearning",
+    descriptionFr: "Consulter les cours en ligne",
+    descriptionEn: "View online courses",
+  },
+  {
+    code: "elearning.write",
+    module: "elearning",
+    descriptionFr: "Gérer les cours en ligne",
+    descriptionEn: "Manage online courses",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -186,6 +198,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "library.write",
     "homework.read",
     "homework.write",
+    "elearning.read",
+    "elearning.write",
   ],
   SCHOOL_ADMIN: [
     "students.read",
@@ -198,6 +212,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "communication.manage",
     "library.read",
     "homework.read",
+    "elearning.read",
   ],
   DIRECTOR: [
     "students.read",
@@ -209,6 +224,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "finance.read",
     "communication.manage",
     "homework.read",
+    "elearning.read",
   ],
   ACADEMIC_DIRECTOR: [
     "students.read",
@@ -219,6 +235,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "homework.read",
     "homework.write",
+    "elearning.read",
+    "elearning.write",
   ],
   SECRETARY: ["students.read", "students.write"],
   ACCOUNTANT: ["finance.read", "finance.write"],
@@ -233,6 +251,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.write",
     "homework.read",
     "homework.write",
+    "elearning.read",
+    "elearning.write",
   ],
   SUPERVISOR: ["attendance.read", "attendance.write", "discipline.read", "discipline.write"],
   LIBRARIAN: ["library.read", "library.write"],
@@ -245,6 +265,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "finance.read",
     "library.read",
     "homework.read",
+    "elearning.read",
   ],
 
   PARENT: [],

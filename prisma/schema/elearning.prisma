@@ -1,0 +1,78 @@
+// E-learning (§29 : "apprentissage en ligne" listé parmi les modules complémentaires,
+// Phase 10) — cours en ligne rattachés à une classe/matière (même granularité que
+// Homework, §18/§21/§25/§26), chacun composé de ressources pédagogiques consultées
+// par les élèves, avec suivi de progression par ressource.
+
+/// classroomId reste un champ nu (pas de relation Prisma), même choix que
+/// Homework.classroomId/Attendance.classroomId ailleurs dans ce schéma — vérifié
+/// côté service, jamais une relation Prisma pour ce FK précis dans ce code.
+model OnlineCourse {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  classroomId         String
+  subjectId           String
+  createdByEmployeeId String?
+  title               String
+  description         String?
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  resources CourseResource[]
+
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+enum LearningResourceType {
+  VIDEO
+  DOCUMENT
+  LINK
+  TEXT
+}
+
+/// url/content : au moins l'un des deux exigé côté service (validation Zod), jamais
+/// au niveau du schéma — même convention que HomeworkSubmission.content/fileUrl.
+/// url suit le même choix que StudentDocument (§19) : un lien fourni par le client,
+/// cette API ne manipule jamais les octets d'un fichier ni n'héberge de vidéo.
+model CourseResource {
+  id        String               @id @default(cuid())
+  tenantId  String
+  courseId  String
+  title     String
+  type      LearningResourceType
+  url       String?
+  content   String?
+  order     Int                  @default(0)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  course OnlineCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  progress ResourceProgress[]
+
+  @@index([tenantId])
+  @@index([courseId])
+}
+
+/// Une contrainte unique (resourceId, studentId) plutôt qu'un historique de
+/// consultations : marquer à nouveau une ressource terminée met à jour la date
+/// existante (upsert), jamais un doublon — même raisonnement que HomeworkSubmission.
+model ResourceProgress {
+  id          String   @id @default(cuid())
+  tenantId    String
+  resourceId  String
+  studentId   String
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  resource CourseResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  student  Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, studentId])
+  @@index([tenantId])
+  @@index([resourceId])
+  @@index([studentId])
+}

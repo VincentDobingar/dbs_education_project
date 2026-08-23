@@ -75,6 +75,7 @@ model Student {
   invoices              StudentInvoice[]
   libraryLoans          LibraryLoan[]
   homeworkSubmissions   HomeworkSubmission[]
+  resourceProgress      ResourceProgress[]
 
   @@unique([tenantId, matricule])
   @@index([tenantId])
