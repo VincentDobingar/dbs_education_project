@@ -1,0 +1,104 @@
+// Cantine (§29 : "cantine" listée parmi les modules complémentaires, Phase 10, même
+// absence de détail fonctionnel que pour la bibliothèque/le RH/l'e-learning/le
+// transport avant leurs tranches respectives). Menus (information affichée) ->
+// formules de repas -> inscription d'un élève à une formule -> suivi des paiements
+// (statut simple, pas de facture) -> suivi quotidien des repas pris.
+// Ajoute le rôle CAFETERIA_MANAGER (roles-permissions.ts), même précédent que
+// LIBRARIAN/TRANSPORT_MANAGER pour leurs modules respectifs.
+
+/// Une ligne par jour, information affichée — jamais liée à une inscription
+/// particulière (le menu du jour est le même pour tout le monde).
+model Menu {
+  id          String   @id @default(cuid())
+  tenantId    String
+  date        DateTime
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+}
+
+enum MealPlanType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+/// priceCents : entiers uniquement (§23/§40), jamais de calcul flottant — même
+/// convention que FeeStructure.amountCents. Aucun lien avec StudentInvoice/
+/// FeeStructure : le suivi de paiement de cette tranche reste un statut simple
+/// (StudentMealEnrollment.paid), pas une vraie facture — voir plus bas.
+model MealPlan {
+  id         String       @id @default(cuid())
+  tenantId   String
+  name       String
+  type       MealPlanType
+  priceCents Int
+  deletedAt  DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  enrollments StudentMealEnrollment[]
+
+  @@index([tenantId])
+}
+
+enum MealEnrollmentStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Pas de contrainte unique sur studentId seul (contrairement à
+/// StudentRouteAssignment) : un élève accumule légitimement plusieurs inscriptions
+/// dans le temps (formules successives). La règle « pas deux inscriptions ACTIVE
+/// qui se chevauchent pour le même élève » est vérifiée côté service, pas au
+/// schéma — même choix que « un prêt actif par élève et par livre » en
+/// bibliothèque (contrainte métier, pas un index).
+model StudentMealEnrollment {
+  id         String               @id @default(cuid())
+  tenantId   String
+  studentId  String
+  mealPlanId String
+  startDate  DateTime
+  endDate    DateTime?
+  status     MealEnrollmentStatus @default(ACTIVE)
+  paid       Boolean              @default(false)
+  paidAt     DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan @relation(fields: [mealPlanId], references: [id])
+
+  attendances MealAttendance[]
+
+  @@index([tenantId])
+  @@index([studentId])
+  @@index([mealPlanId])
+}
+
+enum MealAttendanceStatus {
+  SERVED
+  ABSENT
+}
+
+/// Suivi des repas (§29) : une ligne par inscription/jour, même forme que
+/// TransportAttendance/EmployeeAttendance — @@unique sans colonne nullable dans sa
+/// clé, un upsert natif est donc sûr ici.
+model MealAttendance {
+  id           String               @id @default(cuid())
+  tenantId     String
+  enrollmentId String
+  date         DateTime
+  status       MealAttendanceStatus
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  enrollment StudentMealEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, date])
+  @@index([tenantId])
+  @@index([enrollmentId])
+}

@@ -78,6 +78,7 @@ model Student {
   resourceProgress      ResourceProgress[]
   routeAssignment       StudentRouteAssignment?
   transportAttendances  TransportAttendance[]
+  mealEnrollments       StudentMealEnrollment[]
 
   @@unique([tenantId, matricule])
   @@index([tenantId])

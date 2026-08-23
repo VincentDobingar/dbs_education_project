@@ -18,7 +18,7 @@ Ce document résume les décisions validées et l'état réel de l'implémentati
 
 Deux couches de défense indépendantes, aucune ne suffisant seule :
 
-1. **Extension Prisma** ([apps/api/src/lib/prisma.ts](../apps/api/src/lib/prisma.ts)) : intercepte chaque opération sur les modèles listés dans `TENANT_SCOPED_MODELS` ([tenant-scoped-models.ts](../apps/api/src/lib/tenant-scoped-models.ts), 56 modèles) et fusionne/valide `tenantId` contre le contexte `AsyncLocalStorage` posé par `enforceTenantScope`. Une requête sans contexte tenant lève une erreur plutôt que de s'exécuter sans filtre.
+1. **Extension Prisma** ([apps/api/src/lib/prisma.ts](../apps/api/src/lib/prisma.ts)) : intercepte chaque opération sur les modèles listés dans `TENANT_SCOPED_MODELS` ([tenant-scoped-models.ts](../apps/api/src/lib/tenant-scoped-models.ts), 60 modèles) et fusionne/valide `tenantId` contre le contexte `AsyncLocalStorage` posé par `enforceTenantScope`. Une requête sans contexte tenant lève une erreur plutôt que de s'exécuter sans filtre.
 2. **Row-Level Security PostgreSQL** (migrations `enable_row_level_security` + corrections listées ci-dessous) : chaque opération scopée passe par une micro-transaction qui exécute `SELECT set_config('app.tenant_id', <tenantId>, true)` avant la requête réelle — le même mécanisme protège même un accès qui contournerait l'extension applicative.
 
 **Le rôle applicatif ne doit jamais être le superuser Postgres** : RLS est totalement ignorée pour un superuser ou un rôle `BYPASSRLS`, quel que soit `FORCE ROW LEVEL SECURITY`. L'app tourne sous un rôle dédié `edumanage_app` (créé manuellement, hors migration versionnée — voir `docs/architecture.md#notes-denvironnement-de-développement`), avec uniquement les privilèges DML nécessaires.
@@ -56,7 +56,7 @@ Tests d'isolation (Phase 2, [apps/api/src/test/integration/](../apps/api/src/tes
 - Le lien parent-enfant (`ParentStudentRelationship`) est indépendant du paiement : il naît uniquement du parcours d'activation sécurisé (invitation → code d'activation à usage unique, haché, jamais stocké en clair → vérification → activation), jamais d'une simple déclaration ou d'un paiement — testé explicitement.
 - Le tableau de bord parent consolidé interroge chaque tenant séparément avec le contexte de l'enfant concerné (voir `requireVerifiedStudentRelationship`) — jamais de jointure cross-tenant en base.
 
-Schéma complet : `prisma/schema/*.prisma` (12 fichiers par domaine, 105 modèles).
+Schéma complet : `prisma/schema/*.prisma` (13 fichiers par domaine, 109 modèles).
 
 ## Abonnements et paiements (implémenté, Phase 3)
 
@@ -332,6 +332,18 @@ Même absence de détail fonctionnel que §29 pour la bibliothèque/le RH/l'e-le
 
 **Restent hors périmètre** : portail parent/élève (aucune consultation self-service de l'itinéraire/l'horaire, à l'inverse des devoirs et de l'e-learning), géolocalisation temps réel du véhicule, facturation d'un supplément transport (aucun lien avec `StudentInvoice`/`FeeStructure`).
 
+## Cantine — §29 (Phase 10)
+
+Dernier module avant l'internat, même absence de détail fonctionnel que §29 pour les tranches précédentes. Nouveau rôle `CAFETERIA_MANAGER` (même précédent que `LIBRARIAN`/`TRANSPORT_MANAGER` pour leurs modules). Décision de schéma : menus (information affichée) → formules de repas → inscription d'un élève à une formule → suivi des paiements (statut simple) → suivi quotidien des repas pris.
+
+- **`Menu`** : une ligne par jour (`@@unique([tenantId, date])`), information affichée à tous — jamais liée à une inscription particulière, le menu du jour est le même pour tout le monde.
+- **`MealPlan`** : `priceCents` (entier, §23/§40 — jamais de calcul flottant), `type` (`DAILY`/`WEEKLY`/`MONTHLY`), même paire suppression douce que `Book`/`Vehicle` (`archiveMealPlan`).
+- **`StudentMealEnrollment`** : **pas** de contrainte unique sur `studentId` seul (contrairement à `StudentRouteAssignment`) — un élève accumule légitimement plusieurs inscriptions dans le temps (formules successives). La règle « une seule inscription `ACTIVE` à la fois » est vérifiée côté service par requête, pas par un index — même choix que « un prêt actif par élève et par livre » en bibliothèque (contrainte métier, pas un contraintes de schéma). `paid`/`paidAt` : un statut de paiement simple, **aucun lien avec `StudentInvoice`/`FeeStructure`** — pas une vraie facture, décision assumée pour cette tranche (voir note de schéma).
+- **`MealAttendance`** (suivi des repas) : `@@unique([enrollmentId, date])`, upsert natif par jour — même forme que `TransportAttendance`/`EmployeeAttendance`.
+- Nouveau module [cafeteria](../apps/api/src/modules/cafeteria/), monté sur `/api/v1/cafeteria`, derrière `cafeteria.read`/`cafeteria.write` (`SCHOOL_OWNER` + `CAFETERIA_MANAGER` en écriture, `SCHOOL_ADMIN`/`TENANT_AUDITOR` en lecture seule) : CRUD menus, CRUD formules (avec archivage), inscription/paiement/annulation, enregistrement/consultation du suivi quotidien.
+
+**Restent hors périmètre** : portail parent/élève (même choix que le transport), facturation réelle via `StudentInvoice`/`FeeStructure` (voir note ci-dessus), gestion des allergies/régimes alimentaires.
+
 ## Tableaux de bord — §18
 
 Aucun code n'existait pour §18 avant cette tranche, hormis le super-admin (`stats-admin.service.ts`, §31 tranche 9, couvre déjà tout ce que §18 liste pour ce rôle qui a une source de données réelle). Les cinq autres rôles (Direction, Comptable, Enseignant, Parent, Élève) sont des **agrégations en lecture seule** au-dessus de services déjà existants — aucune nouvelle donnée métier, uniquement de l'orchestration, même discipline que `stats-admin.service.ts` (agrégé en mémoire/`groupBy`, jamais un total qui suppose une donnée absente du schéma).
@@ -420,7 +432,7 @@ Voir §38 du cahier des charges pour le détail complet.
 - **Phase 7 — Gestion financière** : terminée pour le périmètre retenu. §23 (module financier de l'établissement) par tranches — catégories de frais, grilles tarifaires, cycle de vie de la facture, encaissement espèces (complet/partiel) et reçus PDF, dépenses/catégories de dépenses et caisse (ouverture/clôture), remboursements et situation financière consolidée, rapports de recettes/dépenses avec export PDF/CSV faits — voir sections dédiées ci-dessus. Restent hors périmètre, par choix ou en attente d'un contrat opérateur : paiements électroniques pour les frais scolaires, export Excel natif (CSV déjà couvert), génération automatique de factures en masse depuis une grille tarifaire.
 - **Phase 8 — Portails individuels** : démarrée. §8 (rattachement parent/élève), un socle minimal de §28 (notifications `IN_APP` + annonces), les portails parent (§25) et élève (§26) en lecture seule (présences côté parent, profil/emploi du temps/bulletins/annonces/reçus des deux côtés, finances scolaires côté parent), le volet tenant des tickets de support (ouverture/suivi de ses propres tickets), l'abonnement familial en libre-service (§9), l'abonnement individuel de l'élève (§26) et les devoirs/dépôt de travaux (§18/§21/§25/§26) faits — voir sections dédiées ci-dessus. Reste hors périmètre : canaux EMAIL/SMS/PUSH réels.
 - **Phase 9 — Super-administration** : terminée. §31 couvert dans son intégralité en 11 tranches — établissements (liste, vérification, rejet, suspension, réactivation), journaux d'audit (premier écrivain d'`AuditLog`), abonnements (liste, détail, transition forcée, prolongation d'essai), pays/devises/moyens de paiement (CRUD), codes promotionnels (CRUD et, depuis la tranche 8, consommation réelle lors du signup établissement — remise non encore répercutée sur la facture), tickets de support (triage : liste, assignation, statut, réponse), modèles de notification (CRUD, global ou par tenant), organisations sponsors/licences sponsorisées (CRUD organisations, achat de lot, émission, attribution, révocation), statistiques/indicateurs commerciaux (établissements, abonnements, licences, revenu par devise/pays/plan/type d'abonné, taux de conversion et de résiliation), paramètres globaux (tranche 10) et élévation temporaire limitée dans le temps (tranche 11) faits — voir section dédiée ci-dessus.
-- **Phase 10 — Modules complémentaires** : démarrée. Bibliothèque (§29), ressources humaines (§27), e-learning (§29) et transport scolaire (§29) faits — voir sections dédiées. Restent : cantine, internat — rien n'existe encore pour ces deux modules (ni schéma, ni service, ni API).
+- **Phase 10 — Modules complémentaires** : démarrée. Bibliothèque (§29), ressources humaines (§27), e-learning (§29), transport scolaire (§29) et cantine (§29) faits — voir sections dédiées. Reste : internat — rien n'existe encore pour ce module (ni schéma, ni service, ni API).
 - Phase 11 : selon le plan validé, non commencée.
 
 ## Notes d'environnement de développement

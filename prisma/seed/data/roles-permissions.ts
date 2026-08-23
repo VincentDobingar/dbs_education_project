@@ -19,6 +19,7 @@ export const TENANT_ROLES = [
   { code: "SUPERVISOR", nameFr: "Surveillant", nameEn: "Supervisor" },
   { code: "LIBRARIAN", nameFr: "Bibliothécaire", nameEn: "Librarian" },
   { code: "TRANSPORT_MANAGER", nameFr: "Responsable transport", nameEn: "Transport Manager" },
+  { code: "CAFETERIA_MANAGER", nameFr: "Responsable cantine", nameEn: "Cafeteria Manager" },
   { code: "TENANT_AUDITOR", nameFr: "Auditeur établissement", nameEn: "Tenant Auditor" },
 ] as const;
 
@@ -179,6 +180,18 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer le transport scolaire",
     descriptionEn: "Manage school transport",
   },
+  {
+    code: "cafeteria.read",
+    module: "cafeteria",
+    descriptionFr: "Consulter la cantine",
+    descriptionEn: "View the cafeteria",
+  },
+  {
+    code: "cafeteria.write",
+    module: "cafeteria",
+    descriptionFr: "Gérer la cantine",
+    descriptionEn: "Manage the cafeteria",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -214,6 +227,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "elearning.write",
     "transport.read",
     "transport.write",
+    "cafeteria.read",
+    "cafeteria.write",
   ],
   SCHOOL_ADMIN: [
     "students.read",
@@ -228,6 +243,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "homework.read",
     "elearning.read",
     "transport.read",
+    "cafeteria.read",
   ],
   DIRECTOR: [
     "students.read",
@@ -272,6 +288,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
   SUPERVISOR: ["attendance.read", "attendance.write", "discipline.read", "discipline.write"],
   LIBRARIAN: ["library.read", "library.write"],
   TRANSPORT_MANAGER: ["transport.read", "transport.write"],
+  CAFETERIA_MANAGER: ["cafeteria.read", "cafeteria.write"],
   TENANT_AUDITOR: [
     "students.read",
     "grades.read",
@@ -282,6 +299,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "homework.read",
     "elearning.read",
     "transport.read",
+    "cafeteria.read",
   ],
 
   PARENT: [],

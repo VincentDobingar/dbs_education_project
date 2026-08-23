@@ -68,6 +68,10 @@ export const TENANT_SCOPED_MODELS = [
   "RouteStop",
   "StudentRouteAssignment",
   "TransportAttendance",
+  "Menu",
+  "MealPlan",
+  "StudentMealEnrollment",
+  "MealAttendance",
 ] as const;
 
 export type TenantScopedModel = (typeof TENANT_SCOPED_MODELS)[number];
