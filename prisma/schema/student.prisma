@@ -79,6 +79,7 @@ model Student {
   routeAssignment       StudentRouteAssignment?
   transportAttendances  TransportAttendance[]
   mealEnrollments       StudentMealEnrollment[]
+  bedAssignment         StudentBedAssignment?
 
   @@unique([tenantId, matricule])
   @@index([tenantId])

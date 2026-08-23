@@ -1,0 +1,86 @@
+// Internat (§29 : "internat" listé parmi les modules complémentaires, Phase 10,
+// dernier module de cette phase — même absence de détail fonctionnel que pour les
+// tranches précédentes). Chambres -> lits -> affectation d'un élève à un lit ->
+// suivi des présences nocturnes. Ajoute le rôle BOARDING_MANAGER
+// (roles-permissions.ts), même précédent que LIBRARIAN/TRANSPORT_MANAGER/
+// CAFETERIA_MANAGER pour leurs modules respectifs.
+
+model DormitoryRoom {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  capacity  Int
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  beds DormitoryBed[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+/// Pas de statut ACTIVE/OUT_OF_SERVICE : un lit hors service se retire simplement
+/// (delete) tant qu'aucun élève n'y est affecté (FK RESTRICT via
+/// StudentBedAssignment) — pas de cycle de vie à part pour ce périmètre.
+model DormitoryBed {
+  id        String   @id @default(cuid())
+  tenantId  String
+  roomId    String
+  label     String
+  createdAt DateTime @default(now())
+
+  room DormitoryRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  assignment StudentBedAssignment?
+
+  @@unique([roomId, label])
+  @@index([tenantId])
+  @@index([roomId])
+}
+
+/// studentId ET bedId uniques (contrairement à StudentRouteAssignment qui n'a que
+/// studentId) : un lit n'a qu'un seul occupant à la fois, la contrainte l'impose
+/// directement — réaffecter un élève vers un autre lit (upsert par studentId) libère
+/// donc automatiquement son ancien lit, jamais une double occupation possible.
+model StudentBedAssignment {
+  id        String    @id @default(cuid())
+  tenantId  String
+  studentId String    @unique
+  bedId     String    @unique
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  bed     DormitoryBed @relation(fields: [bedId], references: [id])
+
+  attendances DormitoryAttendance[]
+
+  @@index([tenantId])
+}
+
+enum DormitoryAttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+/// Suivi des présences nocturnes (§29) : une ligne par affectation/nuit, même forme
+/// que TransportAttendance/MealAttendance — @@unique sans colonne nullable dans sa
+/// clé, un upsert natif est donc sûr ici.
+model DormitoryAttendance {
+  id           String                    @id @default(cuid())
+  tenantId     String
+  assignmentId String
+  date         DateTime
+  status       DormitoryAttendanceStatus
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  assignment StudentBedAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, date])
+  @@index([tenantId])
+  @@index([assignmentId])
+}
