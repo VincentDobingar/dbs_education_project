@@ -248,4 +248,50 @@ describe("abonnement familial en libre-service (§9)", () => {
     expect(cancelled.status).toBe(200);
     expect((cancelled.body as { status: string }).status).toBe("CANCELLED");
   }, 30000);
+
+  // §37 : « le front ne peut pas forger son statut/plan » — createFamilySubscriptionSchema
+  // n'accepte que planCode/billingPeriod/promoCode, et le contrôleur fixe lui-même
+  // status/fundingSource/ownerRef : tout champ privilégié envoyé par le client doit être
+  // silencieusement ignoré, jamais reflété dans la ligne créée.
+  it("ignores a forged status/planId/fundingSource in the subscription creation body", async () => {
+    const parent = await createUser("famsub-forge-parent");
+    createdUserIds.push(parent.id);
+    const parentToken = signAccessToken({ sub: parent.id });
+
+    await request(app)
+      .post("/api/v1/family/family-account")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({});
+
+    const realPlan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({
+      where: { code: "PARENT_BASIC" },
+    });
+    const otherPlan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({
+      where: { code: "PARENT_PREMIUM" },
+    });
+
+    const forged = await request(app)
+      .post("/api/v1/subscriptions/family")
+      .set("Authorization", `Bearer ${parentToken}`)
+      .send({
+        planCode: "PARENT_BASIC",
+        billingPeriod: "MONTHLY",
+        status: "ACTIVE",
+        planId: otherPlan.id,
+        fundingSource: "ORGANIZATION_SPONSORED",
+        ownerId: "forged-owner-id",
+        trialEndsAt: "2999-01-01",
+      });
+    expect(forged.status).toBe(201);
+    const forgedBody = forged.body as {
+      status: string;
+      planId: string;
+      fundingSource: string;
+      trialEndsAt: string | null;
+    };
+    expect(forgedBody.status).toBe("DRAFT");
+    expect(forgedBody.planId).toBe(realPlan.id);
+    expect(forgedBody.fundingSource).toBe("SELF_PAID");
+    expect(forgedBody.trialEndsAt).toBeNull();
+  });
 });
