@@ -293,5 +293,13 @@ describe("notes et évaluations (§21)", () => {
     expect(changeLogs.length).toBe(1);
     expect(Number(changeLogs[0]?.previousScore)).toBe(15);
     expect(Number(changeLogs[0]?.newScore)).toBe(17);
+
+    // §40 : « suppression logique plutôt qu'automatique » — une suppression dure du
+    // dossier élève ne doit jamais emporter son historique de notes en silence. La
+    // contrainte RESTRICT (jamais CASCADE) sur Grade.studentId le garantit désormais
+    // au niveau base, indépendamment de tout code applicatif.
+    await expect(testAdminPrisma.student.delete({ where: { id: studentA as string } })).rejects.toThrow();
+    const stillThere = await testAdminPrisma.grade.findUniqueOrThrow({ where: { id: gradeIdA } });
+    expect(stillThere.id).toBe(gradeIdA);
   }, 15000);
 });

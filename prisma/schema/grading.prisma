@@ -62,8 +62,12 @@ model Grade {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  // FK RESTRICT via student (défaut, onDelete omis) : une suppression dure d'un
+  // dossier élève ne doit jamais emporter ses notes avec elle (§40 : suppression
+  // logique plutôt qu'automatique) — archiveStudent (soft delete) reste le seul
+  // chemin applicatif, aucune route ne fait de suppression dure aujourd'hui.
   assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id])
 
   changeLogs GradeChangeLog[]
 
@@ -101,7 +105,10 @@ model ReportCard {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  student        Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // FK RESTRICT via student (défaut, onDelete omis) : même raisonnement que Grade
+  // ci-dessus — un bulletin ne doit jamais disparaître avec une suppression dure du
+  // dossier élève.
+  student        Student        @relation(fields: [studentId], references: [id])
   academicPeriod AcademicPeriod @relation(fields: [academicPeriodId], references: [id])
 
   items ReportCardItem[]

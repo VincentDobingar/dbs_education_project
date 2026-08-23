@@ -257,5 +257,15 @@ describe("bulletins et moyennes (§21)", () => {
       .set("X-Tenant-Slug", subdomain);
     expect(pdf.status).toBe(200);
     expect(pdf.headers["content-type"]).toBe("application/pdf");
+
+    // §40 : « suppression logique plutôt qu'automatique » — une suppression dure du
+    // dossier élève ne doit jamais emporter son bulletin en silence. La contrainte
+    // RESTRICT (jamais CASCADE) sur ReportCard.studentId le garantit désormais au
+    // niveau base, indépendamment de tout code applicatif.
+    await expect(testAdminPrisma.student.delete({ where: { id: studentA as string } })).rejects.toThrow();
+    const stillThere = await testAdminPrisma.reportCard.findUniqueOrThrow({
+      where: { id: reportCardA?.id as string },
+    });
+    expect(stillThere.id).toBe(reportCardA?.id);
   }, 20000);
 });
