@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import { env } from "./env.js";
 import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
+import { apiRateLimiter, authRateLimiter } from "./middleware/rateLimit.js";
 import { attendanceRouter } from "./modules/attendance/attendance.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { boardingRouter } from "./modules/boarding/boarding.routes.js";
@@ -40,6 +41,9 @@ export function createApp(): express.Express {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(pinoHttp({ logger }));
+  // §34 : « limitation des requêtes », absente jusqu'ici. Backstop généreux sur
+  // toute l'API (webhooks compris), désactivé sous NODE_ENV=test.
+  app.use(apiRateLimiter);
 
   // Webhooks need the exact raw bytes the provider signed — mounted with their
   // own raw body parser BEFORE the global JSON parser below, and before any
@@ -49,7 +53,9 @@ export function createApp(): express.Express {
   app.use(express.json({ limit: "1mb" }));
 
   app.use("/api/v1", healthRouter);
-  app.use("/api/v1/auth", authRouter);
+  // Plus strict que le backstop général — brute force de mot de passe/OTP et
+  // credential stuffing (§34), complète le verrouillage par compte déjà en place.
+  app.use("/api/v1/auth", authRateLimiter, authRouter);
   app.use("/api/v1/tenants", tenantRouter);
   app.use("/api/v1/subscriptions", subscriptionRouter);
   app.use("/api/v1/school-config", schoolConfigRouter);
