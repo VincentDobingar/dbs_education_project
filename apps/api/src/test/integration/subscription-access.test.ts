@@ -120,6 +120,24 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       expect((response.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
     });
 
+    // §37 : le contrôle doit se déclencher que Subscription.fundingSource ait été
+    // mis à jour ou non — license-admin.service.ts (assignLicense) ne le fait
+    // jamais délibérément, donc un abonnement réellement couvert par une licence
+    // reste SELF_PAID en pratique. Se fier au funding source rendrait ce contrôle
+    // inopérant pour tout vrai bénéficiaire.
+    it("blocks a SELF_PAID subscription whose license assignment has been revoked, exactly as assignLicense leaves it", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+      expect(subscription.fundingSource).toBe("SELF_PAID");
+      const license = await createSponsoredLicense("STUDENT_BASIC", { validUntil: null });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId, new Date());
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(402);
+      expect((response.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
+    });
+
     it("allows a sponsored subscription backed by a valid, non-revoked license", async () => {
       const studentId = await newStudent();
       const subscription = await createSubscription(

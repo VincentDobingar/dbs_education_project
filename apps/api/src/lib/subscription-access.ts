@@ -1,4 +1,4 @@
-import type { FundingSource, Subscription } from "@prisma/client";
+import type { Subscription } from "@prisma/client";
 import type { Request } from "express";
 
 import { prisma } from "./prisma.js";
@@ -44,8 +44,6 @@ export async function familyAccountOwnerContext(req: Request): Promise<Subscript
   return { familyAccountId: familyAccount?.id ?? NO_FAMILY_ACCOUNT_SENTINEL };
 }
 
-const SPONSORED_FUNDING_SOURCES: readonly FundingSource[] = ["SCHOOL_SPONSORED", "ORGANIZATION_SPONSORED"];
-
 /**
  * §37 : « une licence sponsorisée expirée bloque les fonctionnalités ». `SponsoredLicense`
  * porte `validUntil`/`status` depuis le début (§31 tranche 7) mais rien ne les
@@ -53,24 +51,34 @@ const SPONSORED_FUNDING_SOURCES: readonly FundingSource[] = ["SCHOOL_SPONSORED",
  * licence `REVOKED` sans jamais toucher l'abonnement bénéficiaire, qui restait actif
  * indéfiniment. Vérifié ici, au point d'entrée unique de toute vérification
  * d'abonnement, plutôt que dupliqué dans chaque appelant.
+ *
+ * Gouverné par la présence réelle d'un `LicenseAssignment`, jamais par
+ * `Subscription.fundingSource` : `license-admin.service.ts` ne modifie
+ * délibérément jamais ce champ sur un abonnement existant (il se contente de
+ * tracer quelle licence couvre quel abonnement déjà créé) — un abonnement
+ * réellement couvert par une licence sponsorisée reste donc `SELF_PAID` en
+ * pratique. Se fier au funding source ferait passer ce contrôle en code mort :
+ * il ne se déclencherait jamais pour un vrai bénéficiaire.
  */
-async function hasValidLicenseAssignment(subscriptionId: string): Promise<boolean> {
-  const now = new Date();
-  const assignment = await prisma.licenseAssignment.findFirst({
-    where: {
-      subscriptionId,
-      revokedAt: null,
-      license: {
-        status: { not: "REVOKED" },
-        OR: [{ validUntil: null }, { validUntil: { gte: now } }],
-      },
-    },
+async function licenseAssignmentStatus(subscriptionId: string): Promise<"none" | "valid" | "blocked"> {
+  const assignments = await prisma.licenseAssignment.findMany({
+    where: { subscriptionId },
+    include: { license: true },
   });
-  return assignment !== null;
-}
 
-function isSponsoredFunding(fundingSource: FundingSource): boolean {
-  return SPONSORED_FUNDING_SOURCES.includes(fundingSource);
+  if (assignments.length === 0) {
+    return "none";
+  }
+
+  const now = new Date();
+  const hasValid = assignments.some(
+    (assignment) =>
+      !assignment.revokedAt &&
+      assignment.license.status !== "REVOKED" &&
+      (!assignment.license.validUntil || assignment.license.validUntil >= now),
+  );
+
+  return hasValid ? "valid" : "blocked";
 }
 
 export async function findActiveSubscription(
@@ -91,7 +99,7 @@ export async function findActiveSubscription(
     return null;
   }
 
-  if (isSponsoredFunding(subscription.fundingSource) && !(await hasValidLicenseAssignment(subscription.id))) {
+  if ((await licenseAssignmentStatus(subscription.id)) === "blocked") {
     return null;
   }
 
