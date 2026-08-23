@@ -12,7 +12,13 @@ import { TRANSFERABLE_STUDENT_FIELDS } from "./transfer.validation.js";
  * StudentTransfer carries fromTenantId/toTenantId instead of a single tenantId, so
  * it is deliberately NOT in the tenant-guard's auto-scoped model list (see
  * tenant-scoped-models.ts) — every query here must filter by the caller's tenant
- * explicitly, via rawPrisma, or a cross-tenant leak is one missed `where` away.
+ * explicitly, via rawPrisma.
+ *
+ * A dedicated RLS policy (migration rls_child_tables_and_transfers) now backstops
+ * this at the database level too: a row is visible only when app.tenant_id matches
+ * fromTenantId OR toTenantId. Every query below therefore runs inside
+ * withTenantSession(tenantId, ...) with the caller's own resolved tenant — never a
+ * bare rawPrisma.studentTransfer call — or RLS would silently return nothing.
  */
 function parseDataScope(value: unknown): (typeof TRANSFERABLE_STUDENT_FIELDS)[number][] {
   if (!Array.isArray(value)) {
@@ -62,42 +68,52 @@ export async function requestTransfer(
     throw new AppError(400, "SAME_TENANT_TRANSFER", "Cannot transfer a student to the same tenant");
   }
 
-  const pendingTransfer = await rawPrisma.studentTransfer.findFirst({
-    where: { studentId: student.id, status: { in: ["REQUESTED", "APPROVED"] } },
-  });
+  const pendingTransfer = await withTenantSession(fromTenantId, (tx) =>
+    tx.studentTransfer.findFirst({
+      where: { studentId: student.id, status: { in: ["REQUESTED", "APPROVED"] } },
+    }),
+  );
   if (pendingTransfer) {
     throw new AppError(409, "TRANSFER_ALREADY_PENDING", "This student already has a pending transfer");
   }
 
-  return rawPrisma.studentTransfer.create({
-    data: {
-      studentId: student.id,
-      fromTenantId,
-      toTenantId: destination.id,
-      requestedByUserId,
-      status: "REQUESTED",
-      dataScope: input.dataScope,
-    },
-  });
+  return withTenantSession(fromTenantId, (tx) =>
+    tx.studentTransfer.create({
+      data: {
+        studentId: student.id,
+        fromTenantId,
+        toTenantId: destination.id,
+        requestedByUserId,
+        status: "REQUESTED",
+        dataScope: input.dataScope,
+      },
+    }),
+  );
 }
 
 export async function listTransfers(direction: "incoming" | "outgoing"): Promise<StudentTransfer[]> {
   const tenantId = requireCurrentTenantId();
-  return rawPrisma.studentTransfer.findMany({
-    where: direction === "incoming" ? { toTenantId: tenantId } : { fromTenantId: tenantId },
-    orderBy: { requestedAt: "desc" },
-  });
+  return withTenantSession(tenantId, (tx) =>
+    tx.studentTransfer.findMany({
+      where: direction === "incoming" ? { toTenantId: tenantId } : { fromTenantId: tenantId },
+      orderBy: { requestedAt: "desc" },
+    }),
+  );
 }
 
 /**
  * Fetches a transfer and verifies the caller's tenant is the expected party.
  * A mismatch (or an unknown id) surfaces as 404, never 403 — same convention the
  * tenant-guard extension uses for cross-tenant reads, so a transfer's existence is
- * never confirmed to a tenant that isn't one of its two parties.
+ * never confirmed to a tenant that isn't one of its two parties. Runs under the
+ * caller's own tenant context — RLS lets it see the row regardless of which of the
+ * two parties it is, the party check below narrows it further.
  */
 async function requireTransferForParty(id: string, party: "from" | "to"): Promise<StudentTransfer> {
   const tenantId = requireCurrentTenantId();
-  const transfer = await rawPrisma.studentTransfer.findUnique({ where: { id } });
+  const transfer = await withTenantSession(tenantId, (tx) =>
+    tx.studentTransfer.findUnique({ where: { id } }),
+  );
   const expectedTenantId = party === "from" ? transfer?.fromTenantId : transfer?.toTenantId;
   if (!transfer || expectedTenantId !== tenantId) {
     throw new AppError(404, "TRANSFER_NOT_FOUND", `Transfer not found: ${id}`);
@@ -110,10 +126,12 @@ export async function approveTransfer(id: string): Promise<StudentTransfer> {
   if (transfer.status !== "REQUESTED") {
     throw new AppError(409, "INVALID_TRANSFER_STATUS", `Transfer is ${transfer.status.toLowerCase()}`);
   }
-  return rawPrisma.studentTransfer.update({
-    where: { id },
-    data: { status: "APPROVED", decidedAt: new Date() },
-  });
+  return withTenantSession(transfer.toTenantId as string, (tx) =>
+    tx.studentTransfer.update({
+      where: { id },
+      data: { status: "APPROVED", decidedAt: new Date() },
+    }),
+  );
 }
 
 export async function rejectTransfer(id: string): Promise<StudentTransfer> {
@@ -121,10 +139,12 @@ export async function rejectTransfer(id: string): Promise<StudentTransfer> {
   if (transfer.status !== "REQUESTED") {
     throw new AppError(409, "INVALID_TRANSFER_STATUS", `Transfer is ${transfer.status.toLowerCase()}`);
   }
-  return rawPrisma.studentTransfer.update({
-    where: { id },
-    data: { status: "REJECTED", decidedAt: new Date() },
-  });
+  return withTenantSession(transfer.toTenantId as string, (tx) =>
+    tx.studentTransfer.update({
+      where: { id },
+      data: { status: "REJECTED", decidedAt: new Date() },
+    }),
+  );
 }
 
 export interface CompleteTransferResult {
@@ -182,10 +202,12 @@ export async function completeTransfer(
     await tx.student.update({ where: { id: sourceStudent.id }, data: { status: "TRANSFERRED" } });
   });
 
-  const updatedTransfer = await rawPrisma.studentTransfer.update({
-    where: { id },
-    data: { status: "COMPLETED" },
-  });
+  const updatedTransfer = await withTenantSession(transfer.fromTenantId, (tx) =>
+    tx.studentTransfer.update({
+      where: { id },
+      data: { status: "COMPLETED" },
+    }),
+  );
 
   return { transfer: updatedTransfer, newStudent };
 }

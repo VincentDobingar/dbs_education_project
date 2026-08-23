@@ -1,7 +1,7 @@
 import type { Grade } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
@@ -121,20 +121,27 @@ export async function correctGrade(
   const previousScore = grade.score;
   const newScore = isAbsent ? null : (input.score ?? grade.score?.toNumber() ?? null);
 
-  const updated = await prisma.grade.update({
-    where: { id },
-    data: { score: newScore, isAbsent },
-  });
+  // §2/§37 : GradeChangeLog n'a pas de tenantId propre — sa politique RLS vérifie le
+  // tenant du Grade parent par sous-requête, ce qui exige que app.tenant_id soit déjà
+  // positionné quand Postgres l'évalue. withTenantSession le garantit pour les deux
+  // écritures (le update de Grade se fait ici via `tx`, hors garde applicative).
+  const tenantId = requireCurrentTenantId();
+  return withTenantSession(tenantId, async (tx) => {
+    const updated = await tx.grade.update({
+      where: { id },
+      data: { score: newScore, isAbsent },
+    });
 
-  await prisma.gradeChangeLog.create({
-    data: {
-      gradeId: id,
-      previousScore,
-      newScore,
-      changedByUserId: actingUserId,
-      reason: input.reason,
-    },
-  });
+    await tx.gradeChangeLog.create({
+      data: {
+        gradeId: id,
+        previousScore,
+        newScore,
+        changedByUserId: actingUserId,
+        reason: input.reason,
+      },
+    });
 
-  return updated;
+    return updated;
+  });
 }

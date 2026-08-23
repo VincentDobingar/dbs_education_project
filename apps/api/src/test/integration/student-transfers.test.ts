@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
+import { rawPrisma } from "../../lib/prisma.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
 
@@ -219,5 +220,38 @@ describe("transferts inter-établissements (§10, §19)", () => {
       .send();
     expect(approveAfterReject.status).toBe(409);
     expect((approveAfterReject.body as { code: string }).code).toBe("INVALID_TRANSFER_STATUS");
+  });
+
+  // §2/§37 : StudentTransfer n'avait ni garde applicative ni RLS — sa correction
+  // reposait entièrement sur les filtres manuels de transfer.service.ts. Preuve au
+  // niveau base, en parlant directement à Postgres sous le rôle applicatif le moins
+  // privilégié, qu'un tenant tiers ne peut voir la ligne même en contournant
+  // entièrement le service (même style que tenant-isolation.test.ts).
+  it("Postgres itself hides a transfer from a third tenant that is neither party, even bypassing the service", async () => {
+    const source = await setUpTenantWithOwnerAndTeacher("SrcD");
+    const destination = await setUpTenantWithOwnerAndTeacher("DstD");
+    const bystander = await setUpTenantWithOwnerAndTeacher("BystD");
+    const studentId = await createStudentIn(source.subdomain, source.ownerToken);
+
+    const requested = await request(app)
+      .post("/api/v1/student-transfers")
+      .set("Authorization", `Bearer ${source.ownerToken}`)
+      .set("X-Tenant-Slug", source.subdomain)
+      .send({ studentId, toTenantSubdomain: destination.subdomain });
+    const transferId = (requested.body as { id: string }).id;
+
+    const bystanderTenant = await testAdminPrisma.tenantDomain.findFirstOrThrow({
+      where: { subdomain: bystander.subdomain },
+    });
+
+    const rows = await rawPrisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.tenant_id', ${bystanderTenant.tenantId}, true)`;
+      return tx.$queryRaw<{ id: string }[]>`SELECT id FROM "StudentTransfer" WHERE id = ${transferId}`;
+    });
+
+    expect(rows).toHaveLength(0);
+
+    const stillThere = await testAdminPrisma.studentTransfer.findUniqueOrThrow({ where: { id: transferId } });
+    expect(stillThere.id).toBe(transferId);
   });
 });

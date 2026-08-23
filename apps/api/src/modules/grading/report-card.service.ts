@@ -1,7 +1,7 @@
 import type { ReportCard, ReportCardItem } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import type { GenerateReportCardsInput, ListReportCardsQuery } from "./report-card.validation.js";
@@ -175,40 +175,52 @@ export async function generateReportCards(input: GenerateReportCardsInput): Prom
 
   const tenantId = requireCurrentTenantId();
   const results: ReportCardWithItems[] = [];
+  // §2/§37 : ReportCardItem n'a pas de tenantId propre — sa politique RLS vérifie le
+  // tenant du ReportCard parent par sous-requête, ce qui exige que app.tenant_id soit
+  // déjà positionné quand Postgres l'évalue. withTenantSession le garantit pour tout
+  // ce bloc, y compris le upsert de ReportCard lui-même (fait ici via `tx`, hors garde
+  // applicative, tenantId posé explicitement en création comme requis).
   for (const entry of computed) {
-    const reportCard = await prisma.reportCard.upsert({
-      where: {
-        studentId_academicPeriodId: { studentId: entry.studentId, academicPeriodId: input.academicPeriodId },
-      },
-      update: {
-        generatedAt: new Date(),
-        averageScore: entry.overallAverage,
-        classRank: rankByStudentId.get(entry.studentId) ?? null,
-        mention: mentionFor(entry.overallAverage),
-      },
-      create: {
-        tenantId,
-        studentId: entry.studentId,
-        academicPeriodId: input.academicPeriodId,
-        averageScore: entry.overallAverage,
-        classRank: rankByStudentId.get(entry.studentId) ?? null,
-        mention: mentionFor(entry.overallAverage),
-      },
+    const { reportCard, items } = await withTenantSession(tenantId, async (tx) => {
+      const card = await tx.reportCard.upsert({
+        where: {
+          studentId_academicPeriodId: {
+            studentId: entry.studentId,
+            academicPeriodId: input.academicPeriodId,
+          },
+        },
+        update: {
+          generatedAt: new Date(),
+          averageScore: entry.overallAverage,
+          classRank: rankByStudentId.get(entry.studentId) ?? null,
+          mention: mentionFor(entry.overallAverage),
+        },
+        create: {
+          tenantId,
+          studentId: entry.studentId,
+          academicPeriodId: input.academicPeriodId,
+          averageScore: entry.overallAverage,
+          classRank: rankByStudentId.get(entry.studentId) ?? null,
+          mention: mentionFor(entry.overallAverage),
+        },
+      });
+
+      await tx.reportCardItem.deleteMany({ where: { reportCardId: card.id } });
+      if (entry.subjectAverages.length > 0) {
+        await tx.reportCardItem.createMany({
+          data: entry.subjectAverages.map((s) => ({
+            reportCardId: card.id,
+            subjectId: s.subjectId,
+            averageScore: s.averageScore,
+            coefficient: s.coefficient,
+          })),
+        });
+      }
+
+      const cardItems = await tx.reportCardItem.findMany({ where: { reportCardId: card.id } });
+      return { reportCard: card, items: cardItems };
     });
 
-    await prisma.reportCardItem.deleteMany({ where: { reportCardId: reportCard.id } });
-    if (entry.subjectAverages.length > 0) {
-      await prisma.reportCardItem.createMany({
-        data: entry.subjectAverages.map((s) => ({
-          reportCardId: reportCard.id,
-          subjectId: s.subjectId,
-          averageScore: s.averageScore,
-          coefficient: s.coefficient,
-        })),
-      });
-    }
-
-    const items = await prisma.reportCardItem.findMany({ where: { reportCardId: reportCard.id } });
     results.push({ ...reportCard, items });
   }
 
