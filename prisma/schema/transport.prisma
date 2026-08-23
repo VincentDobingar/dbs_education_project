@@ -1,0 +1,120 @@
+// Transport scolaire (§29 : "transport scolaire" listé parmi les modules
+// complémentaires, Phase 10, même absence de détail fonctionnel que §29 pour la
+// bibliothèque et l'apprentissage en ligne avant leurs tranches respectives).
+// Véhicules -> itinéraires (avec arrêts ordonnés) -> affectation d'un élève à un
+// itinéraire/arrêt -> suivi quotidien du trajet (a-t-il pris le bus ce jour-là).
+// Le rôle TRANSPORT_MANAGER existait déjà au seed sans aucune permission à piloter
+// (`roles-permissions.ts`) — cette tranche lui en donne enfin.
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  RETIRED
+}
+
+model Vehicle {
+  id          String        @id @default(cuid())
+  tenantId    String
+  plateNumber String
+  model       String?
+  capacity    Int
+  status      VehicleStatus @default(ACTIVE)
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  routes TransportRoute[]
+
+  @@unique([tenantId, plateNumber])
+  @@index([tenantId])
+}
+
+/// driverEmployeeId reste un champ nu (pas de relation Prisma), même choix que
+/// Homework.createdByEmployeeId/LibraryLoan.issuedByEmployeeId ailleurs dans ce
+/// schéma — vérifié côté service, jamais une relation Prisma pour ce FK précis.
+model TransportRoute {
+  id               String    @id @default(cuid())
+  tenantId         String
+  name             String
+  vehicleId        String?
+  driverEmployeeId String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+
+  stops       RouteStop[]
+  assignments StudentRouteAssignment[]
+  attendances TransportAttendance[]
+
+  @@index([tenantId])
+  @@index([vehicleId])
+}
+
+/// time : "08:00", même convention que TimetableEntry.startTime — une heure
+/// indicative, pas un horodatage.
+model RouteStop {
+  id        String   @id @default(cuid())
+  tenantId  String
+  routeId   String
+  label     String
+  order     Int      @default(0)
+  time      String?
+  createdAt DateTime @default(now())
+
+  route TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  assignments StudentRouteAssignment[]
+
+  @@index([tenantId])
+  @@index([routeId])
+}
+
+/// Un seul itinéraire actif par élève à la fois (@@unique([studentId])) plutôt
+/// qu'un historique — réaffecter un élève remplace l'affectation existante, jamais
+/// un doublon. stopId optionnel : un itinéraire peut être affecté avant que ses
+/// arrêts précis soient saisis.
+model StudentRouteAssignment {
+  id        String    @id @default(cuid())
+  tenantId  String
+  studentId String    @unique
+  routeId   String
+  stopId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop    RouteStop?     @relation(fields: [stopId], references: [id])
+
+  @@index([tenantId])
+  @@index([routeId])
+}
+
+enum TransportAttendanceStatus {
+  BOARDED
+  ABSENT
+}
+
+/// Suivi des trajets (§29) : une ligne par élève/itinéraire/jour, même forme que
+/// EmployeeAttendance (@@unique sur la clé jour) — un upsert corrige la journée,
+/// jamais un doublon.
+model TransportAttendance {
+  id        String                    @id @default(cuid())
+  tenantId  String
+  routeId   String
+  studentId String
+  date      DateTime
+  status    TransportAttendanceStatus
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, studentId, date])
+  @@index([tenantId])
+  @@index([routeId])
+  @@index([studentId])
+}

@@ -76,6 +76,8 @@ model Student {
   libraryLoans          LibraryLoan[]
   homeworkSubmissions   HomeworkSubmission[]
   resourceProgress      ResourceProgress[]
+  routeAssignment       StudentRouteAssignment?
+  transportAttendances  TransportAttendance[]
 
   @@unique([tenantId, matricule])
   @@index([tenantId])

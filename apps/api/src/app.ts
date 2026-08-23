@@ -29,6 +29,7 @@ import { studentTransferRouter } from "./modules/students/transfer.routes.js";
 import { subscriptionRouter } from "./modules/subscriptions/subscription.routes.js";
 import { tenantUserRouter } from "./modules/tenant-users/tenant-user.routes.js";
 import { tenantRouter } from "./modules/tenants/tenant.routes.js";
+import { transportRouter } from "./modules/transport/transport.routes.js";
 import { healthRouter } from "./routes/health.js";
 
 export function createApp(): express.Express {
@@ -58,6 +59,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/library", libraryRouter);
   app.use("/api/v1/homework", homeworkRouter);
   app.use("/api/v1/elearning", elearningRouter);
+  app.use("/api/v1/transport", transportRouter);
   app.use("/api/v1/students", studentRouter);
   app.use("/api/v1/student-transfers", studentTransferRouter);
   app.use("/api/v1/employees", employeeRouter);
