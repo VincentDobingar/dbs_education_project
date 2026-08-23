@@ -4,13 +4,31 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import {
+  addMembership,
+  createSubscription,
+  createTenant,
+  createUser,
+  grantEntitlement,
+  grantRole,
+  uniqueSuffix,
+} from "../fixtures.js";
 
 describe("portail élève — lecture (§26)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
+  const createdSubscribedStudentIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.entitlement.deleteMany({
+      where: { subscription: { owner: { studentId: { in: createdSubscribedStudentIds } } } },
+    });
+    await testAdminPrisma.subscription.deleteMany({
+      where: { owner: { studentId: { in: createdSubscribedStudentIds } } },
+    });
+    await testAdminPrisma.subscriptionOwner.deleteMany({
+      where: { studentId: { in: createdSubscribedStudentIds } },
+    });
     await testAdminPrisma.reportCardItem.deleteMany({
       where: { reportCard: { student: { tenantId: { in: createdTenantIds } } } },
     });
@@ -234,6 +252,14 @@ describe("portail élève — lecture (§26)", () => {
     expect(deniedStranger.status).toBe(403);
     expect((deniedStranger.body as { code: string }).code).toBe("STUDENT_LINK_NOT_VERIFIED");
 
+    // §37 : un élève lié mais sans abonnement individuel actif (§26) reste bloqué —
+    // jamais un accès fantôme faute d'abonnement.
+    const deniedNoSubscription = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(deniedNoSubscription.status).toBe(402);
+    expect((deniedNoSubscription.body as { code: string }).code).toBe("SUBSCRIPTION_INACTIVE");
+
     const linkedStudents = await request(app)
       .get("/api/v1/family/linked-students")
       .set("Authorization", `Bearer ${studentToken}`);
@@ -241,6 +267,25 @@ describe("portail élève — lecture (§26)", () => {
     expect(
       (linkedStudents.body as { student: { id: string } }[]).some((s) => s.student.id === studentId),
     ).toBe(true);
+
+    // §18 "Élève" : bundle des mêmes données, sans abonnement (aucun n'a encore été créé ici).
+    const dashboard = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/dashboard`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(dashboard.status).toBe(200);
+    const dashboardBody = dashboard.body as {
+      profile: { student: { id: string } };
+      recentReportCards: { id: string }[];
+      subscription: unknown;
+    };
+    expect(dashboardBody.profile.student.id).toBe(studentId);
+    expect(dashboardBody.recentReportCards.some((r) => r.id === reportCard.id)).toBe(true);
+    expect(dashboardBody.subscription).toBeNull();
+
+    // §26/§37 : abonnement individuel actif — débloque désormais les fonctions protégées.
+    createdSubscribedStudentIds.push(studentId);
+    const studentSubscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+    await grantEntitlement(studentSubscription.id, "report_card.download", { quotaLimit: 12 });
 
     const profile = await request(app)
       .get(`/api/v1/student-portal/students/${studentId}/profile`)
@@ -258,20 +303,6 @@ describe("portail élève — lecture (§26)", () => {
     expect((timetableEntries.body as { subjectId: string }[]).some((e) => e.subjectId === subjectId)).toBe(
       true,
     );
-
-    // §18 "Élève" : bundle des mêmes données, sans abonnement (aucun n'a été créé ici).
-    const dashboard = await request(app)
-      .get(`/api/v1/student-portal/students/${studentId}/dashboard`)
-      .set("Authorization", `Bearer ${studentToken}`);
-    expect(dashboard.status).toBe(200);
-    const dashboardBody = dashboard.body as {
-      profile: { student: { id: string } };
-      recentReportCards: { id: string }[];
-      subscription: unknown;
-    };
-    expect(dashboardBody.profile.student.id).toBe(studentId);
-    expect(dashboardBody.recentReportCards.some((r) => r.id === reportCard.id)).toBe(true);
-    expect(dashboardBody.subscription).toBeNull();
 
     const reportCards = await request(app)
       .get(`/api/v1/student-portal/students/${studentId}/report-cards`)
@@ -329,6 +360,11 @@ describe("portail élève — lecture (§26)", () => {
       .post("/api/v1/family/activation/redeem")
       .set("Authorization", `Bearer ${otherStudentToken}`)
       .send({ code: (otherInvitation.body as { code: string }).code });
+
+    // Abonnement actif également pour ce second élève : le refus attendu ci-dessous
+    // doit venir de la vérification de propriété (404), jamais d'un 402 d'abonnement.
+    createdSubscribedStudentIds.push(otherStudentId);
+    await createSubscription({ studentId: otherStudentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
 
     const crossStudentReportCard = await request(app)
       .get(`/api/v1/student-portal/students/${otherStudentId}/report-cards/${reportCard.id}`)

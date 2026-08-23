@@ -7,7 +7,9 @@ import {
   type SubscriptionOwnerContext,
 } from "../lib/subscription-access.js";
 
-type OwnerContextResolver = (req: Request) => SubscriptionOwnerContext | null;
+type OwnerContextResolver = (
+  req: Request,
+) => SubscriptionOwnerContext | null | Promise<SubscriptionOwnerContext | null>;
 
 export function requireEntitlement(
   featureCode: string,
@@ -15,7 +17,7 @@ export function requireEntitlement(
 ) {
   return (req: Request, res: Response, next: NextFunction): void => {
     void (async () => {
-      const context = resolveOwnerContext(req);
+      const context = await resolveOwnerContext(req);
 
       if (!context) {
         res
@@ -47,6 +49,17 @@ export function requireEntitlement(
       if (entitlement.quotaLimit !== null && entitlement.quotaUsed >= entitlement.quotaLimit) {
         res.status(403).json({ code: "QUOTA_EXCEEDED", message: `Quota exceeded for: ${featureCode}` });
         return;
+      }
+
+      // §37 : "les quotas sont respectés" — compte cet appel comme une consommation
+      // réelle, jamais un compteur qui ne bouge jamais. Seules les fonctionnalités
+      // plafonnées sont comptées (quotaLimit non nul) ; une fonctionnalité illimitée
+      // n'a rien à mesurer ici.
+      if (entitlement.quotaLimit !== null) {
+        await prisma.entitlement.update({
+          where: { id: entitlement.id },
+          data: { quotaUsed: { increment: 1 } },
+        });
       }
 
       next();

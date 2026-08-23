@@ -4,7 +4,14 @@ import { afterAll, describe, expect, it } from "vitest";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireEntitlement } from "../../middleware/requireEntitlement.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { createStudent, createSubscription, createTenant, grantEntitlement } from "../fixtures.js";
+import {
+  createLicenseAssignment,
+  createSponsoredLicense,
+  createStudent,
+  createSubscription,
+  createTenant,
+  grantEntitlement,
+} from "../fixtures.js";
 import { buildTestApp, type TestResponseBody } from "../test-app.js";
 
 function studentOwnerContext(req: { params: { studentId?: string } }) {
@@ -14,8 +21,12 @@ function studentOwnerContext(req: { params: { studentId?: string } }) {
 describe("requireActiveSubscription / requireEntitlement", () => {
   let tenantId: string;
   const createdStudentIds: string[] = [];
+  const createdLicenseIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.licenseAssignment.deleteMany({
+      where: { subscription: { owner: { studentId: { in: createdStudentIds } } } },
+    });
     await testAdminPrisma.entitlement.deleteMany({
       where: { subscription: { owner: { studentId: { in: createdStudentIds } } } },
     });
@@ -23,6 +34,7 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       where: { owner: { studentId: { in: createdStudentIds } } },
     });
     await testAdminPrisma.subscriptionOwner.deleteMany({ where: { studentId: { in: createdStudentIds } } });
+    await testAdminPrisma.sponsoredLicense.deleteMany({ where: { id: { in: createdLicenseIds } } });
     await testAdminPrisma.student.deleteMany({ where: { id: { in: createdStudentIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -66,6 +78,66 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       const response = await request(app).get(`/protected/${studentId}`);
       expect(response.status).toBe(200);
     });
+
+    // §37 : « une licence sponsorisée expirée/révoquée bloque les fonctionnalités » —
+    // le statut ACTIVE de l'abonnement seul ne suffit plus quand il est financé par
+    // une licence sponsorisée (§31).
+    it("blocks a sponsored subscription whose license has expired", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "ACTIVE",
+        "SCHOOL_SPONSORED",
+      );
+      const license = await createSponsoredLicense("STUDENT_BASIC", {
+        validUntil: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId);
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(402);
+      expect((response.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
+    });
+
+    it("blocks a sponsored subscription whose license assignment has been revoked", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "ACTIVE",
+        "SCHOOL_SPONSORED",
+      );
+      const license = await createSponsoredLicense("STUDENT_BASIC", { validUntil: null });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId, new Date());
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(402);
+      expect((response.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
+    });
+
+    it("allows a sponsored subscription backed by a valid, non-revoked license", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "ACTIVE",
+        "SCHOOL_SPONSORED",
+      );
+      const license = await createSponsoredLicense("STUDENT_BASIC", {
+        validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId);
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(200);
+    });
   });
 
   describe("requireEntitlement", () => {
@@ -97,6 +169,29 @@ describe("requireActiveSubscription / requireEntitlement", () => {
 
       const response = await request(app).get(`/protected/${studentId}`);
       expect(response.status).toBe(200);
+    });
+
+    // §37 : « les quotas sont respectés » — chaque appel consomme réellement le
+    // quota, jamais un compteur qui ne bouge pas.
+    it("increments quotaUsed on each successful call, then blocks once the limit is reached", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+      const entitlement = await grantEntitlement(subscription.id, "report_card.download", {
+        quotaLimit: 1,
+        quotaUsed: 0,
+      });
+
+      const first = await request(app).get(`/protected/${studentId}`);
+      expect(first.status).toBe(200);
+
+      const afterFirstCall = await testAdminPrisma.entitlement.findUniqueOrThrow({
+        where: { id: entitlement.id },
+      });
+      expect(afterFirstCall.quotaUsed).toBe(1);
+
+      const second = await request(app).get(`/protected/${studentId}`);
+      expect(second.status).toBe(403);
+      expect((second.body as TestResponseBody).code).toBe("QUOTA_EXCEEDED");
     });
   });
 });

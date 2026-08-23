@@ -1,6 +1,8 @@
 import { Router } from "express";
 
+import { studentOwnerContext } from "../../lib/subscription-access.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
@@ -94,21 +96,28 @@ elearningRouter.get(
 // requireLinkedStudent.
 const linkedStudent = requireLinkedStudent();
 
+// §37 : « un élève non abonné ne peut pas consulter les fonctions protégées » —
+// toujours après linkedStudent (jamais avant), même raisonnement que le portail élève.
+const requireStudentSubscription = requireActiveSubscription(studentOwnerContext);
+
 elearningRouter.get(
   "/student/:studentId/courses",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   elearningController.listCoursesForStudent,
 );
 elearningRouter.get(
   "/student/:studentId/courses/:courseId",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   elearningController.getCourseForStudent,
 );
 elearningRouter.post(
   "/student/:studentId/courses/:courseId/resources/:resourceId/complete",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   elearningController.markResourceComplete,
 );

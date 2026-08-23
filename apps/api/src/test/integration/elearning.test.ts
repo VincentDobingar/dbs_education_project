@@ -4,13 +4,27 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import {
+  addMembership,
+  createSubscription,
+  createTenant,
+  createUser,
+  grantRole,
+  uniqueSuffix,
+} from "../fixtures.js";
 
 describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
+  const createdSubscribedStudentIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.subscription.deleteMany({
+      where: { owner: { studentId: { in: createdSubscribedStudentIds } } },
+    });
+    await testAdminPrisma.subscriptionOwner.deleteMany({
+      where: { studentId: { in: createdSubscribedStudentIds } },
+    });
     await testAdminPrisma.resourceProgress.deleteMany({
       where: { resource: { course: { tenantId: { in: createdTenantIds } } } },
     });
@@ -288,6 +302,16 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .set("Authorization", `Bearer ${strangerToken}`);
     expect(deniedStranger.status).toBe(403);
     expect((deniedStranger.body as { code: string }).code).toBe("STUDENT_LINK_NOT_VERIFIED");
+
+    // §37 : un élève lié mais sans abonnement individuel actif reste bloqué.
+    const deniedNoSubscription = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(deniedNoSubscription.status).toBe(402);
+    expect((deniedNoSubscription.body as { code: string }).code).toBe("SUBSCRIPTION_INACTIVE");
+
+    createdSubscribedStudentIds.push(studentId);
+    await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
 
     const listedForStudent = await request(app)
       .get(`/api/v1/elearning/student/${studentId}/courses`)

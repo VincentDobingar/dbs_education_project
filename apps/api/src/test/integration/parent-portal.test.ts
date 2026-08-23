@@ -6,9 +6,11 @@ import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import {
   addMembership,
+  createSubscription,
   createTenant,
   createUser,
   createVerifiedRelationship,
+  grantEntitlement,
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
@@ -16,8 +18,21 @@ import {
 describe("portail parent — lecture (§25)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
+  const createdParentUserIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.entitlement.deleteMany({
+      where: { subscription: { owner: { familyAccount: { primaryUserId: { in: createdParentUserIds } } } } },
+    });
+    await testAdminPrisma.subscription.deleteMany({
+      where: { owner: { familyAccount: { primaryUserId: { in: createdParentUserIds } } } },
+    });
+    await testAdminPrisma.subscriptionOwner.deleteMany({
+      where: { familyAccount: { primaryUserId: { in: createdParentUserIds } } },
+    });
+    await testAdminPrisma.familyAccount.deleteMany({
+      where: { primaryUserId: { in: createdParentUserIds } },
+    });
     await testAdminPrisma.reportCardItem.deleteMany({
       where: { reportCard: { student: { tenantId: { in: createdTenantIds } } } },
     });
@@ -68,6 +83,7 @@ describe("portail parent — lecture (§25)", () => {
     const teacherToken = signAccessToken({ sub: teacher.id });
 
     const parent = await createUser("portal-parent");
+    createdParentUserIds.push(parent.id);
     const parentToken = signAccessToken({ sub: parent.id });
 
     const stranger = await createUser("portal-stranger");
@@ -245,11 +261,13 @@ describe("portail parent — lecture (§25)", () => {
     expect(deniedStranger.status).toBe(403);
     expect((deniedStranger.body as { code: string }).code).toBe("STUDENT_RELATIONSHIP_NOT_VERIFIED");
 
-    const attendance = await request(app)
+    // §37 : un parent vérifié mais sans abonnement familial actif (§9) reste bloqué —
+    // jamais un accès fantôme faute de compte familial.
+    const deniedNoSubscription = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/attendance`)
       .set("Authorization", `Bearer ${parentToken}`);
-    expect(attendance.status).toBe(200);
-    expect((attendance.body as { status: string }[]).some((a) => a.status === "ABSENT")).toBe(true);
+    expect(deniedNoSubscription.status).toBe(402);
+    expect((deniedNoSubscription.body as { code: string }).code).toBe("SUBSCRIPTION_INACTIVE");
 
     // §18 "Parent" : agrège tous les enfants vérifiés en un seul appel, chacun sous
     // son propre verrouillage de tenant — un étranger n'a bien sûr aucun enfant ni
@@ -273,6 +291,22 @@ describe("portail parent — lecture (§25)", () => {
     expect(childDashboard).toBeTruthy();
     expect(childDashboard?.tenantName).toBe(tenant.name);
     expect(childDashboard?.recentAttendance.some((a) => a.status === "ABSENT")).toBe(true);
+
+    // §9/§37 : abonnement familial actif — débloque désormais les fonctions protégées.
+    const familyAccount = await testAdminPrisma.familyAccount.create({ data: { primaryUserId: parent.id } });
+    const familySubscription = await createSubscription(
+      { familyAccountId: familyAccount.id },
+      "PARENT",
+      "PARENT_BASIC",
+      "ACTIVE",
+    );
+    await grantEntitlement(familySubscription.id, "report_card.download", { quotaLimit: 12 });
+
+    const attendance = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/attendance`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(attendance.status).toBe(200);
+    expect((attendance.body as { status: string }[]).some((a) => a.status === "ABSENT")).toBe(true);
 
     const reportCards = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/report-cards`)

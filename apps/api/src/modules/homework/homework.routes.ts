@@ -1,6 +1,8 @@
 import { Router } from "express";
 
+import { studentOwnerContext } from "../../lib/subscription-access.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
@@ -67,21 +69,28 @@ homeworkRouter.get(
 // staff), résolu par studentId via requireLinkedStudent.
 const linkedStudent = requireLinkedStudent();
 
+// §37 : « un élève non abonné ne peut pas consulter les fonctions protégées » —
+// toujours après linkedStudent (jamais avant), même raisonnement que le portail élève.
+const requireStudentSubscription = requireActiveSubscription(studentOwnerContext);
+
 homeworkRouter.get(
   "/student/:studentId",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   homeworkController.listHomeworkForStudent,
 );
 homeworkRouter.post(
   "/student/:studentId/:homeworkId/submit",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   homeworkController.submitHomework,
 );
 homeworkRouter.get(
   "/student/:studentId/:homeworkId/submission",
   requireAuth,
   linkedStudent,
+  requireStudentSubscription,
   homeworkController.getMySubmission,
 );

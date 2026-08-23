@@ -6,7 +6,9 @@ import {
   type SubscriptionOwnerContext,
 } from "../lib/subscription-access.js";
 
-type OwnerContextResolver = (req: Request) => SubscriptionOwnerContext | null;
+type OwnerContextResolver = (
+  req: Request,
+) => SubscriptionOwnerContext | null | Promise<SubscriptionOwnerContext | null>;
 
 /**
  * Defaults to checking the current tenant's own subscription (the common case for
@@ -16,7 +18,7 @@ type OwnerContextResolver = (req: Request) => SubscriptionOwnerContext | null;
 export function requireActiveSubscription(resolveOwnerContext: OwnerContextResolver = tenantOwnerContext) {
   return (req: Request, res: Response, next: NextFunction): void => {
     void (async () => {
-      const context = resolveOwnerContext(req);
+      const context = await resolveOwnerContext(req);
 
       if (!context) {
         res

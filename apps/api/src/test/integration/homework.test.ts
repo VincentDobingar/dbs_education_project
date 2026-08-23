@@ -4,13 +4,43 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import {
+  addMembership,
+  createSubscription,
+  createTenant,
+  createUser,
+  grantRole,
+  uniqueSuffix,
+} from "../fixtures.js";
 
 describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
+  const createdSubscribedStudentIds: string[] = [];
+  const createdParentUserIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.subscription.deleteMany({
+      where: {
+        owner: {
+          OR: [
+            { studentId: { in: createdSubscribedStudentIds } },
+            { familyAccount: { primaryUserId: { in: createdParentUserIds } } },
+          ],
+        },
+      },
+    });
+    await testAdminPrisma.subscriptionOwner.deleteMany({
+      where: {
+        OR: [
+          { studentId: { in: createdSubscribedStudentIds } },
+          { familyAccount: { primaryUserId: { in: createdParentUserIds } } },
+        ],
+      },
+    });
+    await testAdminPrisma.familyAccount.deleteMany({
+      where: { primaryUserId: { in: createdParentUserIds } },
+    });
     await testAdminPrisma.homeworkSubmission.deleteMany({
       where: { homework: { tenantId: { in: createdTenantIds } } },
     });
@@ -171,6 +201,7 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
       studentId,
       studentToken,
       parentToken,
+      parentUserId: parentUser.id,
     };
   }
 
@@ -263,8 +294,16 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
   }, 30000);
 
   it("lets a linked student view and submit their classroom's homework, upserts a resubmission, and never reaches another classroom's homework", async () => {
-    const { subdomain, teacherToken, classroomId, subjectId, studentId, studentToken, parentToken } =
-      await setUpClassroom();
+    const {
+      subdomain,
+      teacherToken,
+      classroomId,
+      subjectId,
+      studentId,
+      studentToken,
+      parentToken,
+      parentUserId,
+    } = await setUpClassroom();
 
     const futureDueAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
     const pastDueAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
@@ -291,6 +330,16 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
     expect(deniedStranger.status).toBe(403);
     expect((deniedStranger.body as { code: string }).code).toBe("STUDENT_LINK_NOT_VERIFIED");
 
+    // §37 : un élève lié mais sans abonnement individuel actif reste bloqué.
+    const deniedNoSubscription = await request(app)
+      .get(`/api/v1/homework/student/${studentId}`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(deniedNoSubscription.status).toBe(402);
+    expect((deniedNoSubscription.body as { code: string }).code).toBe("SUBSCRIPTION_INACTIVE");
+
+    createdSubscribedStudentIds.push(studentId);
+    await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+
     const listedForStudent = await request(app)
       .get(`/api/v1/homework/student/${studentId}`)
       .set("Authorization", `Bearer ${studentToken}`);
@@ -298,7 +347,14 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
     const listedIds = (listedForStudent.body as { id: string }[]).map((h) => h.id);
     expect(listedIds).toEqual(expect.arrayContaining([onTimeHomeworkId, lateHomeworkId]));
 
-    // §25 : le parent consulte aussi les devoirs de son enfant, en lecture seule.
+    // §25/§37 : le parent consulte aussi les devoirs de son enfant, en lecture seule —
+    // exige un abonnement familial actif, comme toute autre route du portail parent.
+    createdParentUserIds.push(parentUserId);
+    const parentFamilyAccount = await testAdminPrisma.familyAccount.create({
+      data: { primaryUserId: parentUserId },
+    });
+    await createSubscription({ familyAccountId: parentFamilyAccount.id }, "PARENT", "PARENT_BASIC", "ACTIVE");
+
     const listedForParent = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/homework`)
       .set("Authorization", `Bearer ${parentToken}`);

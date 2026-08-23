@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import type { SubscriberCategory, SubscriptionStatus, Tenant, User } from "@prisma/client";
+import type { FundingSource, SubscriberCategory, SubscriptionStatus, Tenant, User } from "@prisma/client";
 
 import { hashPassword } from "../lib/password.js";
 
@@ -89,6 +89,7 @@ export async function createSubscription(
   ownerType: SubscriberCategory,
   planCode: string,
   status: SubscriptionStatus = "ACTIVE",
+  fundingSource: FundingSource = "SELF_PAID",
 ) {
   const plan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({ where: { code: planCode } });
   const owner = await testAdminPrisma.subscriptionOwner.create({ data: { ownerType, ...ownerRef } });
@@ -98,8 +99,40 @@ export async function createSubscription(
       ownerId: owner.id,
       planId: plan.id,
       status,
-      fundingSource: "SELF_PAID",
+      fundingSource,
       billingPeriod: "MONTHLY",
+    },
+  });
+}
+
+export async function createSponsoredLicense(
+  planCode: string,
+  options: { validUntil?: Date | null; status?: "AVAILABLE" | "ASSIGNED" | "REVOKED" | "EXPIRED" } = {},
+) {
+  const plan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({ where: { code: planCode } });
+  return testAdminPrisma.sponsoredLicense.create({
+    data: {
+      planId: plan.id,
+      fundingSource: "SCHOOL_SPONSORED",
+      status: options.status ?? "ASSIGNED",
+      validUntil: options.validUntil ?? null,
+    },
+  });
+}
+
+export async function createLicenseAssignment(
+  licenseId: string,
+  subscriptionId: string,
+  studentId: string,
+  revokedAt: Date | null = null,
+) {
+  return testAdminPrisma.licenseAssignment.create({
+    data: {
+      licenseId,
+      subscriptionId,
+      beneficiaryType: "STUDENT",
+      beneficiaryStudentId: studentId,
+      revokedAt,
     },
   });
 }
