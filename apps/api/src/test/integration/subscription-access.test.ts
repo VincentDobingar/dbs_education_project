@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireEntitlement } from "../../middleware/requireEntitlement.js";
+import { transitionSubscription } from "../../modules/subscriptions/subscription.service.js";
 import { testAdminPrisma } from "../admin-client.js";
 import {
   createLicenseAssignment,
@@ -252,6 +253,40 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       const second = await request(app).get(`/protected/${studentId}`);
       expect(second.status).toBe(403);
       expect((second.body as TestResponseBody).code).toBe("QUOTA_EXCEEDED");
+    });
+
+    // §6/§37 : « les quotas sont respectés » suppose qu'ils se rechargent à chaque
+    // nouvelle période payée — recalculateEntitlements ne remettait jamais quotaUsed
+    // à zéro, un quota épuisé restait donc épuisé à vie même après un renouvellement
+    // payé (ACTIVE -> SUSPENDED -> ACTIVE ici, même transition qu'un admin
+    // réactivant après régularisation).
+    it("resets quotaUsed when the subscription re-enters ACTIVE, but not on other transitions", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+      const entitlement = await grantEntitlement(subscription.id, "report_card.download", {
+        quotaLimit: 1,
+        quotaUsed: 1,
+      });
+
+      await transitionSubscription(subscription.id, "SUSPENDED");
+      const whileSuspended = await testAdminPrisma.entitlement.findUniqueOrThrow({
+        where: { id: entitlement.id },
+      });
+      expect(whileSuspended.quotaUsed).toBe(1);
+
+      // SUSPENDED n'est pas un statut actif au sens de findActiveSubscription — bloqué
+      // en amont du quota (402), jamais un 403 lié à l'entitlement lui-même.
+      const stillBlocked = await request(app).get(`/protected/${studentId}`);
+      expect(stillBlocked.status).toBe(402);
+
+      await transitionSubscription(subscription.id, "ACTIVE");
+      const afterRenewal = await testAdminPrisma.entitlement.findUniqueOrThrow({
+        where: { id: entitlement.id },
+      });
+      expect(afterRenewal.quotaUsed).toBe(0);
+
+      const allowedAgain = await request(app).get(`/protected/${studentId}`);
+      expect(allowedAgain.status).toBe(200);
     });
   });
 });

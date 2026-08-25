@@ -113,6 +113,14 @@ async function recalculateEntitlements(tx: Tx, subscription: Subscription): Prom
   // (isEnabled reste vrai) ni toucher aux fonctionnalités illimitées, qui ne sont pas
   // la ressource que la grâce cherche à protéger.
   const isGracePeriod = subscription.status === "GRACE_PERIOD";
+  // §6/§37 : « les quotas sont respectés » suppose qu'ils se rechargent à chaque
+  // nouvelle période payée — jusqu'ici quotaUsed n'était jamais remis à zéro, un
+  // quota épuisé restait donc épuisé à vie, même après un renouvellement payé.
+  // ACTIVE est le seul signal fiable d'un renouvellement effectif : c'est le même
+  // toStatus qui déclenche le recalcul de currentPeriodEndsAt juste au-dessus
+  // (applySubscriptionTransition) — jamais les autres transitions (GRACE_PERIOD/
+  // SUSPENDED ne sont pas des renouvellements, seulement un arrêt de consommation).
+  const isNewBillingPeriod = subscription.status === "ACTIVE";
   const features = await tx.planFeature.findMany({ where: { planId: subscription.planId } });
 
   for (const feature of features) {
@@ -126,6 +134,7 @@ async function recalculateEntitlements(tx: Tx, subscription: Subscription): Prom
         isEnabled: isActiveLike && feature.isIncluded,
         quotaLimit,
         computedAt: new Date(),
+        ...(isNewBillingPeriod ? { quotaUsed: 0 } : {}),
       },
       create: {
         subscriptionId: subscription.id,
