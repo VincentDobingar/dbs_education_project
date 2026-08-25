@@ -1,16 +1,11 @@
 import type { PerformanceEvaluation } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import { getEmployee } from "./employee.service.js";
 import type { CreatePerformanceEvaluationInput } from "./performance-evaluation.validation.js";
-
-/** Never trust a client-supplied employee id for "who evaluated this employee". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 /** Pas d'échelle imposée (§27 n'en fixe aucune) : `score` reste un entier libre,
  * l'établissement choisit sa propre convention (note /20, /5, pourcentage...). */

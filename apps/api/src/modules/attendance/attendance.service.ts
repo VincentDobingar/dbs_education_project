@@ -1,5 +1,6 @@
 import type { Attendance } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -14,12 +15,6 @@ import type {
 
 function startOfDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-/** Never trust a client-supplied employee id for "who took the roll call". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
 }
 
 /**

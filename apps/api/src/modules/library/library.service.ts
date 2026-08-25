@@ -1,5 +1,6 @@
 import type { Book, LibraryLoan } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -12,12 +13,6 @@ import type {
   ListLoansQuery,
   UpdateBookInput,
 } from "./library.validation.js";
-
-/** Never trust a client-supplied employee id for "who handed out this loan". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 export async function createBook(input: CreateBookInput): Promise<Book> {
   return prisma.book.create({

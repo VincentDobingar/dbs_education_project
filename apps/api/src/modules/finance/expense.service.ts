@@ -1,17 +1,12 @@
 import type { Expense } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import { requireExpenseCategory } from "./expense-category.service.js";
 import type { CreateExpenseInput, ListExpensesQuery, UpdateExpenseInput } from "./expense.validation.js";
-
-/** Unlike StudentPayment.recordedByEmployeeId, the schema doesn't mark this as required — resolved best-effort. */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 export async function createExpense(input: CreateExpenseInput, actingUserId: string): Promise<Expense> {
   await requireExpenseCategory(input.categoryId);

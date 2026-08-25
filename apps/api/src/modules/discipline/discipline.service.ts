@@ -1,5 +1,6 @@
 import type { DisciplinaryIncident } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -11,12 +12,6 @@ import type {
   ListIncidentsQuery,
   UpdateIncidentInput,
 } from "./discipline.validation.js";
-
-/** Never trust a client-supplied employee id for "who reported this incident". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 export async function createIncident(
   input: CreateIncidentInput,

@@ -1,5 +1,6 @@
 import type { Grade } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -7,12 +8,6 @@ import { requireStudentRecord } from "../students/student.service.js";
 
 import { requireAssessment } from "./assessment.service.js";
 import type { CorrectGradeInput, ListStudentGradesQuery, SetGradesInput } from "./grade.validation.js";
-
-/** Never trust a client-supplied employee id for "who entered this grade" (same principle as document uploads). */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 export async function setGrades(
   assessmentId: string,

@@ -1,5 +1,6 @@
 import type { CourseResource, OnlineCourse, ResourceProgress } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -11,12 +12,6 @@ import type {
   ListCoursesQuery,
   UpdateCourseInput,
 } from "./elearning.validation.js";
-
-/** Never trust a client-supplied employee id for "who created this course". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 export async function createCourse(input: CreateCourseInput, actingUserId: string): Promise<OnlineCourse> {
   const [subject, classroom] = await Promise.all([

@@ -1,5 +1,6 @@
 import type { CashSession } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
@@ -9,12 +10,6 @@ import type {
   ListCashSessionsQuery,
   OpenCashSessionInput,
 } from "./cash-session.validation.js";
-
-/** A cash register is handled by an accountable staff member, same principle as StudentPayment.recordedByEmployeeId. */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 /** One OPEN session at a time per campus (or per tenant, for schools without campuses — campusId null is its own bucket). */
 export async function openCashSession(

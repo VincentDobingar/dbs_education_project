@@ -1,5 +1,6 @@
 import type { StudentPayment, StudentPaymentRefund, StudentReceipt } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, withTenantSession } from "../../lib/prisma.js";
@@ -11,12 +12,6 @@ import { requireStudentInvoice } from "./student-invoice.service.js";
 import type { RecordCashPaymentInput, RefundStudentPaymentInput } from "./student-payment.validation.js";
 
 export type StudentPaymentWithReceipt = StudentPayment & { receipt: StudentReceipt | null };
-
-/** Never trust a client-supplied employee id for "who recorded this cash payment". */
-async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  return employee?.id;
-}
 
 /**
  * Cash only for this slice — the only operator actually wired end-to-end so far

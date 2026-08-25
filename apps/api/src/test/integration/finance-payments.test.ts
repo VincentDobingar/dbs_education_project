@@ -189,4 +189,89 @@ describe("encaissement et reçus (§23)", () => {
     expect(cancelPaidInvoice.status).toBe(409);
     expect((cancelPaidInvoice.body as { code: string }).code).toBe("INVOICE_HAS_PAYMENTS");
   }, 20000);
+
+  // §27 : archiveEmployee pose deletedAt/status TERMINATED, mais rien ne le
+  // consultait jusqu'ici — resolveActingEmployeeId (dupliqué dans dix services)
+  // continuait de résoudre l'Employee d'un utilisateur licencié, qui pouvait donc
+  // continuer d'encaisser des paiements sous son ancienne identité de personnel.
+  it("refuses a cash payment once the recording employee has been archived, even with a valid session", async () => {
+    const { tenant, subdomain } = await createTenant("PaymentTerminated");
+    createdTenantIds.push(tenant.id);
+
+    const agent = await createUser("pay-terminated-agent");
+    await addMembership(agent.id, tenant.id);
+    await grantRole(agent.id, "SCHOOL_OWNER", tenant.id);
+    const agentToken = signAccessToken({ sub: agent.id });
+
+    const employee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Moussa",
+        lastName: "Keita",
+        jobTitle: "Agent comptable",
+        userId: agent.id,
+      });
+    const employeeId = (employee.body as { id: string }).id;
+
+    const year = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+    const academicYearId = (year.body as { id: string }).id;
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Salif", lastName: "Traore" });
+    const studentId = (student.body as { id: string }).id;
+
+    const invoice = await request(app)
+      .post("/api/v1/finance/student-invoices")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId, academicYearId, items: [{ description: "Scolarité", amountCents: 50_000 }] });
+    const invoiceId = (invoice.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/issue`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const beforeArchive = await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/payments`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ amountCents: 20_000 });
+    expect(beforeArchive.status).toBe(201);
+
+    const archived = await request(app)
+      .post(`/api/v1/employees/${employeeId}/archive`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+    expect(archived.status).toBe(200);
+    expect((archived.body as { status: string }).status).toBe("TERMINATED");
+
+    // Same session, same permission (SCHOOL_OWNER never lost finance.write) — only
+    // the Employee link behind it was retired. Must now be refused exactly like a
+    // user who never had an Employee record at all.
+    const afterArchive = await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/payments`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ amountCents: 10_000 });
+    expect(afterArchive.status).toBe(403);
+    expect((afterArchive.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+
+    const invoiceAfter = await request(app)
+      .get(`/api/v1/finance/student-invoices/${invoiceId}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect((invoiceAfter.body as { paidCents: number }).paidCents).toBe(20_000);
+  }, 20000);
 });
