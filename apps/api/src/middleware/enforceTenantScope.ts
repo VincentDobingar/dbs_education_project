@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { rawPrisma } from "../lib/prisma.js";
 import { runWithContext } from "../lib/tenant-context.js";
+import { isTenantBlocked } from "../lib/tenant-status.js";
 
 /**
  * Resolves the tenant for this request from its subdomain (or the X-Tenant-Slug
@@ -20,8 +21,6 @@ function resolveSubdomain(req: Request): string | null {
   // lycee-excellence.edumanage.africa -> "lycee-excellence" ; localhost -> none.
   return hostParts.length >= 3 ? (hostParts[0] ?? null) : null;
 }
-
-const BLOCKING_TENANT_STATUSES = new Set(["REJECTED", "CANCELLED"]);
 
 export function enforceTenantScope(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
@@ -42,7 +41,7 @@ export function enforceTenantScope(req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    if (BLOCKING_TENANT_STATUSES.has(domain.tenant.status)) {
+    if (isTenantBlocked(domain.tenant.status)) {
       res.status(403).json({ code: "TENANT_UNAVAILABLE", message: "This tenant is no longer available" });
       return;
     }

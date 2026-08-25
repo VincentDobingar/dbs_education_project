@@ -3,6 +3,7 @@ import type { Student, StudentTransfer } from "@prisma/client";
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { isTenantBlocked } from "../../lib/tenant-status.js";
 
 import { requireStudentRecord } from "./student.service.js";
 import type { CompleteStudentTransferInput, RequestStudentTransferInput } from "./transfer.validation.js";
@@ -42,7 +43,7 @@ async function resolveDestinationTenant(subdomain: string): Promise<{ id: string
       `Unknown or unverified tenant subdomain: ${subdomain}`,
     );
   }
-  if (domain.tenant.status === "REJECTED" || domain.tenant.status === "CANCELLED") {
+  if (isTenantBlocked(domain.tenant.status)) {
     throw new AppError(
       400,
       "DESTINATION_TENANT_UNAVAILABLE",

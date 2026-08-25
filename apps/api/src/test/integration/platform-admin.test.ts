@@ -26,7 +26,7 @@ describe("super-administration — établissements et audit (§31)", () => {
   it("liste, vérifie, rejette, suspend et réactive des établissements — chaque action journalisée", async () => {
     const { tenant: tenantA } = await createTenant("PlatformTenantA");
     const { tenant: tenantB } = await createTenant("PlatformTenantB");
-    const { tenant: tenantC } = await createTenant("PlatformTenantC");
+    const { tenant: tenantC, subdomain: subdomainC } = await createTenant("PlatformTenantC");
     createdTenantIds.push(tenantA.id, tenantB.id, tenantC.id);
 
     await testAdminPrisma.tenant.update({
@@ -107,6 +107,17 @@ describe("super-administration — établissements et audit (§31)", () => {
     expect((suspended.body as { status: string }).status).toBe("SUSPENDED");
     expect((suspended.body as { suspendedReason: string }).suspendedReason).toBe("Impayé constaté");
 
+    // §31 : suspendre un établissement ne doit pas rester cosmétique — son propre
+    // personnel doit être bloqué sur les routes tenant ordinaires pendant la
+    // suspension (enforceTenantScope), pas seulement voir le statut changer côté
+    // super-admin.
+    const blockedDuringSuspension = await request(app)
+      .get("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${ordinaryToken}`)
+      .set("X-Tenant-Slug", subdomainC);
+    expect(blockedDuringSuspension.status).toBe(403);
+    expect((blockedDuringSuspension.body as { code: string }).code).toBe("TENANT_UNAVAILABLE");
+
     const suspendAgainDenied = await request(app)
       .post(`/api/v1/platform/tenants/${tenantC.id}/suspend`)
       .set("Authorization", `Bearer ${superAdminToken}`)
@@ -121,6 +132,12 @@ describe("super-administration — établissements et audit (§31)", () => {
     expect(reactivated.status).toBe(200);
     expect((reactivated.body as { status: string }).status).toBe("ACTIVE");
     expect((reactivated.body as { suspendedReason: string | null }).suspendedReason).toBeNull();
+
+    const allowedAfterReactivation = await request(app)
+      .get("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${ordinaryToken}`)
+      .set("X-Tenant-Slug", subdomainC);
+    expect(allowedAfterReactivation.status).toBe(200);
 
     const auditLogsDenied = await request(app)
       .get(`/api/v1/platform/audit-logs?tenantId=${tenantC.id}`)
