@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -16,7 +17,7 @@ import * as studentPaymentController from "./student-payment.controller.js";
 
 export const financeRouter: Router = Router();
 
-financeRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+financeRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readFinance = requirePermission("finance.read");
 const writeFinance = requirePermission("finance.write");

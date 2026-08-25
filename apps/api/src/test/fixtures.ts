@@ -10,7 +10,18 @@ export function uniqueSuffix(): string {
   return randomBytes(4).toString("hex");
 }
 
-export async function createTenant(namePrefix = "Tenant"): Promise<{ tenant: Tenant; subdomain: string }> {
+/**
+ * §3.1 : tenant routes now require an active subscription (requireActiveSubscription
+ * wired on every school-side router). Provisioning one by default here — rather than
+ * in each of the ~50 call sites — keeps every existing test exercising those routes
+ * working unchanged. Pass `activeSubscription: false` for tests that manage this
+ * tenant's own subscription explicitly (they'd otherwise collide with this one on
+ * SubscriptionOwner.tenantId, which is unique).
+ */
+export async function createTenant(
+  namePrefix = "Tenant",
+  options: { activeSubscription?: boolean } = {},
+): Promise<{ tenant: Tenant; subdomain: string }> {
   const country = await testAdminPrisma.country.findUniqueOrThrow({ where: { isoCode: "CM" } });
 
   const tenant = await testAdminPrisma.tenant.create({
@@ -27,6 +38,10 @@ export async function createTenant(namePrefix = "Tenant"): Promise<{ tenant: Ten
   await testAdminPrisma.tenantDomain.create({
     data: { tenantId: tenant.id, subdomain, verifiedAt: new Date() },
   });
+
+  if (options.activeSubscription ?? true) {
+    await createSubscription({ tenantId: tenant.id }, "SCHOOL", "SCHOOL_ESSENTIAL", "ACTIVE");
+  }
 
   return { tenant, subdomain };
 }

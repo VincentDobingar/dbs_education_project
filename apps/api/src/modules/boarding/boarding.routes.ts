@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as boardingController from "./boarding.controller.js";
 
 export const boardingRouter: Router = Router();
 
-boardingRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+boardingRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readBoarding = requirePermission("boarding.read");
 const writeBoarding = requirePermission("boarding.write");

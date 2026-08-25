@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as libraryController from "./library.controller.js";
 
 export const libraryRouter: Router = Router();
 
-libraryRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+libraryRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readLibrary = requirePermission("library.read");
 const writeLibrary = requirePermission("library.write");

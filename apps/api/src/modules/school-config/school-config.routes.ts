@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -19,7 +20,7 @@ export const schoolConfigRouter: Router = Router();
 // Reference/structural data for a school year: every tenant member may browse it
 // (a teacher needs to see classes and subjects), but only staff holding
 // tenant.settings.manage may create or edit it (§17).
-schoolConfigRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+schoolConfigRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const manageSettings = requirePermission("tenant.settings.manage");
 

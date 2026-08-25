@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as dashboardController from "./dashboard.controller.js";
 
 export const dashboardRouter: Router = Router();
 
-dashboardRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+dashboardRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 // §18 : "Direction" combine finances + discipline — finance.read (SCHOOL_OWNER,
 // SCHOOL_ADMIN, DIRECTOR, ACCOUNTANT, TENANT_AUDITOR) seul laisserait un comptable

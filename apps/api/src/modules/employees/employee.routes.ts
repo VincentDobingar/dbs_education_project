@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -15,7 +16,7 @@ import * as staffAttendanceController from "./staff-attendance.controller.js";
 
 export const employeeRouter: Router = Router();
 
-employeeRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+employeeRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const manageStaff = requirePermission("hr.manage");
 // §27 : « les informations salariales doivent avoir des permissions particulièrement

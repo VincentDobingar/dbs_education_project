@@ -33,8 +33,8 @@ describe("super-administration — abonnements (§31 tranche 2)", () => {
   });
 
   it("liste, transitionne et prolonge l'essai des abonnements — chaque action journalisée", async () => {
-    const { tenant: tenantA } = await createTenant("SubAdminTenantA");
-    const { tenant: tenantB } = await createTenant("SubAdminTenantB");
+    const { tenant: tenantA } = await createTenant("SubAdminTenantA", { activeSubscription: false });
+    const { tenant: tenantB } = await createTenant("SubAdminTenantB", { activeSubscription: false });
     createdTenantIds.push(tenantA.id, tenantB.id);
 
     const subscriptionA = await createSubscription(
@@ -146,7 +146,7 @@ describe("super-administration — abonnements (§31 tranche 2)", () => {
   // paresseux de findActiveSubscription ne s'exécute qu'à la prochaine vérification
   // réelle d'un abonnement donné, jamais pour celui que personne n'appelle plus.
   it("sweeps lapsed subscriptions past due even when nobody is actively checking them", async () => {
-    const { tenant } = await createTenant("SubAdminSweepTenant");
+    const { tenant } = await createTenant("SubAdminSweepTenant", { activeSubscription: false });
     createdTenantIds.push(tenant.id);
 
     const lapsed = await createSubscription({ tenantId: tenant.id }, "SCHOOL", "SCHOOL_ESSENTIAL", "ACTIVE");

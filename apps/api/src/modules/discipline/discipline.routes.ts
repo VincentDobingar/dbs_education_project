@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as disciplineController from "./discipline.controller.js";
 
 export const disciplineRouter: Router = Router();
 
-disciplineRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+disciplineRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readDiscipline = requirePermission("discipline.read");
 const writeDiscipline = requirePermission("discipline.write");

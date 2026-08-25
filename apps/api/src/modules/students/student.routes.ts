@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -13,7 +14,7 @@ import * as studentController from "./student.controller.js";
 
 export const studentRouter: Router = Router();
 
-studentRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+studentRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readStudents = requirePermission("students.read");
 const manageStudents = requirePermission("students.write");

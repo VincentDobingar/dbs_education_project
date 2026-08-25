@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -12,7 +13,7 @@ import * as reportCardController from "./report-card.controller.js";
 
 export const gradingRouter: Router = Router();
 
-gradingRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+gradingRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const manageSettings = requirePermission("tenant.settings.manage");
 const readGrades = requirePermission("grades.read");

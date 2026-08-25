@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as cafeteriaController from "./cafeteria.controller.js";
 
 export const cafeteriaRouter: Router = Router();
 
-cafeteriaRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+cafeteriaRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readCafeteria = requirePermission("cafeteria.read");
 const writeCafeteria = requirePermission("cafeteria.write");

@@ -15,11 +15,17 @@ export const homeworkRouter: Router = Router();
 const readHomework = requirePermission("homework.read");
 const writeHomework = requirePermission("homework.write");
 
+// §3.1/§37 : même garde d'abonnement tenant que les autres modules académiques
+// (finance, school-config...) — un établissement dont l'abonnement n'est plus
+// actif ne peut pas assigner ou consulter les devoirs de son côté staff.
+const requireTenantSubscription = requireActiveSubscription();
+
 homeworkRouter.post(
   "/",
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeHomework,
   homeworkController.createHomework,
 );
@@ -28,6 +34,7 @@ homeworkRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readHomework,
   homeworkController.listHomework,
 );
@@ -36,6 +43,7 @@ homeworkRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readHomework,
   homeworkController.getHomework,
 );
@@ -44,6 +52,7 @@ homeworkRouter.patch(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeHomework,
   homeworkController.updateHomework,
 );
@@ -52,6 +61,7 @@ homeworkRouter.delete(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeHomework,
   homeworkController.cancelHomework,
 );
@@ -60,6 +70,7 @@ homeworkRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readHomework,
   homeworkController.listSubmissions,
 );

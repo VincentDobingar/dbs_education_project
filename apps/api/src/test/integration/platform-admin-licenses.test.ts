@@ -31,7 +31,7 @@ describe("super-administration — licences sponsorisées (§31 tranche 7)", () 
   });
 
   it("achat de lot, émission des licences, attribution, révocation — moindre privilège respecté", async () => {
-    const { tenant } = await createTenant("LicenseSponsorTenant");
+    const { tenant } = await createTenant("LicenseSponsorTenant", { activeSubscription: false });
     createdTenantIds.push(tenant.id);
     const subscription = await createSubscription({ tenantId: tenant.id }, "SCHOOL", "SCHOOL_ESSENTIAL");
 

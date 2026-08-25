@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -9,7 +10,7 @@ import * as transportController from "./transport.controller.js";
 
 export const transportRouter: Router = Router();
 
-transportRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+transportRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const readTransport = requirePermission("transport.read");
 const writeTransport = requirePermission("transport.write");

@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -12,7 +13,12 @@ import * as transferController from "./transfer.controller.js";
 // Student record, so these routes are addressed by transfer id alone.
 export const studentTransferRouter: Router = Router();
 
-studentTransferRouter.use(requireAuth, enforceTenantScope, requireTenantMembership);
+studentTransferRouter.use(
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  requireActiveSubscription(),
+);
 
 const manageStudents = requirePermission("students.write");
 

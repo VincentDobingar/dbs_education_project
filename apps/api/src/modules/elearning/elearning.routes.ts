@@ -15,11 +15,17 @@ export const elearningRouter: Router = Router();
 const readElearning = requirePermission("elearning.read");
 const writeElearning = requirePermission("elearning.write");
 
+// §3.1/§37 : même garde d'abonnement tenant que les autres modules académiques
+// (finance, school-config...) — un établissement dont l'abonnement n'est plus
+// actif ne peut pas gérer ou consulter les cours en ligne de son côté staff.
+const requireTenantSubscription = requireActiveSubscription();
+
 elearningRouter.post(
   "/courses",
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeElearning,
   elearningController.createCourse,
 );
@@ -28,6 +34,7 @@ elearningRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readElearning,
   elearningController.listCourses,
 );
@@ -36,6 +43,7 @@ elearningRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readElearning,
   elearningController.getCourse,
 );
@@ -44,6 +52,7 @@ elearningRouter.patch(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeElearning,
   elearningController.updateCourse,
 );
@@ -52,6 +61,7 @@ elearningRouter.delete(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeElearning,
   elearningController.cancelCourse,
 );
@@ -61,6 +71,7 @@ elearningRouter.post(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeElearning,
   elearningController.addResource,
 );
@@ -69,6 +80,7 @@ elearningRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readElearning,
   elearningController.listResources,
 );
@@ -77,6 +89,7 @@ elearningRouter.delete(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   writeElearning,
   elearningController.removeResource,
 );
@@ -86,6 +99,7 @@ elearningRouter.get(
   requireAuth,
   enforceTenantScope,
   requireTenantMembership,
+  requireTenantSubscription,
   readElearning,
   elearningController.listProgress,
 );
