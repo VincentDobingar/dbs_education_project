@@ -1,6 +1,8 @@
 import type { Subscription } from "@prisma/client";
 import type { Request } from "express";
 
+import { advanceSubscriptionIfDue } from "../modules/subscriptions/subscription.service.js";
+
 import { prisma } from "./prisma.js";
 
 const ACTIVE_SUBSCRIPTION_STATUSES = ["ACTIVE", "TRIAL", "GRACE_PERIOD"] as const;
@@ -99,9 +101,19 @@ export async function findActiveSubscription(
     return null;
   }
 
-  if ((await licenseAssignmentStatus(subscription.id)) === "blocked") {
+  // §6 : vérification paresseuse — aucun scheduler n'existe pour faire avancer un
+  // abonnement dans le temps (docs/architecture.md), donc ce point d'entrée unique
+  // de toute vérification d'abonnement est celui qui rattrape une période payée ou
+  // une grâce dépassée avant de statuer sur l'accès.
+  const advanced = await advanceSubscriptionIfDue(subscription);
+
+  if (!(ACTIVE_SUBSCRIPTION_STATUSES as readonly string[]).includes(advanced.status)) {
     return null;
   }
 
-  return subscription;
+  if ((await licenseAssignmentStatus(advanced.id)) === "blocked") {
+    return null;
+  }
+
+  return advanced;
 }

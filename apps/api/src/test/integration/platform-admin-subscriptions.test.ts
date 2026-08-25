@@ -141,4 +141,44 @@ describe("super-administration — abonnements (§31 tranche 2)", () => {
     expect(actions).toContain("subscription.transition");
     expect(actions).toContain("subscription.extend_trial");
   }, 20000);
+
+  // §6 : rattrape les abonnements que personne ne consulte activement — le chemin
+  // paresseux de findActiveSubscription ne s'exécute qu'à la prochaine vérification
+  // réelle d'un abonnement donné, jamais pour celui que personne n'appelle plus.
+  it("sweeps lapsed subscriptions past due even when nobody is actively checking them", async () => {
+    const { tenant } = await createTenant("SubAdminSweepTenant");
+    createdTenantIds.push(tenant.id);
+
+    const lapsed = await createSubscription({ tenantId: tenant.id }, "SCHOOL", "SCHOOL_ESSENTIAL", "ACTIVE");
+    createdSubscriptionIds.push(lapsed.id);
+    await testAdminPrisma.subscription.update({
+      where: { id: lapsed.id },
+      data: { currentPeriodEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    });
+
+    const superAdmin = await createUser("subplat-sweep-super");
+    createdUserIds.push(superAdmin.id);
+    await grantRole(superAdmin.id, "SUPER_ADMIN", null);
+    const superAdminToken = signAccessToken({ sub: superAdmin.id });
+
+    const ordinaryUser = await createUser("subplat-sweep-ordinary");
+    createdUserIds.push(ordinaryUser.id);
+    await addMembership(ordinaryUser.id, tenant.id);
+    await grantRole(ordinaryUser.id, "SCHOOL_OWNER", tenant.id);
+    const ordinaryToken = signAccessToken({ sub: ordinaryUser.id });
+
+    const denied = await request(app)
+      .post("/api/v1/platform/subscriptions/sweep-expired")
+      .set("Authorization", `Bearer ${ordinaryToken}`);
+    expect(denied.status).toBe(403);
+
+    const swept = await request(app)
+      .post("/api/v1/platform/subscriptions/sweep-expired")
+      .set("Authorization", `Bearer ${superAdminToken}`);
+    expect(swept.status).toBe(200);
+    expect((swept.body as { advanced: number }).advanced).toBeGreaterThanOrEqual(1);
+
+    const advanced = await testAdminPrisma.subscription.findUniqueOrThrow({ where: { id: lapsed.id } });
+    expect(advanced.status).toBe("GRACE_PERIOD");
+  });
 });

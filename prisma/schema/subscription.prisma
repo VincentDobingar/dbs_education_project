@@ -235,6 +235,11 @@ model Subscription {
   billingPeriod            BillingPeriod
   startsAt                 DateTime?
   endsAt                   DateTime?
+  // Date de fin de la période payée courante — jamais la même chose qu'`endsAt`
+  // (qui marque la fin réelle/terminale de l'abonnement). Calculée à chaque entrée
+  // en ACTIVE depuis `billingPeriod` ; c'est elle qui déclenche l'avancement
+  // automatique ACTIVE -> GRACE_PERIOD|EXPIRED (§6).
+  currentPeriodEndsAt      DateTime?
   trialEndsAt              DateTime?
   graceEndsAt              DateTime?
   cancelledAt              DateTime?

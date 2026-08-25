@@ -138,6 +138,48 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       expect((response.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
     });
 
+    // §6 : le seul point d'entrée (findActiveSubscription) qui rattrape un
+    // abonnement dont personne n'a fait avancer le statut manuellement (aucun
+    // scheduler dans ce dépôt, docs/architecture.md).
+    it("still allows access once a lapsed ACTIVE subscription is lazily advanced into GRACE_PERIOD", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+      await testAdminPrisma.subscription.update({
+        where: { id: subscription.id },
+        data: { currentPeriodEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      });
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(200);
+
+      const advanced = await testAdminPrisma.subscription.findUniqueOrThrow({
+        where: { id: subscription.id },
+      });
+      expect(advanced.status).toBe("GRACE_PERIOD");
+    });
+
+    it("blocks access once a lapsed GRACE_PERIOD subscription is lazily advanced into EXPIRED", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "GRACE_PERIOD",
+      );
+      await testAdminPrisma.subscription.update({
+        where: { id: subscription.id },
+        data: { graceEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      });
+
+      const response = await request(app).get(`/protected/${studentId}`);
+      expect(response.status).toBe(402);
+
+      const advanced = await testAdminPrisma.subscription.findUniqueOrThrow({
+        where: { id: subscription.id },
+      });
+      expect(advanced.status).toBe("EXPIRED");
+    });
+
     it("allows a sponsored subscription backed by a valid, non-revoked license", async () => {
       const studentId = await newStudent();
       const subscription = await createSubscription(

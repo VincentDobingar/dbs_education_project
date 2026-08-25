@@ -3,7 +3,12 @@ import type { Prisma, Subscription, SubscriberCategory, SubscriptionStatus } fro
 import { AppError } from "../../lib/errors.js";
 import { prisma, type PrismaTransactionClient } from "../../lib/prisma.js";
 
-import { ACTIVE_LIKE_STATUSES, isTransitionAllowed } from "./subscription-transitions.js";
+import {
+  ACTIVE_LIKE_STATUSES,
+  computeGraceEnd,
+  computePeriodEnd,
+  isTransitionAllowed,
+} from "./subscription-transitions.js";
 
 export interface SubscriptionOwnerRef {
   tenantId?: string;
@@ -216,19 +221,36 @@ export async function applySubscriptionTransition(
   }
 
   const data: Prisma.SubscriptionUpdateInput = { status: toStatus };
+  const now = new Date();
 
-  if (toStatus === "ACTIVE" && !subscription.startsAt) {
-    data.startsAt = new Date();
+  if (toStatus === "ACTIVE") {
+    if (!subscription.startsAt) {
+      data.startsAt = now;
+    }
+    // §6 : chaque entrée en ACTIVE (première activation ou renouvellement après
+    // paiement) ouvre une nouvelle période payée — recalculée à chaque fois,
+    // jamais seulement à la première activation. Efface un éventuel graceEndsAt
+    // d'une grâce précédente, désormais sans objet.
+    data.currentPeriodEndsAt = computePeriodEnd(now, subscription.billingPeriod);
+    data.graceEndsAt = null;
+  }
+  if (toStatus === "TRIAL" && !subscription.trialEndsAt) {
+    const plan = await tx.subscriptionPlan.findUniqueOrThrow({ where: { id: subscription.planId } });
+    data.trialEndsAt = computeGraceEnd(now, plan.trialDays);
+  }
+  if (toStatus === "GRACE_PERIOD" && !subscription.graceEndsAt) {
+    const plan = await tx.subscriptionPlan.findUniqueOrThrow({ where: { id: subscription.planId } });
+    data.graceEndsAt = computeGraceEnd(now, plan.gracePeriodDays);
   }
   if (toStatus === "CANCELLED") {
-    data.cancelledAt = new Date();
+    data.cancelledAt = now;
     if (options.reason) data.cancelReason = options.reason;
   }
   if (
     (toStatus === "EXPIRED" || toStatus === "CANCELLED" || toStatus === "REFUNDED") &&
     !subscription.endsAt
   ) {
-    data.endsAt = new Date();
+    data.endsAt = now;
   }
 
   const updated = await tx.subscription.update({ where: { id: subscriptionId }, data });
@@ -265,4 +287,67 @@ export async function findSubscriptionForOwner(ownerRef: SubscriptionOwnerRef): 
     return null;
   }
   return prisma.subscription.findFirst({ where: { ownerId: owner.id }, orderBy: { createdAt: "desc" } });
+}
+
+/**
+ * §6/§37 : fait avancer un abonnement dans le temps si sa période courante est
+ * dépassée — le seul mécanisme qui empêche un paiement unique de donner un accès
+ * perpétuel, en l'absence de tout scheduler/cron dans ce dépôt (aucune
+ * infrastructure de file d'attente n'est encore branchée sur une tâche métier,
+ * voir docs/architecture.md). Appelé paresseusement par
+ * requireActiveSubscription/requireEntitlement à chaque vérification réelle, et
+ * par POST /platform/subscriptions/sweep-expired pour les abonnements que
+ * personne ne consulte activement. Sans effet si rien n'est dû.
+ */
+export async function advanceSubscriptionIfDue(subscription: Subscription): Promise<Subscription> {
+  const now = new Date();
+
+  if (
+    subscription.status === "ACTIVE" &&
+    subscription.currentPeriodEndsAt &&
+    subscription.currentPeriodEndsAt <= now
+  ) {
+    const plan = await prisma.subscriptionPlan.findUniqueOrThrow({ where: { id: subscription.planId } });
+    const nextStatus: SubscriptionStatus = plan.gracePeriodDays > 0 ? "GRACE_PERIOD" : "EXPIRED";
+    return prisma.$transaction((tx) =>
+      applySubscriptionTransition(tx, subscription.id, nextStatus, { reason: "Fin de la période payée" }),
+    );
+  }
+
+  if (subscription.status === "GRACE_PERIOD" && subscription.graceEndsAt && subscription.graceEndsAt <= now) {
+    return prisma.$transaction((tx) =>
+      applySubscriptionTransition(tx, subscription.id, "EXPIRED", { reason: "Fin de la période de grâce" }),
+    );
+  }
+
+  if (subscription.status === "TRIAL" && subscription.trialEndsAt && subscription.trialEndsAt <= now) {
+    return prisma.$transaction((tx) =>
+      applySubscriptionTransition(tx, subscription.id, "EXPIRED", { reason: "Essai expiré sans conversion" }),
+    );
+  }
+
+  return subscription;
+}
+
+/**
+ * Balaie tous les abonnements dont le statut peut expirer avec le temps, pour les
+ * faire avancer même si personne ne les consulte activement (le chemin paresseux
+ * ci-dessus ne s'exécute qu'à la prochaine vérification réelle). Utilisé par
+ * l'action plateforme dédiée ; conçu pour être également l'appelé d'un futur job
+ * planifié une fois une infrastructure de file d'attente réellement branchée.
+ */
+export async function sweepExpiredSubscriptions(): Promise<{ advanced: number }> {
+  const candidates = await prisma.subscription.findMany({
+    where: { status: { in: ["ACTIVE", "GRACE_PERIOD", "TRIAL"] } },
+  });
+
+  let advanced = 0;
+  for (const subscription of candidates) {
+    const result = await advanceSubscriptionIfDue(subscription);
+    if (result.status !== subscription.status) {
+      advanced += 1;
+    }
+  }
+
+  return { advanced };
 }

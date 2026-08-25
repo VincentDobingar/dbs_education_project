@@ -44,3 +44,10 @@ export function extendTrial(req: Request, res: Response, next: NextFunction): vo
     res.status(200).json(subscription);
   })().catch(next);
 }
+
+export function sweepExpired(_req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const result = await subscriptionAdminService.sweepExpired();
+    res.status(200).json(result);
+  })().catch(next);
+}

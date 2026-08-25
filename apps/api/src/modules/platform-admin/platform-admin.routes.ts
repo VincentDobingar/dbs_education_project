@@ -108,6 +108,15 @@ platformAdminRouter.post(
   managePlatform,
   subscriptionAdminController.extendTrial,
 );
+// §6 : rattrape les abonnements que personne ne consulte activement — le chemin
+// paresseux (lib/subscription-access.ts) ne s'exécute qu'à la prochaine
+// vérification réelle d'un abonnement donné.
+platformAdminRouter.post(
+  "/subscriptions/sweep-expired",
+  requireAuth,
+  managePlatform,
+  subscriptionAdminController.sweepExpired,
+);
 
 platformAdminRouter.get("/countries", requireAuth, readPlatform, referenceDataAdminController.listCountries);
 platformAdminRouter.post(

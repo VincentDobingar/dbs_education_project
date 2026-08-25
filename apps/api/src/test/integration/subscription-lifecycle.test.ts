@@ -166,4 +166,123 @@ describe("subscription lifecycle service", () => {
     });
     expect(restoredEntitlement.quotaLimit).toBe(12);
   });
+
+  // §6 : jusqu'ici rien ne faisait avancer un abonnement dans le temps (docs/architecture.md,
+  // chantier laissé ouvert par cd66269) — `applySubscriptionTransition` calcule désormais
+  // `currentPeriodEndsAt`/`graceEndsAt`, et `advanceSubscriptionIfDue` est le mécanisme qui les
+  // consulte pour faire progresser un abonnement que personne n'a fait bouger manuellement.
+  describe("advanceSubscriptionIfDue", () => {
+    async function backdate(
+      subscriptionId: string,
+      field: "currentPeriodEndsAt" | "graceEndsAt" | "trialEndsAt",
+    ) {
+      return testAdminPrisma.subscription.update({
+        where: { id: subscriptionId },
+        data: { [field]: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      });
+    }
+
+    it("stamps currentPeriodEndsAt from the plan's billing period on activation", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_ESSENTIAL",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "PENDING_PAYMENT");
+      const active = await subscriptionService.transitionSubscription(subscription.id, "ACTIVE");
+
+      expect(active.currentPeriodEndsAt).not.toBeNull();
+      expect(active.currentPeriodEndsAt!.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it("leaves an ACTIVE subscription untouched while its current period has not ended", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_ESSENTIAL",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "PENDING_PAYMENT");
+      const active = await subscriptionService.transitionSubscription(subscription.id, "ACTIVE");
+
+      const advanced = await subscriptionService.advanceSubscriptionIfDue(active);
+      expect(advanced.status).toBe("ACTIVE");
+    });
+
+    it("moves a lapsed ACTIVE subscription into GRACE_PERIOD when its plan grants one", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_ESSENTIAL",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "PENDING_PAYMENT");
+      await subscriptionService.transitionSubscription(subscription.id, "ACTIVE");
+      const lapsed = await backdate(subscription.id, "currentPeriodEndsAt");
+
+      const advanced = await subscriptionService.advanceSubscriptionIfDue(lapsed);
+      expect(advanced.status).toBe("GRACE_PERIOD");
+      expect(advanced.graceEndsAt).not.toBeNull();
+      expect(advanced.graceEndsAt!.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it("expires a lapsed ACTIVE subscription directly when its plan has no grace period", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_BULK_LICENSE",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "PENDING_PAYMENT");
+      await subscriptionService.transitionSubscription(subscription.id, "ACTIVE");
+      const lapsed = await backdate(subscription.id, "currentPeriodEndsAt");
+
+      const advanced = await subscriptionService.advanceSubscriptionIfDue(lapsed);
+      expect(advanced.status).toBe("EXPIRED");
+    });
+
+    it("expires a GRACE_PERIOD subscription once graceEndsAt has passed", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_ESSENTIAL",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "PENDING_PAYMENT");
+      await subscriptionService.transitionSubscription(subscription.id, "ACTIVE");
+      await subscriptionService.transitionSubscription(subscription.id, "PAST_DUE");
+      await subscriptionService.transitionSubscription(subscription.id, "GRACE_PERIOD");
+      const lapsed = await backdate(subscription.id, "graceEndsAt");
+
+      const advanced = await subscriptionService.advanceSubscriptionIfDue(lapsed);
+      expect(advanced.status).toBe("EXPIRED");
+    });
+
+    it("expires a TRIAL subscription once trialEndsAt has passed", async () => {
+      const tenantId = await newTenantId();
+      const subscription = await subscriptionService.createDraftSubscription({
+        ownerType: "SCHOOL",
+        ownerRef: { tenantId },
+        planCode: "SCHOOL_ESSENTIAL",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      });
+      await subscriptionService.transitionSubscription(subscription.id, "TRIAL");
+      const lapsed = await backdate(subscription.id, "trialEndsAt");
+
+      const advanced = await subscriptionService.advanceSubscriptionIfDue(lapsed);
+      expect(advanced.status).toBe("EXPIRED");
+    });
+  });
 });

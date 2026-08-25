@@ -3,7 +3,7 @@ import type { Subscription } from "@prisma/client";
 import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma } from "../../lib/prisma.js";
-import { transitionSubscription } from "../subscriptions/subscription.service.js";
+import { sweepExpiredSubscriptions, transitionSubscription } from "../subscriptions/subscription.service.js";
 
 import type { PlatformActor } from "./platform-actor.js";
 import type {
@@ -111,4 +111,18 @@ export async function extendTrial(
   });
 
   return updated;
+}
+
+/**
+ * §6 : balaie les abonnements que personne ne consulte activement — le chemin
+ * paresseux de `findActiveSubscription` (lib/subscription-access.ts) ne les
+ * rattrape qu'à la prochaine vérification réelle, ce qui laisse un abonnement
+ * SUSPENDED/EXPIRED en attente indéfiniment si son propriétaire n'utilise plus
+ * la plateforme. Pas de piste AuditLog ici : contrairement à forceTransition/
+ * extendTrial, ce n'est pas une décision administrative sur un abonnement
+ * précis mais une tâche de maintenance de masse, sans `entityId` unique à
+ * consigner.
+ */
+export async function sweepExpired(): Promise<{ advanced: number }> {
+  return sweepExpiredSubscriptions();
 }
