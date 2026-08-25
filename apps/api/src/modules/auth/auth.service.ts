@@ -322,3 +322,44 @@ export async function logout(refreshToken: string): Promise<void> {
     data: { revokedAt: new Date(), revokedReason: "LOGOUT" },
   });
 }
+
+/**
+ * §15/§34 : « voir les appareils connectés » — Session portait déjà userAgent/
+ * ipAddress/deviceLabel/revokedAt depuis la Phase 2, mais rien ne les exposait :
+ * logout ne révoque que la session dont le refresh token est présenté, jamais une
+ * liste consultable. Ne renvoie jamais refreshTokenHash (une capacité de rejeu, pas
+ * une donnée d'affichage).
+ */
+export async function listSessions(userId: string) {
+  return prisma.session.findMany({
+    where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { lastUsedAt: "desc" },
+    select: {
+      id: true,
+      userAgent: true,
+      ipAddress: true,
+      deviceLabel: true,
+      createdAt: true,
+      lastUsedAt: true,
+      expiresAt: true,
+    },
+  });
+}
+
+/**
+ * §15/§34 : « révoquer une session » depuis la liste ci-dessus — jamais par son
+ * refresh token (l'utilisateur consultant cette liste ne l'a pas forcément sous la
+ * main, ex. un appareil volé). `updateMany` scopé sur `userId` plutôt qu'un
+ * `findUnique` + vérification séparée : un id d'une autre session n'existe tout
+ * simplement pas pour cet appelant, jamais une confirmation d'existence via un 403.
+ */
+export async function revokeSession(userId: string, sessionId: string): Promise<void> {
+  const result = await prisma.session.updateMany({
+    where: { id: sessionId, userId, revokedAt: null },
+    data: { revokedAt: new Date(), revokedReason: "USER_REVOKED" },
+  });
+
+  if (result.count === 0) {
+    throw new AppError(404, "SESSION_NOT_FOUND", "Session not found");
+  }
+}

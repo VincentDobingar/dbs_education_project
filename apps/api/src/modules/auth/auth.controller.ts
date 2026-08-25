@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { AppError } from "../../lib/errors.js";
+
 import * as authService from "./auth.service.js";
 import {
   loginSchema,
@@ -92,6 +94,28 @@ export function logout(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = refreshSchema.parse(req.body);
     await authService.logout(input.refreshToken);
+    res.status(204).send();
+  })().catch(next);
+}
+
+export function listSessions(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.user) {
+      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
+    }
+
+    const sessions = await authService.listSessions(req.user.id);
+    res.status(200).json(sessions);
+  })().catch(next);
+}
+
+export function revokeSession(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.user) {
+      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
+    }
+
+    await authService.revokeSession(req.user.id, req.params.id as string);
     res.status(204).send();
   })().catch(next);
 }
