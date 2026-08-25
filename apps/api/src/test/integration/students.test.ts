@@ -334,6 +334,16 @@ describe("élèves et inscriptions (§19)", () => {
       .send({ category: "BIRTH_CERTIFICATE", fileUrl: "https://files.example.test/a.pdf" });
     expect(denied.status).toBe(403);
 
+    // §34 : « protection des fichiers » — un javascript:/data: passait la validation
+    // Zod (simple chaîne non vide) et aurait été restitué tel quel à quiconque
+    // consulte les documents de cet élève (parent, autre membre du personnel).
+    const maliciousScheme = await request(app)
+      .post(`/api/v1/students/${studentId}/documents`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ category: "BIRTH_CERTIFICATE", fileUrl: "javascript:alert(document.cookie)" });
+    expect(maliciousScheme.status).toBe(400);
+
     const added = await request(app)
       .post(`/api/v1/students/${studentId}/documents`)
       .set("Authorization", `Bearer ${ownerToken}`)

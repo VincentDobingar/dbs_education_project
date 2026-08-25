@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpUrlSchema } from "../../lib/http-url-schema.js";
+
 export const createHomeworkSchema = z.object({
   classroomId: z.string().min(1),
   subjectId: z.string().min(1),
@@ -25,7 +27,7 @@ export type ListHomeworkQuery = z.infer<typeof listHomeworkQuerySchema>;
 export const submitHomeworkSchema = z
   .object({
     content: z.string().min(1).optional(),
-    fileUrl: z.string().min(1).optional(),
+    fileUrl: httpUrlSchema.optional(),
   })
   .refine((data) => data.content !== undefined || data.fileUrl !== undefined, {
     message: "Provide at least one of content or fileUrl",

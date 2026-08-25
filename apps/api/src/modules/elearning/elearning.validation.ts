@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpUrlSchema } from "../../lib/http-url-schema.js";
+
 export const createCourseSchema = z.object({
   classroomId: z.string().min(1),
   subjectId: z.string().min(1),
@@ -26,7 +28,7 @@ export const createResourceSchema = z
   .object({
     title: z.string().min(1),
     type: z.enum(LEARNING_RESOURCE_TYPES),
-    url: z.string().min(1).optional(),
+    url: httpUrlSchema.optional(),
     content: z.string().min(1).optional(),
     order: z.coerce.number().int().optional(),
   })

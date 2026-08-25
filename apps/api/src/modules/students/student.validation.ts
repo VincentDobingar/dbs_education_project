@@ -1,12 +1,14 @@
 import { z } from "zod";
 
+import { httpUrlSchema } from "../../lib/http-url-schema.js";
+
 export const createStudentSchema = z.object({
   matricule: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   dateOfBirth: z.coerce.date().optional(),
   gender: z.string().min(1).optional(),
-  photoUrl: z.string().min(1).optional(),
+  photoUrl: httpUrlSchema.optional(),
   emergencyContactName: z.string().min(1).optional(),
   emergencyContactPhone: z.string().min(1).optional(),
   medicalNotes: z.string().min(1).optional(),
@@ -27,7 +29,7 @@ export const updateStudentSchema = z.object({
   lastName: z.string().min(1).optional(),
   dateOfBirth: z.coerce.date().optional(),
   gender: z.string().min(1).optional(),
-  photoUrl: z.string().min(1).optional(),
+  photoUrl: httpUrlSchema.optional(),
   emergencyContactName: z.string().min(1).optional(),
   emergencyContactPhone: z.string().min(1).optional(),
   medicalNotes: z.string().min(1).optional(),
