@@ -20,7 +20,7 @@ describe("super-administration — élévation temporaire limitée dans le temps
   });
 
   it("accorde un rôle tenant borné dans le temps, refuse le doublon actif, révocation anticipée journalisée", async () => {
-    const { tenant } = await createTenant("ElevationTenant");
+    const { tenant, subdomain } = await createTenant("ElevationTenant");
     createdTenantIds.push(tenant.id);
 
     const superAdmin = await createUser("elevation-super");
@@ -67,6 +67,18 @@ describe("super-administration — élévation temporaire limitée dans le temps
     expect(elevated.status).toBe(201);
     const elevationId = (elevated.body as { id: string }).id;
     expect((elevated.body as { expiresAt: string | null }).expiresAt).not.toBeNull();
+
+    // Le rôle élevé doit réellement servir à quelque chose : toute route tenant passe
+    // par enforceTenantScope -> requireTenantMembership -> requirePermission, et
+    // requireTenantMembership ne consulte que TenantMembership, jamais UserRole. Sans
+    // membership créée avec l'élévation, le super-admin restait bloqué par
+    // TENANT_MEMBERSHIP_REQUIRED sur chaque route réelle — la fonctionnalité entière
+    // aurait été inutilisable pour ce pour quoi elle a été construite.
+    const usesElevatedRole = await request(app)
+      .get("/api/v1/students")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(usesElevatedRole.status).toBe(200);
 
     const duplicateDenied = await request(app)
       .post(`/api/v1/platform/tenants/${tenant.id}/elevate`)

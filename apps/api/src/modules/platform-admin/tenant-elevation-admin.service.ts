@@ -2,7 +2,7 @@ import type { Role, UserRole } from "@prisma/client";
 
 import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
-import { rawPrisma } from "../../lib/prisma.js";
+import { rawPrisma, withTenantSession } from "../../lib/prisma.js";
 
 import type { PlatformActor } from "./platform-actor.js";
 import { requirePlatformTenant } from "./tenant-admin.service.js";
@@ -58,6 +58,28 @@ export async function elevateInTenant(
       `Already holds an active elevation for role ${input.roleCode} on this tenant`,
     );
   }
+
+  // Every real tenant route is gated by enforceTenantScope -> requireTenantMembership
+  // -> requirePermission (docs/architecture.md), and requireTenantMembership checks
+  // ONLY TenantMembership — never UserRole. Granting the elevated UserRole alone left
+  // the super-admin locked out of every actual tenant route by TENANT_MEMBERSHIP_REQUIRED,
+  // making the whole feature unusable for what it exists to do. Only created if the
+  // actor has no membership at all — never touches (e.g. silently reactivates) an
+  // existing one, and never removed on revoke: UserRole.expiresAt already governs the
+  // actual permission via activeRoleCodes, so an inert membership left behind is
+  // harmless, not a privilege leak.
+  // TenantMembership is RLS-protected (tenant-scoped-models.ts) — a bare rawPrisma
+  // write here would violate the row-level policy (no app.tenant_id set outside a
+  // tenant-scoped request). withTenantSession is the established escape hatch for
+  // writing a tenant-scoped row from a cross-tenant admin context (same pattern as
+  // tenant.service.ts:onboardTenant creating the SCHOOL_OWNER's own membership).
+  await withTenantSession(tenantId, (tx) =>
+    tx.tenantMembership.upsert({
+      where: { userId_tenantId: { userId: actor.actorUserId, tenantId } },
+      update: {},
+      create: { userId: actor.actorUserId, tenantId, status: "ACTIVE", joinedAt: new Date() },
+    }),
+  );
 
   const expiresAt = new Date(Date.now() + input.durationHours * 60 * 60 * 1000);
   const elevation = await rawPrisma.userRole.upsert({
