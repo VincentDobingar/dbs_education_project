@@ -158,4 +158,33 @@ describe("requireVerifiedStudentRelationship (parent portal)", () => {
     expect(after.status).toBe(403);
     expect((after.body as TestResponseBody).code).toBe("STUDENT_RELATIONSHIP_NOT_VERIFIED");
   });
+
+  // §31 : enforceTenantScope bloque déjà un tenant SUSPENDED/REJECTED/CANCELLED
+  // côté staff, mais ce middleware est le seul point d'entrée côté portail parent
+  // et ne repasse jamais par lui — un parent gardait un accès total à un
+  // établissement suspendu par la super-administration.
+  it("blocks access once the child's tenant is suspended, and restores it on reactivation", async () => {
+    const student = await createStudent(tenantAId, "TENANTSUSPENDED");
+    await createVerifiedRelationship(parentUserId, student.id, tenantAId);
+
+    const before = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(before.status).toBe(200);
+
+    await testAdminPrisma.tenant.update({ where: { id: tenantAId }, data: { status: "SUSPENDED" } });
+
+    const duringSuspension = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(duringSuspension.status).toBe(403);
+    expect((duringSuspension.body as TestResponseBody).code).toBe("TENANT_UNAVAILABLE");
+
+    await testAdminPrisma.tenant.update({ where: { id: tenantAId }, data: { status: "ACTIVE" } });
+
+    const afterReactivation = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(afterReactivation.status).toBe(200);
+  });
 });

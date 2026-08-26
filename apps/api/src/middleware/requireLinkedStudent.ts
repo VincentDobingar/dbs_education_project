@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { rawPrisma } from "../lib/prisma.js";
 import { runWithContext } from "../lib/tenant-context.js";
+import { isTenantBlocked } from "../lib/tenant-status.js";
 
 type StudentIdResolver = (req: Request) => string | undefined;
 
@@ -46,6 +47,14 @@ export function requireLinkedStudent(resolveStudentId: StudentIdResolver = defau
 
       const tenant = await rawPrisma.tenant.findUnique({ where: { id: link.tenantId } });
       if (tenant) {
+        // §31 : un tenant suspendu/rejeté/annulé doit rester bloqué pour tout le
+        // monde, pas seulement le personnel — enforceTenantScope l'impose déjà côté
+        // staff, mais ce middleware est le seul point d'entrée côté portail élève
+        // et ne repasse jamais par lui.
+        if (isTenantBlocked(tenant.status)) {
+          res.status(403).json({ code: "TENANT_UNAVAILABLE", message: "This tenant is no longer available" });
+          return;
+        }
         req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status };
       }
 
