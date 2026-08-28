@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { rawPrisma } from "../lib/prisma.js";
+import { rawPrisma, withTenantSession } from "../lib/prisma.js";
+import { isStudentUnavailable } from "../lib/student-status.js";
 import { runWithContext } from "../lib/tenant-context.js";
 import { isTenantBlocked } from "../lib/tenant-status.js";
 
@@ -42,6 +43,19 @@ export function requireLinkedStudent(resolveStudentId: StudentIdResolver = defau
           code: "STUDENT_LINK_NOT_VERIFIED",
           message: "This account is not linked to this student",
         });
+        return;
+      }
+
+      // §26/§31 : un transfert/retrait/archivage change Student.status/deletedAt mais
+      // ne touche jamais StudentUserLink — sans cette vérification l'accès au portail
+      // élève survivait indéfiniment au départ de l'élève (lib/student-status.ts). Student
+      // a la RLS forcée (contrairement à StudentUserLink) : lecture via withTenantSession,
+      // jamais rawPrisma nu (même piège documenté sur getCurrentUserProfile, auth.service.ts).
+      const student = await withTenantSession(link.tenantId, (tx) =>
+        tx.student.findUnique({ where: { id: studentId }, select: { status: true, deletedAt: true } }),
+      );
+      if (!student || isStudentUnavailable(student)) {
+        res.status(403).json({ code: "STUDENT_UNAVAILABLE", message: "This student is no longer active" });
         return;
       }
 

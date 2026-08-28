@@ -72,4 +72,53 @@ describe("requireLinkedStudent (portail élève) — garde de statut tenant (§3
       .set("Authorization", `Bearer ${token}`);
     expect(afterReactivation.status).toBe(200);
   });
+
+  // §26/§31 : un transfert/retrait/archivage écrit Student.status/deletedAt mais ne
+  // touche jamais StudentUserLink — l'élève gardait un accès total au portail élève
+  // de son ancien établissement indéfiniment après son départ.
+  it("blocks access once the linked student is transferred, withdrawn or archived", async () => {
+    const { tenant } = await createTenant("LinkedStudentDeparture");
+    createdTenantIds.push(tenant.id);
+
+    const user = await createUser("linked-student-departure");
+    const student = await createStudent(tenant.id, "DEPART");
+    await testAdminPrisma.studentUserLink.create({
+      data: { tenantId: tenant.id, studentId: student.id, userId: user.id },
+    });
+    const token = signAccessToken({ sub: user.id });
+
+    const before = await request(app).get(`/students/${student.id}`).set("Authorization", `Bearer ${token}`);
+    expect(before.status).toBe(200);
+
+    await testAdminPrisma.student.update({ where: { id: student.id }, data: { status: "TRANSFERRED" } });
+    const afterTransfer = await request(app)
+      .get(`/students/${student.id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(afterTransfer.status).toBe(403);
+    expect((afterTransfer.body as TestResponseBody).code).toBe("STUDENT_UNAVAILABLE");
+
+    await testAdminPrisma.student.update({ where: { id: student.id }, data: { status: "WITHDRAWN" } });
+    const afterWithdrawal = await request(app)
+      .get(`/students/${student.id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(afterWithdrawal.status).toBe(403);
+
+    await testAdminPrisma.student.update({
+      where: { id: student.id },
+      data: { status: "ARCHIVED", deletedAt: new Date() },
+    });
+    const afterArchive = await request(app)
+      .get(`/students/${student.id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(afterArchive.status).toBe(403);
+
+    await testAdminPrisma.student.update({
+      where: { id: student.id },
+      data: { status: "ACTIVE", deletedAt: null },
+    });
+    const afterRestore = await request(app)
+      .get(`/students/${student.id}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(afterRestore.status).toBe(200);
+  });
 });

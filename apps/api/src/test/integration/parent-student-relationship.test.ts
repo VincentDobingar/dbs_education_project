@@ -187,4 +187,48 @@ describe("requireVerifiedStudentRelationship (parent portal)", () => {
       .set("Authorization", `Bearer ${parentToken}`);
     expect(afterReactivation.status).toBe(200);
   });
+
+  // §26/§31 : un transfert/retrait/archivage écrit Student.status/deletedAt mais ne
+  // révoque jamais ParentStudentRelationship — le parent gardait un accès total au
+  // portail parent de l'ancien établissement de son enfant indéfiniment après son départ.
+  it("blocks access once the child is transferred, withdrawn or archived", async () => {
+    const student = await createStudent(tenantAId, "DEPARTED");
+    await createVerifiedRelationship(parentUserId, student.id, tenantAId);
+
+    const before = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(before.status).toBe(200);
+
+    await testAdminPrisma.student.update({ where: { id: student.id }, data: { status: "TRANSFERRED" } });
+    const afterTransfer = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(afterTransfer.status).toBe(403);
+    expect((afterTransfer.body as TestResponseBody).code).toBe("STUDENT_UNAVAILABLE");
+
+    await testAdminPrisma.student.update({ where: { id: student.id }, data: { status: "WITHDRAWN" } });
+    const afterWithdrawal = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(afterWithdrawal.status).toBe(403);
+
+    await testAdminPrisma.student.update({
+      where: { id: student.id },
+      data: { status: "ARCHIVED", deletedAt: new Date() },
+    });
+    const afterArchive = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(afterArchive.status).toBe(403);
+
+    await testAdminPrisma.student.update({
+      where: { id: student.id },
+      data: { status: "ACTIVE", deletedAt: null },
+    });
+    const afterRestore = await request(app)
+      .get(`/children/${student.id}`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(afterRestore.status).toBe(200);
+  });
 });
