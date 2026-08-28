@@ -12,8 +12,16 @@ import { prisma } from "./prisma.js";
  * reads. Filters on `deletedAt` (the soft-delete convention used everywhere else in
  * this codebase) rather than `status`, so an `ON_LEAVE` employee — still legitimate
  * staff, just temporarily away — is unaffected.
+ *
+ * Also excludes `status: "TERMINATED"` on its own (not just alongside `deletedAt`):
+ * `updateEmployee` lets `status` be set to `TERMINATED` through the generic
+ * `PATCH /employees/:id` edit endpoint without going through `archiveEmployee`, so
+ * `deletedAt` alone isn't a reliable "has left" signal — the same bug reopened
+ * through a sibling code path the first fix didn't cover.
  */
 export async function resolveActingEmployeeId(userId: string): Promise<string | undefined> {
-  const employee = await prisma.employee.findFirst({ where: { userId, deletedAt: null } });
+  const employee = await prisma.employee.findFirst({
+    where: { userId, deletedAt: null, status: { not: "TERMINATED" } },
+  });
   return employee?.id;
 }

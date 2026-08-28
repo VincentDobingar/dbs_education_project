@@ -274,4 +274,82 @@ describe("encaissement et reçus (§23)", () => {
       .set("X-Tenant-Slug", subdomain);
     expect((invoiceAfter.body as { paidCents: number }).paidCents).toBe(20_000);
   }, 20000);
+
+  // §27 : le correctif ci-dessus ne couvrait que archiveEmployee (deletedAt +
+  // status TERMINATED posés ensemble) — PATCH /employees/:id expose pourtant
+  // status en édition libre, sans jamais toucher deletedAt. Un licenciement
+  // enregistré par ce chemin-là gardait donc, avant ce correctif, la capacité
+  // d'encaisser sous l'ancienne identité de personnel.
+  it("refuses a cash payment once the recording employee's status is set to TERMINATED via PATCH, without archiving", async () => {
+    const { tenant, subdomain } = await createTenant("PaymentPatchTerminated");
+    createdTenantIds.push(tenant.id);
+
+    const agent = await createUser("pay-patch-terminated-agent");
+    await addMembership(agent.id, tenant.id);
+    await grantRole(agent.id, "SCHOOL_OWNER", tenant.id);
+    const agentToken = signAccessToken({ sub: agent.id });
+
+    const employee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Aminata",
+        lastName: "Diarra",
+        jobTitle: "Agent comptable",
+        userId: agent.id,
+      });
+    const employeeId = (employee.body as { id: string }).id;
+
+    const year = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+    const academicYearId = (year.body as { id: string }).id;
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Ibrahim", lastName: "Cisse" });
+    const studentId = (student.body as { id: string }).id;
+
+    const invoice = await request(app)
+      .post("/api/v1/finance/student-invoices")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId, academicYearId, items: [{ description: "Scolarité", amountCents: 50_000 }] });
+    const invoiceId = (invoice.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/issue`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const beforeTermination = await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/payments`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ amountCents: 20_000 });
+    expect(beforeTermination.status).toBe(201);
+
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${employeeId}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+    expect((patched.body as { status: string; deletedAt: string | null }).status).toBe("TERMINATED");
+    expect((patched.body as { status: string; deletedAt: string | null }).deletedAt).toBeNull();
+
+    const afterTermination = await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/payments`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ amountCents: 10_000 });
+    expect(afterTermination.status).toBe(403);
+    expect((afterTermination.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+  }, 20000);
 });
