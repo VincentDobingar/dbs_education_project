@@ -1,5 +1,6 @@
 import type { Announcement, Assessment, Homework, TeacherAssignment, TimetableEntry } from "@prisma/client";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 
@@ -38,15 +39,14 @@ function schemaDayOfWeek(date: Date): number {
 /**
  * §18 "Enseignant" : entièrement auto-scopé par l'employé lié à l'utilisateur
  * appelant, jamais par un paramètre — un enseignant ne peut voir que ses propres
- * classes/cours, quel que soit son rôle exact (même garde que resolveActingEmployeeId
- * ailleurs dans finance/attendance/discipline). "Notes manquantes" (§18) est
+ * classes/cours, quel que soit son rôle exact. "Notes manquantes" (§18) est
  * volontairement absent : un diff fiable élève-par-élève/évaluation-par-évaluation
  * n'existe nulle part ailleurs dans ce code, et l'approximer risquerait d'afficher un
  * chiffre trompeur plutôt qu'utile.
  */
 export async function getTeacherDashboard(userId: string): Promise<TeacherDashboard> {
-  const employee = await prisma.employee.findFirst({ where: { userId } });
-  if (!employee) {
+  const employeeId = await resolveActingEmployeeId(userId);
+  if (!employeeId) {
     throw new AppError(
       403,
       "EMPLOYEE_RECORD_REQUIRED",
@@ -58,9 +58,9 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
   const todayDayOfWeek = schemaDayOfWeek(today);
 
   const [classAssignments, todayClasses] = await Promise.all([
-    prisma.teacherAssignment.findMany({ where: { employeeId: employee.id }, orderBy: { createdAt: "asc" } }),
+    prisma.teacherAssignment.findMany({ where: { employeeId }, orderBy: { createdAt: "asc" } }),
     prisma.timetableEntry.findMany({
-      where: { teacherEmployeeId: employee.id, dayOfWeek: todayDayOfWeek },
+      where: { teacherEmployeeId: employeeId, dayOfWeek: todayDayOfWeek },
       orderBy: { startTime: "asc" },
     }),
   ]);
@@ -134,7 +134,7 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
   ]);
 
   return {
-    employeeId: employee.id,
+    employeeId,
     classAssignments,
     todayClasses,
     classesNeedingRollCall,

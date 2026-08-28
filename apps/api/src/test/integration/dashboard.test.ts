@@ -325,5 +325,20 @@ describe("tableaux de bord (§18)", () => {
       .set("Authorization", `Bearer ${signAccessToken({ sub: (await createUser("dash-stranger")).id })}`)
       .set("X-Tenant-Slug", subdomain);
     expect(teacherDeniedForStranger.status).toBe(403);
+
+    // Enseignant licencié (fiche archivée) mais dont le rôle tenant n'a pas été
+    // séparément révoqué — ne doit plus pouvoir consulter son ancien tableau de bord
+    // sous son identité employé désormais retirée (même garde que resolveActingEmployeeId).
+    await request(app)
+      .post(`/api/v1/employees/${teacherEmployeeId}/archive`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+    const teacherDashboardAfterTermination = await request(app)
+      .get("/api/v1/dashboard/enseignant")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(teacherDashboardAfterTermination.status).toBe(403);
+    expect((teacherDashboardAfterTermination.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   }, 30000);
 });
