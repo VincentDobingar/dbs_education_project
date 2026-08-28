@@ -119,3 +119,14 @@ export function revokeSession(req: Request, res: Response, next: NextFunction): 
     res.status(204).send();
   })().catch(next);
 }
+
+export function getCurrentUser(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.user) {
+      throw new AppError(401, "UNAUTHENTICATED", "requireAuth must run first");
+    }
+
+    const profile = await authService.getCurrentUserProfile(req.user.id);
+    res.status(200).json(profile);
+  })().catch(next);
+}

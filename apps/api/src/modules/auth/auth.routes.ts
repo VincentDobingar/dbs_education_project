@@ -21,6 +21,10 @@ authRouter.post("/resend-phone-verification", authController.resendPhoneVerifica
 authRouter.get("/sessions", requireAuth, authController.listSessions);
 authRouter.post("/sessions/:id/revoke", requireAuth, authController.revokeSession);
 
+// Identité courante + établissements — jamais enforceTenantScope/requireTenantMembership
+// ici : doit répondre même pour un utilisateur sans encore aucun établissement.
+authRouter.get("/me", requireAuth, authController.getCurrentUser);
+
 authRouter.post("/mfa/verify", authController.verifyMfaChallenge);
 authRouter.post("/mfa/setup", requireAuth, mfaController.setupMfa);
 authRouter.post("/mfa/enable", requireAuth, mfaController.enableMfa);

@@ -14,7 +14,7 @@ import { AppError } from "../../lib/errors.js";
 import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from "../../lib/jwt.js";
 import { verifyTotpCode } from "../../lib/mfa.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
 import { generateRefreshToken, hashRefreshToken, REFRESH_TOKEN_TTL_MS } from "../../lib/refresh-token.js";
 import { sendSms } from "../../lib/sms-provider/send-sms.js";
 
@@ -102,10 +102,13 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
   sendEmail({
     to: user.email,
     subject: "Verify your email address",
-    text: `Your EduManage verification token is: ${emailVerificationToken}\n\nUse it to confirm your account.`,
+    text: `Your Digital Business Services Africa School verification token is: ${emailVerificationToken}\n\nUse it to confirm your account.`,
   });
   if (phoneVerificationCode && user.phone) {
-    sendSms({ to: user.phone, body: `Your EduManage verification code is: ${phoneVerificationCode}` });
+    sendSms({
+      to: user.phone,
+      body: `Your Digital Business Services Africa School verification code is: ${phoneVerificationCode}`,
+    });
   }
 
   return { user, emailVerificationToken, ...(phoneVerificationCode ? { phoneVerificationCode } : {}) };
@@ -176,7 +179,7 @@ export async function resendEmailVerification(email: string): Promise<string> {
   sendEmail({
     to: user.email,
     subject: "Verify your email address",
-    text: `Your EduManage verification token is: ${token}\n\nUse it to confirm your account.`,
+    text: `Your Digital Business Services Africa School verification token is: ${token}\n\nUse it to confirm your account.`,
   });
 
   return token;
@@ -203,7 +206,10 @@ export async function resendPhoneVerification(email: string): Promise<string> {
     },
   });
 
-  sendSms({ to: user.phone, body: `Your EduManage verification code is: ${code}` });
+  sendSms({
+    to: user.phone,
+    body: `Your Digital Business Services Africa School verification code is: ${code}`,
+  });
 
   return code;
 }
@@ -362,4 +368,81 @@ export async function revokeSession(userId: string, sessionId: string): Promise<
   if (result.count === 0) {
     throw new AppError(404, "SESSION_NOT_FOUND", "Session not found");
   }
+}
+
+export interface CurrentUserTenantMembership {
+  tenantId: string;
+  tenantName: string;
+  subdomain: string;
+  roleCodes: string[];
+}
+
+export interface CurrentUserProfile {
+  id: string;
+  email: string;
+  tenantMemberships: CurrentUserTenantMembership[];
+}
+
+/**
+ * Identité de l'appelant + ses établissements — le JWT ne porte que `sub`, rien
+ * d'autre n'est décodable côté client. Ne peut pas lire `TenantMembership`
+ * directement en cross-tenant comme `tenant-user.service.ts` le fait pour
+ * `Role`/`UserRole` : contrairement à `UserRole` (tenantId nullable, sans RLS,
+ * voir docs/architecture.md), `TenantMembership` a une politique RLS stricte
+ * (`enable_row_level_security` migration) qui exige `app.tenant_id` déjà posé —
+ * une lecture brute sans contexte tenant renvoie silencieusement zéro ligne.
+ * On part donc de `UserRole` (sans RLS) pour découvrir les tenants candidats,
+ * puis on vérifie le statut d'adhésion de chacun un par un via
+ * `withTenantSession`, la seule façon légitime d'obtenir ce contexte pour un
+ * tenant à la fois.
+ */
+export async function getCurrentUserProfile(userId: string): Promise<CurrentUserProfile> {
+  const user = await rawPrisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  const tenantUserRoles = await rawPrisma.userRole.findMany({
+    where: {
+      userId,
+      tenantId: { not: null },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
+    include: { role: true },
+  });
+
+  const roleCodesByTenantId = new Map<string, string[]>();
+  for (const userRole of tenantUserRoles) {
+    if (!userRole.tenantId) continue;
+    const codes = roleCodesByTenantId.get(userRole.tenantId) ?? [];
+    codes.push(userRole.role.code);
+    roleCodesByTenantId.set(userRole.tenantId, codes);
+  }
+
+  const activeTenantIds: string[] = [];
+  for (const tenantId of roleCodesByTenantId.keys()) {
+    const membership = await withTenantSession(tenantId, (tx) =>
+      tx.tenantMembership.findUnique({ where: { userId_tenantId: { userId, tenantId } } }),
+    );
+    if (membership?.status === "ACTIVE") {
+      activeTenantIds.push(tenantId);
+    }
+  }
+
+  const tenants =
+    activeTenantIds.length === 0
+      ? []
+      : await rawPrisma.tenant.findMany({
+          where: { id: { in: activeTenantIds } },
+          include: { domains: true },
+        });
+
+  return {
+    id: user.id,
+    email: user.email,
+    tenantMemberships: tenants.map((tenant) => ({
+      tenantId: tenant.id,
+      tenantName: tenant.name,
+      subdomain:
+        tenant.domains.find((domain) => domain.isPrimary)?.subdomain ?? tenant.domains[0]?.subdomain ?? "",
+      roleCodes: roleCodesByTenantId.get(tenant.id) ?? [],
+    })),
+  };
 }
