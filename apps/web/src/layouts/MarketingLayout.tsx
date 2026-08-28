@@ -21,8 +21,12 @@ export function MarketingLayout(): ReactNode {
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="bg-brand-night">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/" className="text-lg font-semibold text-white">
-            EduManage <span className="text-brand-teal">Africa</span>
+          <Link to="/" className="flex items-center rounded-md bg-white px-3 py-1.5">
+            <img
+              src="/logo-dbsas-trimmed.png"
+              alt="Digital Business Services Africa School"
+              className="h-9 w-auto"
+            />
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex">
@@ -53,7 +57,12 @@ export function MarketingLayout(): ReactNode {
         <div className="mx-auto max-w-6xl px-6 py-10">
           <div className="grid gap-8 md:grid-cols-3">
             <div>
-              <p className="text-lg font-semibold text-white">EduManage Africa</p>
+              <img
+                src="/logo-icon-square.png"
+                alt="Digital Business Services Africa School"
+                className="h-14 w-14 rounded-md bg-white p-1"
+              />
+              <p className="mt-3 text-lg font-semibold text-white">Digital Business Services Africa School</p>
               <p className="mt-2 text-sm">{t("footer.tagline")}</p>
             </div>
 
@@ -100,7 +109,7 @@ export function MarketingLayout(): ReactNode {
           </div>
 
           <p className="mt-8 border-t border-white/10 pt-6 text-xs">
-            © {new Date().getFullYear()} EduManage Africa. {t("footer.rights")}
+            © {new Date().getFullYear()} Digital Business Services Africa School. {t("footer.rights")}
           </p>
         </div>
       </footer>

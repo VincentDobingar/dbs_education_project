@@ -2,7 +2,7 @@ import { createHash, randomInt } from "node:crypto";
 
 import { generateSecret, generateURI, verify } from "otplib";
 
-const ISSUER = "EduManage Africa";
+const ISSUER = "Digital Business Services Africa School";
 const TOTP_EPOCH_TOLERANCE: [number, number] = [1, 1]; // ±30s de tolérance d'horloge
 
 const RECOVERY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // pas de 0/O, 1/I

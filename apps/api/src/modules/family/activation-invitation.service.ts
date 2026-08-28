@@ -58,14 +58,14 @@ export async function createInvitation(
   if (invitation.invitedEmail) {
     sendEmail({
       to: invitation.invitedEmail,
-      subject: "Your EduManage activation code",
-      text: `You've been invited to access EduManage. Your activation code is: ${code}\nThis code expires on ${expiresAt.toISOString()}.`,
+      subject: "Your Digital Business Services Africa School activation code",
+      text: `You've been invited to access Digital Business Services Africa School. Your activation code is: ${code}\nThis code expires on ${expiresAt.toISOString()}.`,
     });
   }
   if (invitation.invitedPhone) {
     sendSms({
       to: invitation.invitedPhone,
-      body: `Your EduManage activation code is: ${code} (expires ${expiresAt.toISOString().slice(0, 10)})`,
+      body: `Your Digital Business Services Africa School activation code is: ${code} (expires ${expiresAt.toISOString().slice(0, 10)})`,
     });
   }
 
