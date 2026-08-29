@@ -65,7 +65,7 @@ export async function familyAccountOwnerContext(req: Request): Promise<Subscript
 async function licenseAssignmentStatus(subscriptionId: string): Promise<"none" | "valid" | "blocked"> {
   const assignments = await prisma.licenseAssignment.findMany({
     where: { subscriptionId },
-    include: { license: true },
+    include: { license: { include: { sponsorOrganization: true } } },
   });
 
   if (assignments.length === 0) {
@@ -73,11 +73,18 @@ async function licenseAssignmentStatus(subscriptionId: string): Promise<"none" |
   }
 
   const now = new Date();
+  // deleteOrganization() (organization-admin.service.ts) ne fait que poser
+  // Organization.deletedAt -- elle ne touche jamais les SponsoredLicense/
+  // LicenseAssignment du sponsor (meme choix qu'ici pour Tenant.status : un seul
+  // point de verification plutot qu'une cascade d'ecritures). Sans ce controle,
+  // supprimer l'organisation sponsor laissait tous ses beneficiaires actifs
+  // indefiniment, memes licences REVOKED/expirees deja gerees juste en dessous.
   const hasValid = assignments.some(
     (assignment) =>
       !assignment.revokedAt &&
       assignment.license.status !== "REVOKED" &&
-      (!assignment.license.validUntil || assignment.license.validUntil >= now),
+      (!assignment.license.validUntil || assignment.license.validUntil >= now) &&
+      !assignment.license.sponsorOrganization?.deletedAt,
   );
 
   return hasValid ? "valid" : "blocked";

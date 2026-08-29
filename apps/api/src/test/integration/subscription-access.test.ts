@@ -23,6 +23,7 @@ describe("requireActiveSubscription / requireEntitlement", () => {
   let tenantId: string;
   const createdStudentIds: string[] = [];
   const createdLicenseIds: string[] = [];
+  const createdOrganizationIds: string[] = [];
 
   afterAll(async () => {
     await testAdminPrisma.licenseAssignment.deleteMany({
@@ -36,6 +37,7 @@ describe("requireActiveSubscription / requireEntitlement", () => {
     });
     await testAdminPrisma.subscriptionOwner.deleteMany({ where: { studentId: { in: createdStudentIds } } });
     await testAdminPrisma.sponsoredLicense.deleteMany({ where: { id: { in: createdLicenseIds } } });
+    await testAdminPrisma.organization.deleteMany({ where: { id: { in: createdOrganizationIds } } });
     await testAdminPrisma.student.deleteMany({ where: { id: { in: createdStudentIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: tenantId } });
@@ -198,6 +200,45 @@ describe("requireActiveSubscription / requireEntitlement", () => {
 
       const response = await request(app).get(`/protected/${studentId}`);
       expect(response.status).toBe(200);
+    });
+
+    // organization-admin.service.ts:deleteOrganization ne fait que poser
+    // Organization.deletedAt -- elle ne touche jamais les SponsoredLicense/
+    // LicenseAssignment du sponsor. Sans ce contrôle dans licenseAssignmentStatus,
+    // tous les bénéficiaires d'une organisation sponsor supprimée (financement
+    // coupé, fraude, contrat résilié) gardaient un accès payant actif indéfiniment.
+    it("blocks a sponsored subscription once its sponsor organization is deleted", async () => {
+      const studentId = await newStudent();
+      const organization = await testAdminPrisma.organization.create({
+        data: { name: "Org Sponsor Access Test", type: "COMPANY" },
+      });
+      createdOrganizationIds.push(organization.id);
+
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "ACTIVE",
+        "SCHOOL_SPONSORED",
+      );
+      const license = await createSponsoredLicense("STUDENT_BASIC", {
+        validUntil: null,
+        sponsorOrganizationId: organization.id,
+      });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId);
+
+      const beforeDeletion = await request(app).get(`/protected/${studentId}`);
+      expect(beforeDeletion.status).toBe(200);
+
+      await testAdminPrisma.organization.update({
+        where: { id: organization.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const afterDeletion = await request(app).get(`/protected/${studentId}`);
+      expect(afterDeletion.status).toBe(402);
+      expect((afterDeletion.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
     });
   });
 

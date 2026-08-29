@@ -122,7 +122,11 @@ export async function createSubscription(
 
 export async function createSponsoredLicense(
   planCode: string,
-  options: { validUntil?: Date | null; status?: "AVAILABLE" | "ASSIGNED" | "REVOKED" | "EXPIRED" } = {},
+  options: {
+    validUntil?: Date | null;
+    status?: "AVAILABLE" | "ASSIGNED" | "REVOKED" | "EXPIRED";
+    sponsorOrganizationId?: string;
+  } = {},
 ) {
   const plan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({ where: { code: planCode } });
   return testAdminPrisma.sponsoredLicense.create({
@@ -131,6 +135,7 @@ export async function createSponsoredLicense(
       fundingSource: "SCHOOL_SPONSORED",
       status: options.status ?? "ASSIGNED",
       validUntil: options.validUntil ?? null,
+      ...(options.sponsorOrganizationId ? { sponsorOrganizationId: options.sponsorOrganizationId } : {}),
     },
   });
 }
