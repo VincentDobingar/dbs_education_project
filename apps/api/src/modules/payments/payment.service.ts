@@ -50,6 +50,41 @@ async function resolvePlanPrice(
   return generic;
 }
 
+/**
+ * §31 tranche 8 avait branché la consommation reelle d'un PromotionCode (la
+ * PromotionRedemption est creee/comptee) mais jamais son application au montant
+ * facture -- createInvoiceForSubscription facturait toujours le plein tarif du
+ * plan. PromotionCode n'a pas de currencyId : discountValue (Decimal) est traite
+ * comme un montant dans la devise de LA FACTURE en cours (jamais une conversion
+ * inter-devises inventee, §40) -- PERCENTAGE s'applique tel quel au sous-total,
+ * FIXED_AMOUNT est mis a l'echelle via Currency.decimalDigits (ex: 500.00 avec
+ * decimalDigits=2 -> 50000 centimes ; XAF, decimalDigits=0 -> 500). Plafonne au
+ * sous-total : une remise ne peut jamais rendre la facture negative.
+ */
+async function resolveDiscountCents(
+  tx: Tx,
+  subscriptionId: string,
+  subtotalCents: number,
+  currencyDecimalDigits: number,
+): Promise<number> {
+  const redemption = await tx.promotionRedemption.findFirst({
+    where: { subscriptionId },
+    include: { promotionCode: true },
+    orderBy: { redeemedAt: "desc" },
+  });
+  if (!redemption) {
+    return 0;
+  }
+
+  const { discountType, discountValue } = redemption.promotionCode;
+  const rawDiscountCents =
+    discountType === "PERCENTAGE"
+      ? Math.round((subtotalCents * Number(discountValue)) / 100)
+      : Math.round(Number(discountValue) * 10 ** currencyDecimalDigits);
+
+  return Math.min(Math.max(rawDiscountCents, 0), subtotalCents);
+}
+
 export interface CreateInvoiceForSubscriptionInput {
   subscriptionId: string;
   currencyIsoCode: string;
@@ -87,7 +122,16 @@ export async function createInvoiceForSubscription(
       },
     });
 
-    const taxCents = Math.round((price.amountCents * Number(price.taxRatePercent)) / 100);
+    const discountCents = await resolveDiscountCents(
+      tx,
+      subscription.id,
+      price.amountCents,
+      currency.decimalDigits,
+    );
+    // §31/§40 : la remise s'applique avant la taxe -- la taxe est due sur ce que le
+    // client paie reellement, jamais sur le plein tarif affiche.
+    const taxableCents = price.amountCents - discountCents;
+    const taxCents = Math.round((taxableCents * Number(price.taxRatePercent)) / 100);
 
     const invoice = await tx.invoice.create({
       data: {
@@ -97,8 +141,9 @@ export async function createInvoiceForSubscription(
         status: "ISSUED",
         currencyId: currency.id,
         subtotalCents: price.amountCents,
+        discountCents,
         taxCents,
-        totalCents: price.amountCents + taxCents,
+        totalCents: taxableCents + taxCents,
         issuedAt: new Date(),
       },
     });
@@ -111,6 +156,17 @@ export async function createInvoiceForSubscription(
         totalAmountCents: price.amountCents,
       },
     });
+
+    if (discountCents > 0) {
+      await tx.invoiceItem.create({
+        data: {
+          invoiceId: invoice.id,
+          description: "Remise — code promotionnel",
+          unitAmountCents: -discountCents,
+          totalAmountCents: -discountCents,
+        },
+      });
+    }
 
     return invoice;
   });

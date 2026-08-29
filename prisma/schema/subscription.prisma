@@ -307,6 +307,7 @@ model Invoice {
   status           InvoiceStatus @default(DRAFT)
   currencyId       String
   subtotalCents    Int
+  discountCents    Int           @default(0)
   taxCents         Int           @default(0)
   totalCents       Int
   issuedAt         DateTime?
