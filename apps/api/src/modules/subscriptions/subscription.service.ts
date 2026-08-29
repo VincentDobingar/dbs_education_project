@@ -1,4 +1,10 @@
-import type { Prisma, Subscription, SubscriberCategory, SubscriptionStatus } from "@prisma/client";
+import type {
+  Prisma,
+  Subscription,
+  SubscriberCategory,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma, type PrismaTransactionClient } from "../../lib/prisma.js";
@@ -156,6 +162,42 @@ export interface CreateDraftSubscriptionInput {
   redeemedByUserId?: string;
 }
 
+/**
+ * Cœur de createDraftSubscription, réutilisable dans la transaction d'un appelant
+ * qui doit rester atomique avec d'autres écritures (ex: license-admin.service.ts
+ * créant l'abonnement d'un bénéficiaire de licence sponsorisée et l'activant dans
+ * la même transaction que la LicenseAssignment). Le plan est résolu par l'appelant
+ * (createDraftSubscription le résout par code avant d'ouvrir sa transaction ;
+ * license-admin.service.ts le connaît déjà via SponsoredLicense.planId).
+ */
+export async function createDraftSubscriptionInTx(
+  tx: Tx,
+  plan: SubscriptionPlan,
+  input: CreateDraftSubscriptionInput,
+): Promise<Subscription> {
+  const owner = await findOrCreateOwner(tx, input.ownerType, input.ownerRef);
+
+  const subscription = await tx.subscription.create({
+    data: {
+      ownerId: owner.id,
+      planId: plan.id,
+      status: "DRAFT",
+      fundingSource: input.fundingSource,
+      billingPeriod: input.billingPeriod,
+    },
+  });
+
+  await tx.subscriptionEvent.create({
+    data: { subscriptionId: subscription.id, toStatus: "DRAFT" },
+  });
+
+  if (input.promoCode) {
+    await redeemPromotionCode(tx, input.promoCode, input.ownerType, subscription.id, input.redeemedByUserId);
+  }
+
+  return subscription;
+}
+
 export async function createDraftSubscription(input: CreateDraftSubscriptionInput): Promise<Subscription> {
   const plan = await prisma.subscriptionPlan.findUnique({ where: { code: input.planCode } });
 
@@ -171,35 +213,7 @@ export async function createDraftSubscription(input: CreateDraftSubscriptionInpu
     );
   }
 
-  return prisma.$transaction(async (tx) => {
-    const owner = await findOrCreateOwner(tx, input.ownerType, input.ownerRef);
-
-    const subscription = await tx.subscription.create({
-      data: {
-        ownerId: owner.id,
-        planId: plan.id,
-        status: "DRAFT",
-        fundingSource: input.fundingSource,
-        billingPeriod: input.billingPeriod,
-      },
-    });
-
-    await tx.subscriptionEvent.create({
-      data: { subscriptionId: subscription.id, toStatus: "DRAFT" },
-    });
-
-    if (input.promoCode) {
-      await redeemPromotionCode(
-        tx,
-        input.promoCode,
-        input.ownerType,
-        subscription.id,
-        input.redeemedByUserId,
-      );
-    }
-
-    return subscription;
-  });
+  return prisma.$transaction((tx) => createDraftSubscriptionInTx(tx, plan, input));
 }
 
 /**

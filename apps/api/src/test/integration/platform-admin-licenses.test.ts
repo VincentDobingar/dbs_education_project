@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { createSubscription, createTenant, createUser, grantRole } from "../fixtures.js";
+import { createStudent, createSubscription, createTenant, createUser, grantRole } from "../fixtures.js";
 
 describe("super-administration — licences sponsorisées (§31 tranche 7)", () => {
   const app = createApp();
@@ -12,6 +12,7 @@ describe("super-administration — licences sponsorisées (§31 tranche 7)", () 
   const createdTenantIds: string[] = [];
   const createdOrganizationIds: string[] = [];
   const createdBatchIds: string[] = [];
+  const createdStudentIds: string[] = [];
 
   afterAll(async () => {
     await testAdminPrisma.auditLog.deleteMany({ where: { actorUserId: { in: createdUserIds } } });
@@ -21,10 +22,24 @@ describe("super-administration — licences sponsorisées (§31 tranche 7)", () 
     await testAdminPrisma.sponsoredLicense.deleteMany({ where: { batchId: { in: createdBatchIds } } });
     await testAdminPrisma.licenseBatch.deleteMany({ where: { id: { in: createdBatchIds } } });
     await testAdminPrisma.organization.deleteMany({ where: { id: { in: createdOrganizationIds } } });
+    // Abonnements créés par assignLicense elle-même (bénéficiaire STUDENT, sans
+    // subscriptionId fourni) — rattachés à un SubscriptionOwner.studentId, jamais
+    // .tenantId, donc pas couverts par le nettoyage tenant ci-dessous.
+    await testAdminPrisma.entitlement.deleteMany({
+      where: { subscription: { owner: { studentId: { in: createdStudentIds } } } },
+    });
+    await testAdminPrisma.subscriptionEvent.deleteMany({
+      where: { subscription: { owner: { studentId: { in: createdStudentIds } } } },
+    });
+    await testAdminPrisma.subscription.deleteMany({
+      where: { owner: { studentId: { in: createdStudentIds } } },
+    });
+    await testAdminPrisma.subscriptionOwner.deleteMany({ where: { studentId: { in: createdStudentIds } } });
     await testAdminPrisma.subscription.deleteMany({
       where: { owner: { tenantId: { in: createdTenantIds } } },
     });
     await testAdminPrisma.subscriptionOwner.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.student.deleteMany({ where: { id: { in: createdStudentIds } } });
     await testAdminPrisma.userRole.deleteMany({ where: { userId: { in: createdUserIds }, tenantId: null } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
@@ -194,5 +209,83 @@ describe("super-administration — licences sponsorisées (§31 tranche 7)", () 
       .filter((log) => log.entityId === batchId)
       .map((log) => log.action);
     expect(batchActions).toContain("license_batch.create");
+  }, 20000);
+
+  it("attribue une licence sans subscriptionId : crée et active l'abonnement du bénéficiaire", async () => {
+    const { tenant } = await createTenant("LicenseNewSubTenant", { activeSubscription: false });
+    createdTenantIds.push(tenant.id);
+
+    const superAdmin = await createUser("license-new-sub-super");
+    createdUserIds.push(superAdmin.id);
+    await grantRole(superAdmin.id, "SUPER_ADMIN", null);
+    const superAdminToken = signAccessToken({ sub: superAdmin.id });
+
+    const studentPlan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({
+      where: { code: "STUDENT_BASIC" },
+    });
+    const currency = await testAdminPrisma.currency.findUniqueOrThrow({ where: { isoCode: "XAF" } });
+    const studentBeneficiary = await createStudent(tenant.id, "LICSTU");
+    createdStudentIds.push(studentBeneficiary.id);
+
+    const missingBillingPeriod = await request(app)
+      .post("/api/v1/platform/license-batches")
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        planId: studentPlan.id,
+        purchaserType: "TENANT",
+        sponsorTenantId: tenant.id,
+        quantity: 1,
+        unitPriceCents: 500,
+        currencyId: currency.id,
+      });
+    expect(missingBillingPeriod.status).toBe(201);
+    const batchId = (missingBillingPeriod.body as { id: string }).id;
+    createdBatchIds.push(batchId);
+    const licenseId = (missingBillingPeriod.body as { licenses: { id: string }[] }).licenses[0]?.id as string;
+
+    const missingBillingPeriodAssign = await request(app)
+      .post(`/api/v1/platform/licenses/${licenseId}/assign`)
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({ beneficiaryType: "STUDENT", beneficiaryStudentId: studentBeneficiary.id, tenantId: tenant.id });
+    expect(missingBillingPeriodAssign.status).toBe(400);
+
+    const missingTenantIdAssign = await request(app)
+      .post(`/api/v1/platform/licenses/${licenseId}/assign`)
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        beneficiaryType: "STUDENT",
+        beneficiaryStudentId: studentBeneficiary.id,
+        billingPeriod: "MONTHLY",
+      });
+    expect(missingTenantIdAssign.status).toBe(400);
+
+    const assigned = await request(app)
+      .post(`/api/v1/platform/licenses/${licenseId}/assign`)
+      .set("Authorization", `Bearer ${superAdminToken}`)
+      .send({
+        beneficiaryType: "STUDENT",
+        beneficiaryStudentId: studentBeneficiary.id,
+        tenantId: tenant.id,
+        billingPeriod: "MONTHLY",
+      });
+    expect(assigned.status).toBe(200);
+    expect((assigned.body as { status: string }).status).toBe("ASSIGNED");
+
+    const createdSubscription = await testAdminPrisma.subscription.findFirstOrThrow({
+      where: { owner: { studentId: studentBeneficiary.id } },
+    });
+    expect(createdSubscription.status).toBe("ACTIVE");
+    expect(createdSubscription.fundingSource).toBe("SCHOOL_SPONSORED");
+    expect(createdSubscription.planId).toBe(studentPlan.id);
+
+    const assignment = await testAdminPrisma.licenseAssignment.findFirstOrThrow({
+      where: { licenseId },
+    });
+    expect(assignment.subscriptionId).toBe(createdSubscription.id);
+
+    const entitlements = await testAdminPrisma.entitlement.findMany({
+      where: { subscriptionId: createdSubscription.id },
+    });
+    expect(entitlements.length).toBeGreaterThan(0);
   }, 20000);
 });
