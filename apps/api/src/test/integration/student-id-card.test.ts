@@ -142,4 +142,38 @@ describe("cartes scolaires (§19)", () => {
     expect(card.status).toBe(400);
     expect((card.body as { code: string }).code).toBe("STUDENT_NOT_ENROLLED");
   });
+
+  // completeTransfer()/withdrawStudent() (transfer.service.ts) posent Student.status
+  // sans jamais toucher l'Enrollment courant -- sans ce contrôle, une carte restait
+  // générable pour un élève transféré vers un autre établissement ou retiré, tant que
+  // son ancienne inscription ENROLLED n'était pas explicitement clôturée.
+  it("refuses to generate a card once the student has transferred out, even with the old enrollment still ENROLLED", async () => {
+    const { subdomain, ownerToken } = await setUpTenantWithOwner();
+    const { academicYearId, campusId, gradeLevelId, classroomId } = await setUpClassroom(
+      subdomain,
+      ownerToken,
+    );
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Salif", lastName: "Toure" });
+    const studentId = (student.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/students/${studentId}/enrollments`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+
+    await testAdminPrisma.student.update({ where: { id: studentId }, data: { status: "TRANSFERRED" } });
+
+    const card = await request(app)
+      .get(`/api/v1/students/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(card.status).toBe(403);
+    expect((card.body as { code: string }).code).toBe("STUDENT_UNAVAILABLE");
+  });
 });

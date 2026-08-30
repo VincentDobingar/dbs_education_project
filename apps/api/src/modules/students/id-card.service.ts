@@ -1,5 +1,8 @@
 import PDFDocument from "pdfkit";
 
+import { AppError } from "../../lib/errors.js";
+import { isStudentUnavailable } from "../../lib/student-status.js";
+
 import { getStudent, requireCurrentEnrollment } from "./student.service.js";
 
 // CR80 ID card size (85.6mm x 53.98mm) expressed in PDF points (1mm ≈ 2.83465pt).
@@ -14,6 +17,14 @@ const CARD_HEIGHT = 153.07;
  */
 export async function generateIdCardPdf(studentId: string, tenantName: string): Promise<Buffer> {
   const student = await getStudent(studentId);
+  // completeTransfer()/withdrawStudent() (transfer.service.ts) posent
+  // Student.status sans jamais toucher l'Enrollment courant -- requireCurrentEnrollment
+  // seul continuait donc de valider un eleve transfere/retire/diplome, permettant de
+  // regenerer une carte d'eleve pour quelqu'un qui n'appartient plus a cet
+  // etablissement (meme signal que requireLinkedStudent, lib/student-status.ts).
+  if (isStudentUnavailable(student)) {
+    throw new AppError(403, "STUDENT_UNAVAILABLE", "This student is no longer active");
+  }
   const enrollment = await requireCurrentEnrollment(studentId);
 
   return new Promise((resolve, reject) => {
