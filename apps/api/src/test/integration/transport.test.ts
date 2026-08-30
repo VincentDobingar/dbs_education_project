@@ -251,4 +251,69 @@ describe("transport scolaire (§29)", () => {
       .set("X-Tenant-Slug", subdomain);
     expect(fetchAfterCancel.status).toBe(404);
   }, 20000);
+
+  // requireVehicle/assignStudentToRoute ne vérifiaient que Vehicle.deletedAt,
+  // jamais Vehicle.status -- un véhicule retiré via PATCH (sans passer par
+  // retireVehicle) restait rattachable à un itinéraire, et un itinéraire dont
+  // le véhicule avait été retiré via le endpoint dédié continuait d'accepter de
+  // nouveaux élèves puisque assignStudentToRoute ne consultait jamais le
+  // véhicule associé.
+  it("stops attaching or assigning students to a retired vehicle's route", async () => {
+    const { subdomain, ownerToken, managerToken } = await setUpTenant();
+    const tenantId = (await testAdminPrisma.tenantDomain.findFirstOrThrow({ where: { subdomain } })).tenantId;
+
+    const vehicle = await request(app)
+      .post("/api/v1/transport/vehicles")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ plateNumber: `CE-${uniqueSuffix()}-C`, capacity: 25 });
+    const vehicleId = (vehicle.body as { id: string }).id;
+
+    // Route créée pendant que le véhicule est encore actif.
+    const route = await request(app)
+      .post("/api/v1/transport/routes")
+      .set("Authorization", `Bearer ${managerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: "Circuit Retired", vehicleId });
+    expect(route.status).toBe(201);
+    const routeId = (route.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/transport/vehicles/${vehicleId}/retire`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const student = await createStudent(tenantId, "TR");
+    const assignAfterRetire = await request(app)
+      .post(`/api/v1/transport/routes/${routeId}/students`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId: student.id });
+    expect(assignAfterRetire.status).toBe(404);
+    expect((assignAfterRetire.body as { code: string }).code).toBe("VEHICLE_NOT_FOUND");
+
+    // PATCH status: RETIRED (sans passer par /retire) pose status seul, jamais
+    // deletedAt -- requireVehicle doit quand même refuser de le rattacher.
+    const secondVehicle = await request(app)
+      .post("/api/v1/transport/vehicles")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ plateNumber: `CE-${uniqueSuffix()}-D`, capacity: 25 });
+    const secondVehicleId = (secondVehicle.body as { id: string }).id;
+
+    await request(app)
+      .patch(`/api/v1/transport/vehicles/${secondVehicleId}`)
+      .set("Authorization", `Bearer ${managerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "RETIRED" });
+
+    const newRouteWithRetiredVehicle = await request(app)
+      .post("/api/v1/transport/routes")
+      .set("Authorization", `Bearer ${managerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: "Circuit Should Fail", vehicleId: secondVehicleId });
+    expect(newRouteWithRetiredVehicle.status).toBe(404);
+    expect((newRouteWithRetiredVehicle.body as { code: string }).code).toBe("VEHICLE_NOT_FOUND");
+  });
 });

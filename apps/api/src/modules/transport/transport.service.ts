@@ -42,9 +42,15 @@ export async function listVehicles(): Promise<Vehicle[]> {
   return prisma.vehicle.findMany({ where: { deletedAt: null }, orderBy: { plateNumber: "asc" } });
 }
 
+/**
+ * `updateVehicle` expose `status` en écriture libre (§29) sans jamais poser
+ * `deletedAt`, contrairement à `retireVehicle` qui pose les deux ensemble — un
+ * véhicule retiré via PATCH restait donc rattachable à un itinéraire tant que
+ * seul `deletedAt` était vérifié ici.
+ */
 export async function requireVehicle(id: string): Promise<Vehicle> {
   const vehicle = await prisma.vehicle.findUnique({ where: { id } });
-  if (!vehicle || vehicle.deletedAt) {
+  if (!vehicle || vehicle.deletedAt || vehicle.status === "RETIRED") {
     throw new AppError(404, "VEHICLE_NOT_FOUND", `Vehicle not found: ${id}`);
   }
   return vehicle;
@@ -174,6 +180,12 @@ export async function assignStudentToRoute(
   input: AssignStudentInput,
 ): Promise<StudentRouteAssignment> {
   const route = await requireRoute(routeId);
+  // `retireVehicle`/`updateVehicle` ne touchent jamais le TransportRoute qui
+  // référence le véhicule -- sans ce contrôle, un itinéraire dont le véhicule a
+  // été retiré depuis continuait d'accepter de nouveaux élèves indéfiniment.
+  if (route.vehicleId) {
+    await requireVehicle(route.vehicleId);
+  }
   await requireStudentRecord(input.studentId);
   if (input.stopId) {
     await requireStop(routeId, input.stopId);
