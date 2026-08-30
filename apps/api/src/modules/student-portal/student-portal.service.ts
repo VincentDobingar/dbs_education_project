@@ -3,8 +3,6 @@ import type {
   Homework,
   ReportCard,
   Student,
-  StudentPayment,
-  StudentReceipt,
   Subscription,
   TimetableEntry,
 } from "@prisma/client";
@@ -14,6 +12,7 @@ import { listAnnouncementsForStudent } from "../communication/announcement.servi
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
 import { listReceiptsForStudent, requireReceipt } from "../finance/student-payment.service.js";
+import type { StudentReceiptWithRefund } from "../finance/student-payment.service.js";
 import { generateReportCardPdf } from "../grading/report-card-pdf.service.js";
 import * as reportCardService from "../grading/report-card.service.js";
 import type { ReportCardWithItems } from "../grading/report-card.service.js";
@@ -87,9 +86,7 @@ export async function getMyAnnouncements(studentId: string): Promise<Announcemen
   return listAnnouncementsForStudent(studentId, "STUDENTS");
 }
 
-export async function getMyReceipts(
-  studentId: string,
-): Promise<(StudentReceipt & { payment: StudentPayment })[]> {
+export async function getMyReceipts(studentId: string): Promise<StudentReceiptWithRefund[]> {
   return listReceiptsForStudent(studentId);
 }
 

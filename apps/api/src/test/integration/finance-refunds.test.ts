@@ -165,6 +165,24 @@ describe("remboursements et situation financière (§23)", () => {
       .send();
     expect(cancelAfterRefund.status).toBe(200);
     expect((cancelAfterRefund.body as { status: string }).status).toBe("CANCELLED");
+
+    // requireReceipt (student-payment.service.ts) ne consultait jamais
+    // StudentPaymentRefund -- le reçu d'un paiement intégralement remboursé restait
+    // indiscernable d'un paiement toujours valide (JSON et PDF, y compris côté
+    // portails parent/élève).
+    const receiptId = (payment.body as { receipt: { id: string } }).receipt.id;
+    const receiptAfterFullRefund = await request(app)
+      .get(`/api/v1/finance/receipts/${receiptId}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(receiptAfterFullRefund.status).toBe(200);
+    expect((receiptAfterFullRefund.body as { refundedCents: number }).refundedCents).toBe(100_000);
+
+    const receiptPdfAfterFullRefund = await request(app)
+      .get(`/api/v1/finance/receipts/${receiptId}/pdf`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(receiptPdfAfterFullRefund.status).toBe(200);
   }, 20000);
 
   it("calcule la situation financière consolidée et les impayés d'un élève", async () => {

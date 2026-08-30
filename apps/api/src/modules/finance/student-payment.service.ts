@@ -12,6 +12,25 @@ import { requireStudentInvoice } from "./student-invoice.service.js";
 import type { RecordCashPaymentInput, RefundStudentPaymentInput } from "./student-payment.validation.js";
 
 export type StudentPaymentWithReceipt = StudentPayment & { receipt: StudentReceipt | null };
+export type StudentReceiptWithRefund = StudentReceipt & { payment: StudentPayment; refundedCents: number };
+
+/**
+ * §23 : un StudentReceipt est un document figé émis une fois, jamais mis à jour ni
+ * annulé par refundStudentPayment (append-only refund trail ci-dessous) -- sans ce
+ * calcul, un reçu entièrement remboursé restait indiscernable d'un paiement toujours
+ * valide sur chaque surface qui le lit (JSON, PDF, portails parent/élève).
+ */
+async function refundedCentsByPaymentId(paymentIds: string[]): Promise<Map<string, number>> {
+  if (paymentIds.length === 0) {
+    return new Map();
+  }
+  const refunds = await prisma.studentPaymentRefund.groupBy({
+    by: ["studentPaymentId"],
+    where: { studentPaymentId: { in: paymentIds } },
+    _sum: { amountCents: true },
+  });
+  return new Map(refunds.map((refund) => [refund.studentPaymentId, refund._sum.amountCents ?? 0]));
+}
 
 /**
  * Cash only for this slice — the only operator actually wired end-to-end so far
@@ -100,22 +119,29 @@ export async function listPaymentsForInvoice(invoiceId: string): Promise<Student
 }
 
 /** §26 : « consulter ses reçus » côté portail élève. */
-export async function listReceiptsForStudent(
-  studentId: string,
-): Promise<(StudentReceipt & { payment: StudentPayment })[]> {
-  return prisma.studentReceipt.findMany({
+export async function listReceiptsForStudent(studentId: string): Promise<StudentReceiptWithRefund[]> {
+  const receipts = await prisma.studentReceipt.findMany({
     where: { payment: { invoice: { studentId } } },
     include: { payment: true },
     orderBy: { issuedAt: "desc" },
   });
+  const refundedByPaymentId = await refundedCentsByPaymentId(
+    receipts.map((receipt) => receipt.studentPaymentId),
+  );
+  return receipts.map((receipt) => ({
+    ...receipt,
+    refundedCents: refundedByPaymentId.get(receipt.studentPaymentId) ?? 0,
+  }));
 }
 
-export async function requireReceipt(id: string): Promise<StudentReceipt & { payment: StudentPayment }> {
+export async function requireReceipt(id: string): Promise<StudentReceiptWithRefund> {
   const receipt = await prisma.studentReceipt.findUnique({ where: { id }, include: { payment: true } });
   if (!receipt) {
     throw new AppError(404, "RECEIPT_NOT_FOUND", `Receipt not found: ${id}`);
   }
-  return receipt;
+  const refundedCents =
+    (await refundedCentsByPaymentId([receipt.studentPaymentId])).get(receipt.studentPaymentId) ?? 0;
+  return { ...receipt, refundedCents };
 }
 
 export async function requireStudentPayment(id: string): Promise<StudentPayment> {
