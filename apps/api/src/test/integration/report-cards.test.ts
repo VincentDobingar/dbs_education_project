@@ -48,6 +48,18 @@ describe("bulletins et moyennes (§21)", () => {
     await grantRole(teacher.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacher.id });
 
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacher.id,
+      });
+
     const campus = await request(app)
       .post("/api/v1/school-config/campuses")
       .set("Authorization", `Bearer ${adminToken}`)

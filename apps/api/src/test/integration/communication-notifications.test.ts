@@ -51,6 +51,18 @@ describe("notifications aux parents — §28 tranche 1", () => {
     await grantRole(teacher.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacher.id });
 
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacher.id,
+      });
+
     const parent = await createUser("notif-parent");
     const parentToken = signAccessToken({ sub: parent.id });
 
@@ -162,10 +174,27 @@ describe("notifications aux parents — §28 tranche 1", () => {
     const { tenant, subdomain } = await createTenant("NotifTenant2");
     createdTenantIds.push(tenant.id);
 
+    const admin = await createUser("notif2-admin");
+    await addMembership(admin.id, tenant.id);
+    await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
     const teacher = await createUser("notif2-teacher");
     await addMembership(teacher.id, tenant.id);
     await grantRole(teacher.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacher.id });
+
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacher.id,
+      });
 
     const student = await createStudent(tenant.id);
 

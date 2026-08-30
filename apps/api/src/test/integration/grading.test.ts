@@ -35,6 +35,7 @@ describe("notes et évaluations (§21)", () => {
     subdomain: string;
     adminToken: string;
     teacherToken: string;
+    teacherEmployeeId: string;
   }> {
     const { tenant, subdomain } = await createTenant("GradingTenant");
     createdTenantIds.push(tenant.id);
@@ -46,11 +47,25 @@ describe("notes et évaluations (§21)", () => {
     const teacher = await createUser("gr-teacher");
     await addMembership(teacher.id, tenant.id);
     await grantRole(teacher.id, "TEACHER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const teacherEmployee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacher.id,
+      });
 
     return {
       subdomain,
-      adminToken: signAccessToken({ sub: admin.id }),
+      adminToken,
       teacherToken: signAccessToken({ sub: teacher.id }),
+      teacherEmployeeId: (teacherEmployee.body as { id: string }).id,
     };
   }
 
@@ -301,5 +316,54 @@ describe("notes et évaluations (§21)", () => {
     await expect(testAdminPrisma.student.delete({ where: { id: studentA as string } })).rejects.toThrow();
     const stillThere = await testAdminPrisma.grade.findUniqueOrThrow({ where: { id: gradeIdA } });
     expect(stillThere.id).toBe(gradeIdA);
+  }, 15000);
+
+  // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+  // employee, but setGrades never checked its result was non-null — the write went
+  // through regardless, just with enteredByEmployeeId silently left unset. Same bug
+  // family as the already-fixed cash-payment/cash-session checks, reopened here.
+  it("refuses to enter grades once the teacher has been terminated", async () => {
+    const { subdomain, adminToken, teacherToken, teacherEmployeeId } = await setUpTenantWithAdmin();
+    const { academicPeriodId, classroomId, subjectId, studentIds } = await setUpClassAndStudents(
+      subdomain,
+      adminToken,
+    );
+    const [studentA] = studentIds;
+
+    const assessmentType = await request(app)
+      .post("/api/v1/grading/assessment-types")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `EXAM-${uniqueSuffix()}`, nameFr: "Examen", nameEn: "Exam" });
+    const assessmentTypeId = (assessmentType.body as { id: string }).id;
+
+    const assessment = await request(app)
+      .post("/api/v1/grading/assessments")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ subjectId, classroomId, assessmentTypeId, academicPeriodId, title: "Devoir 1", maxScore: 20 });
+    const assessmentId = (assessment.body as { id: string }).id;
+
+    const beforeTermination = await request(app)
+      .put(`/api/v1/grading/assessments/${assessmentId}/grades`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ grades: [{ studentId: studentA, score: 12 }] });
+    expect(beforeTermination.status).toBe(200);
+
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${teacherEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const afterTermination = await request(app)
+      .put(`/api/v1/grading/assessments/${assessmentId}/grades`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ grades: [{ studentId: studentA, score: 14 }] });
+    expect(afterTermination.status).toBe(403);
+    expect((afterTermination.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   }, 15000);
 });

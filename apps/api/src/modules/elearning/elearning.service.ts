@@ -26,6 +26,13 @@ export async function createCourse(input: CreateCourseInput, actingUserId: strin
   }
 
   const createdByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!createdByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can create a course",
+    );
+  }
 
   return prisma.onlineCourse.create({
     data: {

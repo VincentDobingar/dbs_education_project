@@ -26,6 +26,13 @@ export async function createHomework(input: CreateHomeworkInput, actingUserId: s
   }
 
   const createdByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!createdByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can assign homework",
+    );
+  }
 
   return prisma.homework.create({
     data: {

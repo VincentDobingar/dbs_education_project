@@ -4,7 +4,14 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createStudent, createTenant, createUser, grantRole } from "../fixtures.js";
+import {
+  addMembership,
+  createStudent,
+  createTenant,
+  createUser,
+  grantRole,
+  uniqueSuffix,
+} from "../fixtures.js";
 
 describe("bibliothèque (§29)", () => {
   const app = createApp();
@@ -23,6 +30,7 @@ describe("bibliothèque (§29)", () => {
   async function setUpTenant(): Promise<{
     subdomain: string;
     adminToken: string;
+    adminEmployeeId: string;
     teacherToken: string;
     studentId: string;
   }> {
@@ -32,6 +40,19 @@ describe("bibliothèque (§29)", () => {
     const admin = await createUser("lib-admin");
     await addMembership(admin.id, tenant.id);
     await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const adminEmployee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Fatou",
+        lastName: "Diallo",
+        jobTitle: "Directrice",
+        userId: admin.id,
+      });
 
     const teacher = await createUser("lib-teacher");
     await addMembership(teacher.id, tenant.id);
@@ -41,7 +62,8 @@ describe("bibliothèque (§29)", () => {
 
     return {
       subdomain,
-      adminToken: signAccessToken({ sub: admin.id }),
+      adminToken,
+      adminEmployeeId: (adminEmployee.body as { id: string }).id,
       teacherToken: signAccessToken({ sub: teacher.id }),
       studentId: student.id,
     };
@@ -223,5 +245,35 @@ describe("bibliothèque (§29)", () => {
       .send({ studentId, dueAt: "2026-09-15" });
     expect(blockedLoan.status).toBe(404);
     expect((blockedLoan.body as { code: string }).code).toBe("BOOK_NOT_FOUND");
+  });
+
+  // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+  // employee, but createLoan never checked its result was non-null — the loan went
+  // through regardless, just with issuedByEmployeeId silently left unset. Same bug
+  // family as the already-fixed cash-payment/cash-session checks, reopened here.
+  it("refuses to issue a loan once the issuing staff member has been terminated", async () => {
+    const { subdomain, adminToken, adminEmployeeId, studentId } = await setUpTenant();
+
+    const book = await request(app)
+      .post("/api/v1/library/books")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ title: "Cahier d'un retour au pays natal", author: "Aimé Césaire", totalCopies: 1 });
+    const bookId = (book.body as { id: string }).id;
+
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${adminEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const blockedLoan = await request(app)
+      .post(`/api/v1/library/books/${bookId}/loans`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ studentId, dueAt: "2026-09-15" });
+    expect(blockedLoan.status).toBe(403);
+    expect((blockedLoan.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   });
 });

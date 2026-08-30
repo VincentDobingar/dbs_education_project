@@ -65,6 +65,7 @@ describe("ressources humaines — contrats, présences, congés, évaluations, d
   async function setUpTenantWithStaff(): Promise<{
     subdomain: string;
     ownerToken: string;
+    ownerEmployeeId: string;
     assistantToken: string;
     teacherToken: string;
   }> {
@@ -75,6 +76,22 @@ describe("ressources humaines — contrats, présences, congés, évaluations, d
     createdUserIds.push(owner.id);
     await addMembership(owner.id, tenant.id);
     await grantRole(owner.id, "SCHOOL_OWNER", tenant.id);
+    const ownerToken = signAccessToken({ sub: owner.id });
+
+    // decideLeaveRequest/createPerformanceEvaluation require the acting user to have
+    // their own linked Employee record (resolveActingEmployeeId) — distinct from the
+    // Employee row `createEmployee` below creates for the person *being* managed.
+    const ownerEmployee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Aissatou",
+        lastName: "Bello",
+        jobTitle: "Directrice",
+        userId: owner.id,
+      });
 
     const assistant = await createUser("hr2-assistant");
     createdUserIds.push(assistant.id);
@@ -88,7 +105,8 @@ describe("ressources humaines — contrats, présences, congés, évaluations, d
 
     return {
       subdomain,
-      ownerToken: signAccessToken({ sub: owner.id }),
+      ownerToken,
+      ownerEmployeeId: (ownerEmployee.body as { id: string }).id,
       assistantToken: signAccessToken({ sub: assistant.id }),
       teacherToken: signAccessToken({ sub: teacher.id }),
     };
@@ -369,5 +387,46 @@ describe("ressources humaines — contrats, présences, congés, évaluations, d
     expect(exported.headers["content-type"]).toContain("text/csv");
     expect(exported.text).toContain("2750.00");
     expect(exported.text).toContain("CDI");
+  });
+
+  // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+  // employee, but decideLeaveRequest/createPerformanceEvaluation never checked its
+  // result was non-null — both writes went through regardless, just with
+  // approvedByEmployeeId/evaluatedByEmployeeId silently left unset. Same bug family
+  // as the already-fixed cash-payment/cash-session checks, reopened here.
+  it("refuses to decide a leave request or record an evaluation once the deciding manager has been terminated", async () => {
+    const { subdomain, ownerToken, ownerEmployeeId } = await setUpTenantWithStaff();
+    const employeeId = await createEmployee(subdomain, ownerToken);
+
+    const leaveRequest = await request(app)
+      .post(`/api/v1/employees/${employeeId}/leave-requests`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ type: "ANNUAL", startDate: "2026-03-01", endDate: "2026-03-10", reason: "Congés annuels" });
+    expect(leaveRequest.status).toBe(201);
+    const leaveRequestId = (leaveRequest.body as { id: string }).id;
+
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${ownerEmployeeId}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const blockedDecision = await request(app)
+      .patch(`/api/v1/employees/${employeeId}/leave-requests/${leaveRequestId}/decision`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "APPROVED" });
+    expect(blockedDecision.status).toBe(403);
+    expect((blockedDecision.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+
+    const blockedEvaluation = await request(app)
+      .post(`/api/v1/employees/${employeeId}/evaluations`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ periodStart: "2025-09-01", periodEnd: "2026-06-30", score: 4 });
+    expect(blockedEvaluation.status).toBe(403);
+    expect((blockedEvaluation.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   });
 });

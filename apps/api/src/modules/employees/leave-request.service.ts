@@ -53,6 +53,13 @@ export async function decideLeaveRequest(
   }
 
   const approvedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!approvedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can decide a leave request",
+    );
+  }
 
   return prisma.leaveRequest.update({
     where: { id },

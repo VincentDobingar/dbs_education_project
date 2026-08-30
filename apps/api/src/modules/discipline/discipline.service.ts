@@ -19,6 +19,13 @@ export async function createIncident(
 ): Promise<DisciplinaryIncident> {
   await requireStudentRecord(input.studentId);
   const reportedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!reportedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can report a disciplinary incident",
+    );
+  }
 
   const incident = await prisma.disciplinaryIncident.create({
     data: {

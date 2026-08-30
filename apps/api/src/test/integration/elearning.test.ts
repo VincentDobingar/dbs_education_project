@@ -195,6 +195,25 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
     expect(courseBody.createdByEmployeeId).toBe(teacherEmployeeId);
     const courseId = courseBody.id;
 
+    // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+    // employee, but createCourse never checked its result was non-null — the write
+    // went through regardless, just with createdByEmployeeId silently left unset.
+    // Same bug family as the already-fixed cash-payment/cash-session checks.
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${teacherEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const blockedCourse = await request(app)
+      .post("/api/v1/elearning/courses")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ classroomId, subjectId, title: "Les décimaux" });
+    expect(blockedCourse.status).toBe(403);
+    expect((blockedCourse.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+
     const invalidResource = await request(app)
       .post(`/api/v1/elearning/courses/${courseId}/resources`)
       .set("Authorization", `Bearer ${teacherToken}`)

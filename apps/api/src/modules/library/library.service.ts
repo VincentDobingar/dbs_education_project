@@ -101,6 +101,13 @@ export async function createLoan(
   }
 
   const issuedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!issuedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can issue a loan",
+    );
+  }
 
   return prisma.libraryLoan.create({
     data: {

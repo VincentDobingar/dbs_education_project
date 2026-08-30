@@ -11,6 +11,13 @@ import type { CreateExpenseInput, ListExpensesQuery, UpdateExpenseInput } from "
 export async function createExpense(input: CreateExpenseInput, actingUserId: string): Promise<Expense> {
   await requireExpenseCategory(input.categoryId);
   const approvedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!approvedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can record an expense",
+    );
+  }
 
   return prisma.expense.create({
     data: {

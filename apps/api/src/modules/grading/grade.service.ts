@@ -24,6 +24,13 @@ export async function setGrades(
   }
 
   const enteredByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!enteredByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can enter grades",
+    );
+  }
   const tenantId = requireCurrentTenantId();
   const maxScore = assessment.maxScore.toNumber();
 

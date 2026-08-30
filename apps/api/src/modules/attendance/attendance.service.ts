@@ -41,6 +41,13 @@ export async function recordRollCall(
 
   const tenantId = requireCurrentTenantId();
   const recordedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!recordedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can record attendance",
+    );
+  }
   const date = startOfDay(input.date);
   const subjectId = input.subjectId ?? null;
 

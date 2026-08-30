@@ -291,6 +291,25 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
         (h) => h.id === (secondHomework.body as { id: string }).id,
       ),
     ).toBe(true);
+
+    // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+    // employee, but createHomework never checked its result was non-null — the write
+    // went through regardless, just with createdByEmployeeId silently left unset.
+    // Same bug family as the already-fixed cash-payment/cash-session checks.
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${teacherEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const blockedHomework = await request(app)
+      .post("/api/v1/homework")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ classroomId, subjectId, title: "Exercices chapitre 4", dueAt });
+    expect(blockedHomework.status).toBe(403);
+    expect((blockedHomework.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   }, 30000);
 
   it("lets a linked student view and submit their classroom's homework, upserts a resubmission, and never reaches another classroom's homework", async () => {

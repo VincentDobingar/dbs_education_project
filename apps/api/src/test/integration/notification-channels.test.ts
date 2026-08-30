@@ -158,6 +158,18 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
     await grantRole(teacherUser.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacherUser.id });
 
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacherUser.id,
+      });
+
     const student = await createStudent(tenant.id, "CHANNOTIF");
 
     const parent = await createUser("chan-notif-parent");
@@ -211,6 +223,18 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
     await addMembership(teacherUser.id, tenant.id);
     await grantRole(teacherUser.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacherUser.id });
+
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacherUser.id,
+      });
 
     const student = await createStudent(tenant.id, "CHANPREF");
 
@@ -305,6 +329,18 @@ describe("canaux de notification réels — email/SMS (§28)", () => {
     await addMembership(teacherUser.id, tenant.id);
     await grantRole(teacherUser.id, "TEACHER", tenant.id);
     const teacherToken = signAccessToken({ sub: teacherUser.id });
+
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacherUser.id,
+      });
 
     const student = await createStudent(tenant.id, "CHANTPL");
 

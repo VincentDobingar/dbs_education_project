@@ -61,7 +61,7 @@ describe("dépenses et caisse (§23)", () => {
   }
 
   it("manages expense categories and expenses, guarding permissions and duplicate codes", async () => {
-    const { subdomain, agentToken, teacherToken } = await setUpTenant();
+    const { subdomain, agentToken, teacherToken, noEmployeeToken } = await setUpTenant();
 
     const denied = await request(app)
       .post("/api/v1/finance/expense-categories")
@@ -106,6 +106,18 @@ describe("dépenses et caisse (§23)", () => {
       });
     expect(missingCategory.status).toBe(404);
     expect((missingCategory.body as { code: string }).code).toBe("EXPENSE_CATEGORY_NOT_FOUND");
+
+    // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a user with no
+    // linked Employee record, but createExpense never checked its result was non-null
+    // — the write went through regardless, just with approvedByEmployeeId silently
+    // left unset. Same bug family as the already-fixed cash-payment/cash-session checks.
+    const deniedByEmployeeRequirement = await request(app)
+      .post("/api/v1/finance/expenses")
+      .set("Authorization", `Bearer ${noEmployeeToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ categoryId, description: "Papier A4", amountCents: 15_000, expenseDate: "2026-02-01" });
+    expect(deniedByEmployeeRequirement.status).toBe(403);
+    expect((deniedByEmployeeRequirement.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
 
     const expense = await request(app)
       .post("/api/v1/finance/expenses")

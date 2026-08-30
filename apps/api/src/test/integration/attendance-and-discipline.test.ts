@@ -30,6 +30,7 @@ describe("présences et discipline (§22)", () => {
     subdomain: string;
     adminToken: string;
     teacherToken: string;
+    teacherEmployeeId: string;
   }> {
     const { tenant, subdomain } = await createTenant("AttendanceTenant");
     createdTenantIds.push(tenant.id);
@@ -41,11 +42,25 @@ describe("présences et discipline (§22)", () => {
     const teacher = await createUser("at-teacher");
     await addMembership(teacher.id, tenant.id);
     await grantRole(teacher.id, "TEACHER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const teacherEmployee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Jean",
+        lastName: "Mballa",
+        jobTitle: "Enseignant",
+        userId: teacher.id,
+      });
 
     return {
       subdomain,
-      adminToken: signAccessToken({ sub: admin.id }),
+      adminToken,
       teacherToken: signAccessToken({ sub: teacher.id }),
+      teacherEmployeeId: (teacherEmployee.body as { id: string }).id,
     };
   }
 
@@ -260,5 +275,44 @@ describe("présences et discipline (§22)", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain);
     expect((historyAfterRemoval.body as unknown[]).length).toBe(0);
+  });
+
+  // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated
+  // employee, but recordRollCall/createIncident never checked its result was
+  // non-null — both writes went through regardless, just with recordedByEmployeeId/
+  // reportedByEmployeeId silently left unset. Same bug family as the already-fixed
+  // cash-payment/cash-session checks, reopened here.
+  it("refuses to record attendance or report an incident once the teacher has been terminated", async () => {
+    const { subdomain, adminToken, teacherToken, teacherEmployeeId } = await setUpTenantWithAdmin();
+    const { classroomId, studentIds } = await setUpClassAndStudents(subdomain, adminToken);
+    const [studentA] = studentIds;
+
+    const patched = await request(app)
+      .patch(`/api/v1/employees/${teacherEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "TERMINATED" });
+    expect(patched.status).toBe(200);
+
+    const blockedRollCall = await request(app)
+      .put("/api/v1/attendance/roll-call")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ classroomId, date: "2025-10-01", entries: [{ studentId: studentA, status: "PRESENT" }] });
+    expect(blockedRollCall.status).toBe(403);
+    expect((blockedRollCall.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+
+    const blockedIncident = await request(app)
+      .post("/api/v1/discipline/incidents")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId: studentA,
+        occurredAt: "2025-10-02",
+        description: "Bavardage répété en classe",
+        severity: "MINOR",
+      });
+    expect(blockedIncident.status).toBe(403);
+    expect((blockedIncident.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   });
 });

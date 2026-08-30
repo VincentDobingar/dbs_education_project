@@ -1,6 +1,7 @@
 import type { PerformanceEvaluation } from "@prisma/client";
 
 import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
+import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
@@ -16,6 +17,13 @@ export async function createPerformanceEvaluation(
 ): Promise<PerformanceEvaluation> {
   await getEmployee(employeeId);
   const evaluatedByEmployeeId = await resolveActingEmployeeId(actingUserId);
+  if (!evaluatedByEmployeeId) {
+    throw new AppError(
+      403,
+      "EMPLOYEE_RECORD_REQUIRED",
+      "Only a staff member with a linked employee record can record a performance evaluation",
+    );
+  }
 
   return prisma.performanceEvaluation.create({
     data: {
