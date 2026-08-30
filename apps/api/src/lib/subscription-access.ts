@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { advanceSubscriptionIfDue } from "../modules/subscriptions/subscription.service.js";
 
 import { prisma } from "./prisma.js";
+import { isTenantBlocked } from "./tenant-status.js";
 
 const ACTIVE_SUBSCRIPTION_STATUSES = ["ACTIVE", "TRIAL", "GRACE_PERIOD"] as const;
 
@@ -72,20 +73,49 @@ async function licenseAssignmentStatus(subscriptionId: string): Promise<"none" |
     return "none";
   }
 
+  // sponsorTenantId (licence SCHOOL_SPONSORED) n'a pas de champ de relation Prisma
+  // vers Tenant -- chargement separe. suspendTenant()/rejectTenant() (tenant-admin
+  // .service.ts) ne touchent jamais les SponsoredLicense/LicenseAssignment du
+  // sponsor, exactement comme deleteOrganization() pour Organization.deletedAt
+  // ci-dessous : sans ce controle, suspendre/rejeter l'etablissement sponsor
+  // laissait tous ses beneficiaires actifs indefiniment.
+  const sponsorTenantIds = [
+    ...new Set(
+      assignments
+        .map((assignment) => assignment.license.sponsorTenantId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const sponsorTenants = sponsorTenantIds.length
+    ? await prisma.tenant.findMany({
+        where: { id: { in: sponsorTenantIds } },
+        select: { id: true, status: true, deletedAt: true },
+      })
+    : [];
+  const sponsorTenantById = new Map(sponsorTenants.map((tenant) => [tenant.id, tenant]));
+
   const now = new Date();
   // deleteOrganization() (organization-admin.service.ts) ne fait que poser
   // Organization.deletedAt -- elle ne touche jamais les SponsoredLicense/
-  // LicenseAssignment du sponsor (meme choix qu'ici pour Tenant.status : un seul
-  // point de verification plutot qu'une cascade d'ecritures). Sans ce controle,
-  // supprimer l'organisation sponsor laissait tous ses beneficiaires actifs
-  // indefiniment, memes licences REVOKED/expirees deja gerees juste en dessous.
-  const hasValid = assignments.some(
-    (assignment) =>
+  // LicenseAssignment du sponsor. Sans ce controle, supprimer l'organisation
+  // sponsor laissait tous ses beneficiaires actifs indefiniment, memes licences
+  // REVOKED/expirees deja gerees juste en dessous.
+  const hasValid = assignments.some((assignment) => {
+    const sponsorTenant = assignment.license.sponsorTenantId
+      ? sponsorTenantById.get(assignment.license.sponsorTenantId)
+      : undefined;
+    const sponsorTenantBlocked =
+      sponsorTenant !== undefined &&
+      (isTenantBlocked(sponsorTenant.status) || sponsorTenant.deletedAt !== null);
+
+    return (
       !assignment.revokedAt &&
       assignment.license.status !== "REVOKED" &&
       (!assignment.license.validUntil || assignment.license.validUntil >= now) &&
-      !assignment.license.sponsorOrganization?.deletedAt,
-  );
+      !assignment.license.sponsorOrganization?.deletedAt &&
+      !sponsorTenantBlocked
+    );
+  });
 
   return hasValid ? "valid" : "blocked";
 }

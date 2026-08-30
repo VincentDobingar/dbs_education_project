@@ -240,6 +240,45 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       expect(afterDeletion.status).toBe(402);
       expect((afterDeletion.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
     });
+
+    // subscription-access.ts:licenseAssignmentStatus ne chargeait le sponsor que via
+    // license.sponsorOrganization -- une licence SCHOOL_SPONSORED (sponsorTenantId,
+    // pas sponsorOrganizationId) n'était jamais revérifiée : suspendre/rejeter
+    // l'établissement sponsor (impayé, fraude, contrat résilié) laissait tous ses
+    // bénéficiaires (parents, élèves) actifs indéfiniment.
+    it("blocks a sponsored subscription once its sponsor tenant is suspended", async () => {
+      const studentId = await newStudent();
+      const sponsorTenant = await createTenant("SubAccess Sponsor", { activeSubscription: false });
+
+      const subscription = await createSubscription(
+        { studentId },
+        "STUDENT",
+        "STUDENT_BASIC",
+        "ACTIVE",
+        "SCHOOL_SPONSORED",
+      );
+      const license = await createSponsoredLicense("STUDENT_BASIC", {
+        validUntil: null,
+        sponsorTenantId: sponsorTenant.tenant.id,
+      });
+      createdLicenseIds.push(license.id);
+      await createLicenseAssignment(license.id, subscription.id, studentId);
+
+      const beforeSuspension = await request(app).get(`/protected/${studentId}`);
+      expect(beforeSuspension.status).toBe(200);
+
+      await testAdminPrisma.tenant.update({
+        where: { id: sponsorTenant.tenant.id },
+        data: { status: "SUSPENDED", suspendedAt: new Date() },
+      });
+
+      const afterSuspension = await request(app).get(`/protected/${studentId}`);
+      expect(afterSuspension.status).toBe(402);
+      expect((afterSuspension.body as TestResponseBody).code).toBe("SUBSCRIPTION_INACTIVE");
+
+      await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: sponsorTenant.tenant.id } });
+      await testAdminPrisma.tenant.deleteMany({ where: { id: sponsorTenant.tenant.id } });
+    });
   });
 
   describe("requireEntitlement", () => {

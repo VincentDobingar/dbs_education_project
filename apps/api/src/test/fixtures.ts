@@ -126,6 +126,7 @@ export async function createSponsoredLicense(
     validUntil?: Date | null;
     status?: "AVAILABLE" | "ASSIGNED" | "REVOKED" | "EXPIRED";
     sponsorOrganizationId?: string;
+    sponsorTenantId?: string;
   } = {},
 ) {
   const plan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({ where: { code: planCode } });
@@ -136,6 +137,7 @@ export async function createSponsoredLicense(
       status: options.status ?? "ASSIGNED",
       validUntil: options.validUntil ?? null,
       ...(options.sponsorOrganizationId ? { sponsorOrganizationId: options.sponsorOrganizationId } : {}),
+      ...(options.sponsorTenantId ? { sponsorTenantId: options.sponsorTenantId } : {}),
     },
   });
 }
