@@ -127,7 +127,17 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
       take: UPCOMING_HOMEWORK_LIMIT,
     }),
     prisma.announcement.findMany({
-      where: { deletedAt: null, audienceScope: { in: [...STAFF_FACING_AUDIENCES] } },
+      // meme filtrage publishedAt/expiresAt que listAnnouncementsForStudent
+      // (announcement.service.ts) -- sans lui, une annonce planifiee pour plus
+      // tard ou deja expiree restait visible ici indefiniment, alors qu'elle
+      // disparaissait correctement des tableaux de bord parent/eleve au meme
+      // instant.
+      where: {
+        deletedAt: null,
+        audienceScope: { in: [...STAFF_FACING_AUDIENCES] },
+        publishedAt: { lte: new Date() },
+        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
+      },
       orderBy: { publishedAt: "desc" },
       take: RECENT_ANNOUNCEMENTS_LIMIT,
     }),

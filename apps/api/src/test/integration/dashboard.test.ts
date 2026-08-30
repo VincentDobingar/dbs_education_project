@@ -11,6 +11,7 @@ describe("tableaux de bord (§18)", () => {
   const createdTenantIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.announcement.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.disciplinaryIncident.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.attendance.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.reportCard.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -319,6 +320,54 @@ describe("tableaux de bord (§18)", () => {
     expect(teacherBody.todayClasses.some((c) => c.subjectId === subjectId)).toBe(true);
     // Déjà fait l'appel pour cette classe/matière aujourd'hui — ne doit plus apparaître.
     expect(teacherBody.classesNeedingRollCall.some((c) => c.classroomId === classroomId)).toBe(false);
+
+    // teacher-dashboard.service.ts ne filtrait ni publishedAt ni expiresAt sur les
+    // annonces staff-facing, contrairement à listAnnouncementsForStudent
+    // (announcement.service.ts) qui les filtre déjà pour parents/élèves — une annonce
+    // planifiée pour plus tard ou déjà expirée restait donc visible ici indéfiniment.
+    await testAdminPrisma.announcement.create({
+      data: {
+        tenantId: tenant.id,
+        title: "Annonce future",
+        body: "Ne doit pas encore être visible",
+        audienceScope: "TEACHERS",
+        createdByUserId: admin.id,
+        publishedAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+    await testAdminPrisma.announcement.create({
+      data: {
+        tenantId: tenant.id,
+        title: "Annonce expirée",
+        body: "Ne doit plus être visible",
+        audienceScope: "ALL",
+        createdByUserId: admin.id,
+        publishedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      },
+    });
+    const currentAnnouncement = await testAdminPrisma.announcement.create({
+      data: {
+        tenantId: tenant.id,
+        title: "Annonce en cours",
+        body: "Doit être visible",
+        audienceScope: "ALL",
+        createdByUserId: admin.id,
+        publishedAt: new Date(Date.now() - 60 * 60 * 1000),
+      },
+    });
+
+    const teacherDashboardAfterAnnouncements = await request(app)
+      .get("/api/v1/dashboard/enseignant")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(teacherDashboardAfterAnnouncements.status).toBe(200);
+    const announcementTitles = (
+      teacherDashboardAfterAnnouncements.body as { announcements: { title: string }[] }
+    ).announcements.map((a) => a.title);
+    expect(announcementTitles).toContain(currentAnnouncement.title);
+    expect(announcementTitles).not.toContain("Annonce future");
+    expect(announcementTitles).not.toContain("Annonce expirée");
 
     const teacherDeniedForStranger = await request(app)
       .get("/api/v1/dashboard/enseignant")
