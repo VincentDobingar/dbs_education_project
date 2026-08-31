@@ -9,6 +9,7 @@ import type {
 
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma } from "../../lib/prisma.js";
+import { isStudentUnavailable } from "../../lib/student-status.js";
 import { runWithContext } from "../../lib/tenant-context.js";
 import * as attendanceService from "../attendance/attendance.service.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
@@ -152,6 +153,31 @@ export async function getParentDashboard(parentUserId: string): Promise<ParentDa
     children.map((child) =>
       runWithContext({ tenantId: child.student.tenantId, userId: parentUserId }, async () => {
         const tenant = await rawPrisma.tenant.findUnique({ where: { id: child.student.tenantId } });
+
+        // Cette agrégation sans :studentId échappe à requireVerifiedStudentRelationship
+        // (parent-portal.routes.ts) -- seul point d'entrée parent-portail qui ne
+        // consultait jamais isStudentUnavailable, contrairement à chaque route
+        // /children/:studentId/* équivalente (attendance, report-cards, finance/situation,
+        // announcements), qui bloquent déjà un enfant transféré/retiré/diplômé/archivé
+        // en 403. Sans ce contrôle, ce tableau de bord continuait d'exposer les données
+        // en cours d'un enfant qui n'appartient plus à l'établissement, indéfiniment.
+        if (isStudentUnavailable(child.student)) {
+          return {
+            student: child.student,
+            tenantName: tenant?.name ?? child.student.tenantId,
+            recentAttendance: [],
+            latestReportCard: null,
+            financialSituation: {
+              studentId: child.student.id,
+              invoices: [],
+              totalInvoicedCents: 0,
+              totalPaidCents: 0,
+              outstandingCents: 0,
+              overdueInvoices: [],
+            },
+            announcements: [],
+          };
+        }
 
         let hasCurrentEnrollment = true;
         try {

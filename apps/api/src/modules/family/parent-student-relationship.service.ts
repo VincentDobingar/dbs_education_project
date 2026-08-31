@@ -71,6 +71,7 @@ export interface VerifiedChild {
     firstName: string;
     lastName: string;
     status: StudentStatus;
+    deletedAt: Date | null;
   };
 }
 
@@ -100,6 +101,7 @@ export async function listVerifiedChildrenForParent(parentUserId: string): Promi
             firstName: true,
             lastName: true,
             status: true,
+            deletedAt: true,
           },
         }),
       );

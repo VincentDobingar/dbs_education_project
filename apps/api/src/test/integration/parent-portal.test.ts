@@ -374,5 +374,41 @@ describe("portail parent — lecture (§25)", () => {
       .get(`/api/v1/parent-portal/children/${otherStudentId}/receipts/${receiptId}/pdf`)
       .set("Authorization", `Bearer ${parentToken}`);
     expect(crossStudentReceipt.status).toBe(404);
+
+    // completeTransfer()/withdrawStudent() (transfer.service.ts) posent Student.status
+    // sans jamais toucher l'Enrollment courant -- le tableau de bord agrégé (sans
+    // :studentId, donc jamais passé par requireVerifiedStudentRelationship) continuait
+    // d'exposer présences/bulletins/finances/annonces en cours pour un enfant
+    // transféré, alors que chaque route /children/:studentId/* équivalente bloque déjà
+    // ce même cas en 403 STUDENT_UNAVAILABLE.
+    await testAdminPrisma.student.update({ where: { id: studentId }, data: { status: "TRANSFERRED" } });
+
+    const deniedDirectRoute = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/attendance`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(deniedDirectRoute.status).toBe(403);
+    expect((deniedDirectRoute.body as { code: string }).code).toBe("STUDENT_UNAVAILABLE");
+
+    const dashboardAfterTransfer = await request(app)
+      .get("/api/v1/parent-portal/dashboard")
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(dashboardAfterTransfer.status).toBe(200);
+    const childAfterTransfer = (
+      dashboardAfterTransfer.body as {
+        children: {
+          student: { id: string };
+          recentAttendance: unknown[];
+          latestReportCard: unknown;
+          announcements: unknown[];
+          financialSituation: { outstandingCents: number; invoices: unknown[] };
+        }[];
+      }
+    ).children.find((c) => c.student.id === studentId);
+    expect(childAfterTransfer).toBeTruthy();
+    expect(childAfterTransfer?.recentAttendance).toEqual([]);
+    expect(childAfterTransfer?.latestReportCard).toBeNull();
+    expect(childAfterTransfer?.announcements).toEqual([]);
+    expect(childAfterTransfer?.financialSituation.outstandingCents).toBe(0);
+    expect(childAfterTransfer?.financialSituation.invoices).toEqual([]);
   }, 30000);
 });
