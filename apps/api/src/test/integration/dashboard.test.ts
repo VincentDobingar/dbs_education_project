@@ -390,4 +390,152 @@ describe("tableaux de bord (§18)", () => {
     expect(teacherDashboardAfterTermination.status).toBe(403);
     expect((teacherDashboardAfterTermination.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
   }, 30000);
+
+  // setCurrentAcademicYear (academic-year.service.ts) bascule isCurrent d'une annee a
+  // l'autre, mais TeacherAssignment/TimetableEntry de l'ancienne annee ne sont jamais
+  // purges -- sans filtrage sur l'annee courante, le tableau de bord enseignant
+  // continuait de resoudre un creneau d'une annee scolaire revolue comme si c'etait
+  // toujours d'actualite aujourd'hui.
+  it("stops surfacing a teacher's prior-academic-year timetable/assignments once a new year becomes current", async () => {
+    const { tenant, subdomain } = await createTenant("DashboardStaleYearTenant");
+    createdTenantIds.push(tenant.id);
+
+    const admin = await createUser("stale-admin");
+    await addMembership(admin.id, tenant.id);
+    await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
+    const adminToken = signAccessToken({ sub: admin.id });
+
+    const teacherUser = await createUser("stale-teacher");
+    await addMembership(teacherUser.id, tenant.id);
+    await grantRole(teacherUser.id, "TEACHER", tenant.id);
+    const teacherToken = signAccessToken({ sub: teacherUser.id });
+
+    const teacherEmployee = await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Omar",
+        lastName: "Sy",
+        jobTitle: "Enseignant",
+        userId: teacherUser.id,
+      });
+    const teacherEmployeeId = (teacherEmployee.body as { id: string }).id;
+
+    const campus = await request(app)
+      .post("/api/v1/school-config/campuses")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: "Campus principal", code: `CP-${uniqueSuffix()}` });
+    const campusId = (campus.body as { id: string }).id;
+
+    const oldYear = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Old-${uniqueSuffix()}`, startDate: "2024-09-01", endDate: "2025-06-30" });
+    const oldYearId = (oldYear.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/school-config/academic-years/${oldYearId}/set-current`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const cycle = await request(app)
+      .post("/api/v1/school-config/education-cycles")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `CYC-${uniqueSuffix()}`, nameFr: "Collège", nameEn: "Middle school", order: 1 });
+    const gradeLevel = await request(app)
+      .post(`/api/v1/school-config/education-cycles/${(cycle.body as { id: string }).id}/grade-levels`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `6EME-${uniqueSuffix()}`, nameFr: "6ème", nameEn: "Grade 6", order: 1 });
+    const gradeLevelId = (gradeLevel.body as { id: string }).id;
+
+    const classroom = await request(app)
+      .post("/api/v1/school-config/classrooms")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        name: `6e Old ${uniqueSuffix()}`,
+        academicYearId: oldYearId,
+        campusId,
+        gradeLevelId,
+        capacity: 40,
+      });
+    const classroomId = (classroom.body as { id: string }).id;
+
+    const subject = await request(app)
+      .post("/api/v1/school-config/subjects")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `MATH-${uniqueSuffix()}`, nameFr: "Mathématiques", nameEn: "Mathematics" });
+    const subjectId = (subject.body as { id: string }).id;
+
+    await request(app)
+      .post("/api/v1/school-config/teacher-assignments")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ employeeId: teacherEmployeeId, subjectId, classroomId, academicYearId: oldYearId });
+
+    const todayDayOfWeek = (new Date().getUTCDay() + 6) % 7;
+    const timetable = await request(app)
+      .post("/api/v1/school-config/timetables")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ classroomId, academicYearId: oldYearId });
+    await request(app)
+      .post(`/api/v1/school-config/timetables/${(timetable.body as { id: string }).id}/entries`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        subjectId,
+        teacherEmployeeId,
+        dayOfWeek: todayDayOfWeek,
+        startTime: "08:00",
+        endTime: "09:00",
+      });
+
+    const dashboardDuringOldYear = await request(app)
+      .get("/api/v1/dashboard/enseignant")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(dashboardDuringOldYear.status).toBe(200);
+    const beforeBody = dashboardDuringOldYear.body as {
+      classAssignments: { classroomId: string }[];
+      todayClasses: { subjectId: string }[];
+      classesNeedingRollCall: { classroomId: string }[];
+    };
+    expect(beforeBody.classAssignments.some((a) => a.classroomId === classroomId)).toBe(true);
+    expect(beforeBody.todayClasses.some((c) => c.subjectId === subjectId)).toBe(true);
+    expect(beforeBody.classesNeedingRollCall.some((c) => c.classroomId === classroomId)).toBe(true);
+
+    const newYear = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `New-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+    const newYearId = (newYear.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/school-config/academic-years/${newYearId}/set-current`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const dashboardAfterRollover = await request(app)
+      .get("/api/v1/dashboard/enseignant")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(dashboardAfterRollover.status).toBe(200);
+    const afterBody = dashboardAfterRollover.body as {
+      classAssignments: { classroomId: string }[];
+      todayClasses: { subjectId: string }[];
+      classesNeedingRollCall: { classroomId: string }[];
+    };
+    expect(afterBody.classAssignments.some((a) => a.classroomId === classroomId)).toBe(false);
+    expect(afterBody.todayClasses.some((c) => c.subjectId === subjectId)).toBe(false);
+    expect(afterBody.classesNeedingRollCall.some((c) => c.classroomId === classroomId)).toBe(false);
+  }, 30000);
 });

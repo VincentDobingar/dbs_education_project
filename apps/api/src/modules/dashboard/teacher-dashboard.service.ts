@@ -57,10 +57,28 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
   const today = startOfDay(new Date());
   const todayDayOfWeek = schemaDayOfWeek(today);
 
+  // setCurrentAcademicYear (academic-year.service.ts) bascule isCurrent d'une annee a
+  // l'autre au changement d'annee scolaire, mais TeacherAssignment/TimetableEntry ne
+  // sont jamais purges ni archives -- sans ce filtrage, ce tableau de bord continuait
+  // de resoudre les creneaux/affectations d'annees revolues comme s'ils etaient
+  // toujours d'actualite, avec un vrai risque d'y enregistrer des presences via
+  // classesNeedingRollCall.
+  const currentAcademicYear = await prisma.academicYear.findFirst({ where: { isCurrent: true } });
+
   const [classAssignments, todayClasses] = await Promise.all([
-    prisma.teacherAssignment.findMany({ where: { employeeId }, orderBy: { createdAt: "asc" } }),
+    prisma.teacherAssignment.findMany({
+      where: {
+        employeeId,
+        ...(currentAcademicYear ? { academicYearId: currentAcademicYear.id } : {}),
+      },
+      orderBy: { createdAt: "asc" },
+    }),
     prisma.timetableEntry.findMany({
-      where: { teacherEmployeeId: employeeId, dayOfWeek: todayDayOfWeek },
+      where: {
+        teacherEmployeeId: employeeId,
+        dayOfWeek: todayDayOfWeek,
+        ...(currentAcademicYear ? { timetable: { academicYearId: currentAcademicYear.id } } : {}),
+      },
       orderBy: { startTime: "asc" },
     }),
   ]);
