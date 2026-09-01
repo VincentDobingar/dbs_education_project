@@ -115,6 +115,25 @@ describe("authentification multifacteur (§34)", () => {
       .send({ challengeToken: thirdChallenge.challengeToken, code: recoveryCode });
     expect(recoveryReplay.status).toBe(401);
 
+    // Deux vérifications concurrentes avec le même code de secours : une seule doit réussir
+    // (régression — `consumeMfaRecoveryCode` doit consommer le code de façon atomique).
+    const raceLoginA = await request(app).post("/api/v1/auth/login").send({ email, password });
+    const raceLoginB = await request(app).post("/api/v1/auth/login").send({ email, password });
+    const raceChallengeA = (raceLoginA.body as { challengeToken: string }).challengeToken;
+    const raceChallengeB = (raceLoginB.body as { challengeToken: string }).challengeToken;
+    const raceRecoveryCode = recoveryCodes[1] as string;
+
+    const [raceResultA, raceResultB] = await Promise.all([
+      request(app)
+        .post("/api/v1/auth/mfa/verify")
+        .send({ challengeToken: raceChallengeA, code: raceRecoveryCode }),
+      request(app)
+        .post("/api/v1/auth/mfa/verify")
+        .send({ challengeToken: raceChallengeB, code: raceRecoveryCode }),
+    ]);
+    const raceStatuses = [raceResultA.status, raceResultB.status].sort();
+    expect(raceStatuses).toEqual([200, 401]);
+
     // Désactivation : mauvais mot de passe refusé, puis mot de passe + code valides.
     const disableWrongPassword = await request(app)
       .post("/api/v1/auth/mfa/disable")

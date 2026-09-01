@@ -94,14 +94,19 @@ export async function disableMfa(userId: string, password: string, code: string)
   ]);
 }
 
-/** Partagé avec `auth.service.ts` (login post-MFA) — un code de secours accepté à la place d'un TOTP. */
+/**
+ * Partagé avec `auth.service.ts` (login post-MFA) — un code de secours accepté à la
+ * place d'un TOTP. `updateMany` guardé par `usedAt: null` plutôt qu'un
+ * `findFirst`+`update` séparés (même motif que `activationCode` ci-dessus) : deux
+ * requêtes concurrentes présentant le même code passeraient toutes les deux le
+ * `findFirst` avant que l'une ou l'autre ne pose `usedAt`, authentifiant deux sessions
+ * avec un code censé être à usage unique.
+ */
 export async function consumeMfaRecoveryCode(userId: string, code: string): Promise<boolean> {
   const codeHash = hashMfaRecoveryCode(code);
-  const recoveryCode = await prisma.mfaRecoveryCode.findFirst({ where: { userId, codeHash, usedAt: null } });
-  if (!recoveryCode) {
-    return false;
-  }
-
-  await prisma.mfaRecoveryCode.update({ where: { id: recoveryCode.id }, data: { usedAt: new Date() } });
-  return true;
+  const claim = await prisma.mfaRecoveryCode.updateMany({
+    where: { userId, codeHash, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+  return claim.count > 0;
 }
