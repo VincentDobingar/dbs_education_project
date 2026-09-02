@@ -24,6 +24,7 @@ describe("tenant users / membership management (§17)", () => {
     subdomain: string;
     ownerToken: string;
     teacherToken: string;
+    adminToken: string;
   }> {
     const { tenant, subdomain } = await createTenant("TenantUsers");
     createdTenantIds.push(tenant.id);
@@ -38,11 +39,21 @@ describe("tenant users / membership management (§17)", () => {
     await addMembership(teacher.id, tenant.id);
     await grantRole(teacher.id, "TEACHER", tenant.id);
 
+    // SCHOOL_ADMIN also holds tenant.settings.manage (the only permission this
+    // route is gated by) but is missing several permissions SCHOOL_OWNER has
+    // (finance.write, hr.manage, hr.salary.manage, subscriptions.manage, ...) —
+    // exactly the gap a privilege-escalation attempt would exploit.
+    const admin = await createUser("tu-admin");
+    createdUserIds.push(admin.id);
+    await addMembership(admin.id, tenant.id);
+    await grantRole(admin.id, "SCHOOL_ADMIN", tenant.id);
+
     return {
       tenantId: tenant.id,
       subdomain,
       ownerToken: signAccessToken({ sub: owner.id }),
       teacherToken: signAccessToken({ sub: teacher.id }),
+      adminToken: signAccessToken({ sub: admin.id }),
     };
   }
 
@@ -161,6 +172,64 @@ describe("tenant users / membership management (§17)", () => {
       .send();
     expect(revokedAgain.status).toBe(404);
     expect((revokedAgain.body as { code: string }).code).toBe("ROLE_NOT_GRANTED");
+  });
+
+  it("refuses to let a SCHOOL_ADMIN grant or invite someone straight to SCHOOL_OWNER (privilege escalation)", async () => {
+    // §17 : tenant.settings.manage gates managing membership, not which privileges a
+    // granter can hand out — a SCHOOL_ADMIN holds that permission but not every
+    // permission SCHOOL_OWNER has, so it must not be able to promote a member (or
+    // itself) or invite a newcomer straight into SCHOOL_OWNER.
+    const { subdomain, ownerToken, adminToken } = await setUpTenantWithOwner();
+
+    const member = await createUser("tu-escalation-target");
+    createdUserIds.push(member.id);
+    const invited = await request(app)
+      .post("/api/v1/tenant-users")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ email: member.email, roleCode: "TEACHER" });
+    expect(invited.status).toBe(201);
+    const memberId = (invited.body as { userId: string }).userId;
+
+    const escalateOther = await request(app)
+      .post(`/api/v1/tenant-users/${memberId}/roles`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ roleCode: "SCHOOL_OWNER" });
+    expect(escalateOther.status).toBe(403);
+    expect((escalateOther.body as { code: string }).code).toBe("ROLE_EXCEEDS_GRANTER_PERMISSIONS");
+
+    // Same gap via a narrower role: HR_MANAGER only carries hr.manage/
+    // hr.salary.manage, neither of which SCHOOL_ADMIN holds either.
+    const escalateViaHrRole = await request(app)
+      .post(`/api/v1/tenant-users/${memberId}/roles`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ roleCode: "HR_MANAGER" });
+    expect(escalateViaHrRole.status).toBe(403);
+    expect((escalateViaHrRole.body as { code: string }).code).toBe("ROLE_EXCEEDS_GRANTER_PERMISSIONS");
+
+    const inviteAsOwner = await request(app)
+      .post("/api/v1/tenant-users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        email: `escalation-invite-${uniqueSuffix()}@example.test`,
+        roleCode: "SCHOOL_OWNER",
+        firstName: "Malick",
+        lastName: "Fall",
+      });
+    expect(inviteAsOwner.status).toBe(403);
+    expect((inviteAsOwner.body as { code: string }).code).toBe("ROLE_EXCEEDS_GRANTER_PERMISSIONS");
+
+    // Sanity check the guard isn't overly broad: a SCHOOL_OWNER (superset of every
+    // permission any tenant role carries) can still grant SCHOOL_OWNER.
+    const ownerGrantsOwner = await request(app)
+      .post(`/api/v1/tenant-users/${memberId}/roles`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ roleCode: "SCHOOL_OWNER" });
+    expect(ownerGrantsOwner.status).toBe(204);
   });
 
   it("updates a member's status", async () => {

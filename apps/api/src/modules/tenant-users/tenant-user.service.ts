@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { MembershipStatus, Role } from "@prisma/client";
 
 import { recordAuditLog } from "../../lib/audit-log.js";
+import { getEffectivePermissionCodes } from "../../lib/authorization.js";
 import { AppError } from "../../lib/errors.js";
 import { hashPassword } from "../../lib/password.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
@@ -32,15 +33,67 @@ async function requireTenantRole(roleCode: string): Promise<Role> {
 }
 
 /**
+ * Permissions that represent control over the institution itself (its money, its
+ * staff records/payroll, its subscription, its settings) rather than day-to-day
+ * content operations (grades, attendance, homework, ...). Roles are deliberately
+ * NOT permission-supersets of one another in this catalog — e.g. SCHOOL_OWNER has
+ * no grades.write/attendance.write/discipline.write, those are TEACHER's job to
+ * perform directly — so a full-permission-subset check would wrongly block an
+ * owner from appointing a teacher. Only these institution-governance permissions
+ * need guarding against escalation.
+ */
+const GOVERNANCE_PERMISSION_CODES = new Set([
+  "tenant.settings.manage",
+  "finance.write",
+  "hr.manage",
+  "hr.salary.manage",
+  "subscriptions.manage",
+]);
+
+/**
+ * §17 : `tenant.settings.manage` gates *who can manage membership*, not *which
+ * privileges they can hand out* — without this check, any granter holding that one
+ * permission (e.g. SCHOOL_ADMIN) could invite or promote someone straight to
+ * SCHOOL_OWNER, picking up finance.write/hr.manage/hr.salary.manage/
+ * subscriptions.manage they themselves don't hold. A role is only grantable if it
+ * doesn't carry a governance permission the granter lacks.
+ */
+async function requireGrantableRole(role: Role, granterUserId: string, tenantId: string): Promise<void> {
+  const [targetPermissions, granterPermissions] = await Promise.all([
+    rawPrisma.rolePermission.findMany({
+      where: { roleId: role.id },
+      select: { permission: { select: { code: true } } },
+    }),
+    getEffectivePermissionCodes(granterUserId, tenantId),
+  ]);
+
+  const excessGovernancePermissions = targetPermissions
+    .map((rolePermission) => rolePermission.permission.code)
+    .filter((code) => GOVERNANCE_PERMISSION_CODES.has(code) && !granterPermissions.has(code));
+
+  if (excessGovernancePermissions.length > 0) {
+    throw new AppError(
+      403,
+      "ROLE_EXCEEDS_GRANTER_PERMISSIONS",
+      `Cannot grant role ${role.code}: it includes permissions you do not hold (${excessGovernancePermissions.join(", ")})`,
+    );
+  }
+}
+
+/**
  * Adds a member to the current tenant, creating their platform User account first
  * if one doesn't exist yet under that email. There is no email-delivery flow wired
  * up (same gap documented as a TODO on auth.service.ts's registerUser, §34) — a
  * freshly created account gets a random, unknown password and must go through
  * password reset before it can log in.
  */
-export async function inviteTenantUser(input: InviteTenantUserInput): Promise<TenantUserSummary> {
+export async function inviteTenantUser(
+  input: InviteTenantUserInput,
+  inviterUserId: string,
+): Promise<TenantUserSummary> {
   const tenantId = requireCurrentTenantId();
   const role = await requireTenantRole(input.roleCode);
+  await requireGrantableRole(role, inviterUserId, tenantId);
 
   const existingUser = await rawPrisma.user.findUnique({
     where: { email: input.email },
@@ -133,6 +186,7 @@ export async function grantTenantRole(userId: string, roleCode: string, actor: T
   const tenantId = requireCurrentTenantId();
   await requireMembership(userId);
   const role = await requireTenantRole(roleCode);
+  await requireGrantableRole(role, actor.actorUserId, tenantId);
 
   const existing = await rawPrisma.userRole.findUnique({
     where: { userId_roleId_tenantId: { userId, roleId: role.id, tenantId } },

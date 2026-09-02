@@ -12,7 +12,8 @@ import {
 export function inviteTenantUser(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = inviteTenantUserSchema.parse(req.body);
-    const summary = await tenantUserService.inviteTenantUser(input);
+    const actor = await resolveTenantActor(req);
+    const summary = await tenantUserService.inviteTenantUser(input, actor.actorUserId);
     res.status(201).json(summary);
   })().catch(next);
 }
