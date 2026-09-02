@@ -91,16 +91,32 @@ async function redeemPromotionCode(
     );
   }
 
+  // Atomic guard on redemptionCount < maxRedemptions prevents concurrent redemptions
+  // (e.g. two simultaneous signups) from all reading the count before any of them
+  // increments it, which would let a capped promotion code be over-redeemed.
+  const { count } = await tx.promotionCode.updateMany({
+    where: {
+      id: promotionCode.id,
+      ...(promotionCode.maxRedemptions !== null
+        ? { redemptionCount: { lt: promotionCode.maxRedemptions } }
+        : {}),
+    },
+    data: { redemptionCount: { increment: 1 } },
+  });
+  if (count === 0) {
+    throw new AppError(
+      409,
+      "PROMOTION_CODE_EXHAUSTED",
+      `Promotion code has reached its redemption limit: ${code}`,
+    );
+  }
+
   await tx.promotionRedemption.create({
     data: {
       promotionCodeId: promotionCode.id,
       subscriptionId,
       ...(redeemedByUserId ? { redeemedByUserId } : {}),
     },
-  });
-  await tx.promotionCode.update({
-    where: { id: promotionCode.id },
-    data: { redemptionCount: { increment: 1 } },
   });
 }
 

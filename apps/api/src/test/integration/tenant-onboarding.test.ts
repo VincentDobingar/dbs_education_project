@@ -250,6 +250,52 @@ describe("tenant onboarding (§14)", () => {
       expect((response.body as TestResponseBody).code).toBe("PROMOTION_CODE_EXHAUSTED");
     });
 
+    it("refuses to let two concurrent onboardings both redeem a maxRedemptions:1 code (increment must be atomic)", async () => {
+      // §31 : `redeemPromotionCode` gagnait le check `redemptionCount >= maxRedemptions`
+      // puis écrivait l'incrément dans un `update` séparé — deux onboardings concurrents
+      // avec le même code passaient tous deux le check avant que l'un des deux
+      // n'incrémente, dépassant le plafond de redemptions.
+      const promotionCode = await createPromotionCode({ maxRedemptions: 1, redemptionCount: 0 });
+      const userA = await createUser("founder-promo-race-a");
+      const userB = await createUser("founder-promo-race-b");
+      const tokenA = signAccessToken({ sub: userA.id });
+      const tokenB = signAccessToken({ sub: userB.id });
+      const payloadA = onboardingPayload({
+        planCode: "SCHOOL_ESSENTIAL",
+        billingPeriod: "MONTHLY",
+        promoCode: promotionCode.code,
+      });
+      const payloadB = onboardingPayload({
+        planCode: "SCHOOL_ESSENTIAL",
+        billingPeriod: "MONTHLY",
+        promoCode: promotionCode.code,
+      });
+
+      const [responseA, responseB] = await Promise.all([
+        request(app)
+          .post("/api/v1/tenants/onboarding")
+          .set("Authorization", `Bearer ${tokenA}`)
+          .send(payloadA),
+        request(app)
+          .post("/api/v1/tenants/onboarding")
+          .set("Authorization", `Bearer ${tokenB}`)
+          .send(payloadB),
+      ]);
+      for (const response of [responseA, responseB]) {
+        if (response.status === 201) {
+          createdTenantIds.push((response.body as { tenant: { id: string } }).tenant.id);
+        }
+      }
+
+      const statuses = [responseA.status, responseB.status].sort();
+      expect(statuses).toEqual([201, 409]);
+
+      const updatedCode = await testAdminPrisma.promotionCode.findUniqueOrThrow({
+        where: { id: promotionCode.id },
+      });
+      expect(updatedCode.redemptionCount).toBe(1);
+    });
+
     it("rejects a promo code submitted without a planCode", async () => {
       const user = await createUser("founder-promo-no-plan");
       const token = signAccessToken({ sub: user.id });
