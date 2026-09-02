@@ -5,13 +5,24 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import * as subscriptionService from "../../modules/subscriptions/subscription.service.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createStudent, createTenant, createUser, grantRole } from "../fixtures.js";
+import {
+  addMembership,
+  createStudent,
+  createTenant,
+  createUser,
+  createVerifiedRelationship,
+  grantRole,
+} from "../fixtures.js";
 
 describe("abonnement individuel de l'élève — libre-service (§26)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.tenantSetting.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.parentStudentRelationship.deleteMany({
+      where: { tenantId: { in: createdTenantIds } },
+    });
     await testAdminPrisma.receipt.deleteMany({
       where: {
         paymentTransaction: {
@@ -66,11 +77,12 @@ describe("abonnement individuel de l'élève — libre-service (§26)", () => {
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
-  async function setUpLinkedStudent(): Promise<{
+  async function setUpLinkedStudent(overrides: { dateOfBirth?: Date } = {}): Promise<{
     subdomain: string;
     adminToken: string;
     studentToken: string;
     studentId: string;
+    tenantId: string;
   }> {
     const { tenant, subdomain } = await createTenant("StudentSubTenant");
     createdTenantIds.push(tenant.id);
@@ -80,7 +92,7 @@ describe("abonnement individuel de l'élève — libre-service (§26)", () => {
     await grantRole(admin.id, "SCHOOL_OWNER", tenant.id);
     const adminToken = signAccessToken({ sub: admin.id });
 
-    const student = await createStudent(tenant.id, "STUSUB");
+    const student = await createStudent(tenant.id, "STUSUB", overrides);
     const studentUser = await createUser("stusub-student");
     const studentToken = signAccessToken({ sub: studentUser.id });
 
@@ -97,7 +109,7 @@ describe("abonnement individuel de l'élève — libre-service (§26)", () => {
       .send({ code });
     expect(redeemed.status).toBe(200);
 
-    return { subdomain, adminToken, studentToken, studentId: student.id };
+    return { subdomain, adminToken, studentToken, studentId: student.id, tenantId: tenant.id };
   }
 
   it("refuses an unlinked account, then subscribes, invoices, pays in cash, and cancels — never another student's", async () => {
@@ -243,5 +255,73 @@ describe("abonnement individuel de l'élève — libre-service (§26)", () => {
     expect(forgedBody.planId).toBe(realPlan.id);
     expect(forgedBody.fundingSource).toBe("SELF_PAID");
     expect(forgedBody.trialEndsAt).toBeNull();
+  });
+
+  function yearsAgo(years: number): Date {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - years);
+    return date;
+  }
+
+  // §16 : « pour les élèves mineurs, prévoir les règles de consentement ... selon
+  // les paramètres applicables » — requireMinorConsentForStudentSubscription.
+  describe("consentement parental pour un élève mineur (§16)", () => {
+    it("refuses a minor student with no verified parent, then succeeds once one exists", async () => {
+      const { subdomain, studentToken, studentId } = await setUpLinkedStudent({
+        dateOfBirth: yearsAgo(10),
+      });
+
+      const denied = await request(app)
+        .post(`/api/v1/subscriptions/student/${studentId}`)
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({ planCode: "STUDENT_BASIC", billingPeriod: "MONTHLY" });
+      expect(denied.status).toBe(403);
+      expect((denied.body as { code: string }).code).toBe("MINOR_CONSENT_REQUIRED");
+
+      const tenant = await testAdminPrisma.tenantDomain.findFirstOrThrow({ where: { subdomain } });
+      const parent = await createUser("stusub-minor-parent");
+      await createVerifiedRelationship(parent.id, studentId, tenant.tenantId);
+
+      const allowed = await request(app)
+        .post(`/api/v1/subscriptions/student/${studentId}`)
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({ planCode: "STUDENT_BASIC", billingPeriod: "MONTHLY" });
+      expect(allowed.status).toBe(201);
+    });
+
+    it("does not gate an adult student or a student with no dateOfBirth on file", async () => {
+      const adult = await setUpLinkedStudent({ dateOfBirth: yearsAgo(25) });
+      const adultAllowed = await request(app)
+        .post(`/api/v1/subscriptions/student/${adult.studentId}`)
+        .set("Authorization", `Bearer ${adult.studentToken}`)
+        .send({ planCode: "STUDENT_BASIC", billingPeriod: "MONTHLY" });
+      expect(adultAllowed.status).toBe(201);
+
+      const unknownDob = await setUpLinkedStudent();
+      const unknownDobAllowed = await request(app)
+        .post(`/api/v1/subscriptions/student/${unknownDob.studentId}`)
+        .set("Authorization", `Bearer ${unknownDob.studentToken}`)
+        .send({ planCode: "STUDENT_BASIC", billingPeriod: "MONTHLY" });
+      expect(unknownDobAllowed.status).toBe(201);
+    });
+
+    it("does not gate a minor when the tenant has disabled the setting", async () => {
+      const { subdomain, adminToken, studentToken, studentId } = await setUpLinkedStudent({
+        dateOfBirth: yearsAgo(10),
+      });
+
+      const disabled = await request(app)
+        .put("/api/v1/school-config/minor-consent-setting")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ enabled: false, majorityAge: 18 });
+      expect(disabled.status).toBe(200);
+
+      const allowed = await request(app)
+        .post(`/api/v1/subscriptions/student/${studentId}`)
+        .set("Authorization", `Bearer ${studentToken}`)
+        .send({ planCode: "STUDENT_BASIC", billingPeriod: "MONTHLY" });
+      expect(allowed.status).toBe(201);
+    });
   });
 });

@@ -295,6 +295,8 @@ export function createStudentSubscription(req: Request, res: Response, next: Nex
     const studentId = req.params.studentId as string;
     const input = createStudentSubscriptionSchema.parse(req.body);
 
+    await subscriptionService.requireMinorConsentForStudentSubscription(studentId);
+
     const subscription = await subscriptionService.createDraftSubscription({
       ownerType: "STUDENT",
       ownerRef: { studentId },

@@ -7,7 +7,9 @@ import type {
 } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
-import { prisma, type PrismaTransactionClient } from "../../lib/prisma.js";
+import { prisma, rawPrisma, withTenantSession, type PrismaTransactionClient } from "../../lib/prisma.js";
+import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { getMinorConsentSetting } from "../school-config/minor-consent-setting.service.js";
 
 import {
   ACTIVE_LIKE_STATUSES,
@@ -212,6 +214,54 @@ export async function createDraftSubscriptionInTx(
   }
 
   return subscription;
+}
+
+function ageInYears(dateOfBirth: Date, now: Date): number {
+  let age = now.getFullYear() - dateOfBirth.getFullYear();
+  const beforeBirthdayThisYear =
+    now.getMonth() < dateOfBirth.getMonth() ||
+    (now.getMonth() === dateOfBirth.getMonth() && now.getDate() < dateOfBirth.getDate());
+  if (beforeBirthdayThisYear) {
+    age -= 1;
+  }
+  return age;
+}
+
+/**
+ * §16 : « pour les élèves mineurs, prévoir les règles de consentement ... selon les
+ * paramètres applicables » — gates only the STUDENT self-service subscription
+ * pipeline's creation step (the "choix du plan" step, before "paiement"), per the
+ * TenantSetting resolved by minor-consent-setting.service.ts. A verified,
+ * non-revoked ParentStudentRelationship already linking a parent to this student
+ * (§8) counts as consent — no separate confirmation action, since the parent chose
+ * to establish that link in the first place. `dateOfBirth` is optional on Student;
+ * unknown birth date can't prove minority, so it is never gated (a false negative
+ * here is a data-completeness gap, not a bypass of an actually-known rule).
+ */
+export async function requireMinorConsentForStudentSubscription(studentId: string): Promise<void> {
+  const tenantId = requireCurrentTenantId();
+  const setting = await getMinorConsentSetting(tenantId);
+  if (!setting.enabled) {
+    return;
+  }
+
+  const student = await withTenantSession(tenantId, (tx) =>
+    tx.student.findUnique({ where: { id: studentId }, select: { dateOfBirth: true } }),
+  );
+  if (!student?.dateOfBirth || ageInYears(student.dateOfBirth, new Date()) >= setting.majorityAge) {
+    return;
+  }
+
+  const verifiedParentLink = await rawPrisma.parentStudentRelationship.findFirst({
+    where: { tenantId, studentId, status: "VERIFIED", revokedAt: null },
+  });
+  if (!verifiedParentLink) {
+    throw new AppError(
+      403,
+      "MINOR_CONSENT_REQUIRED",
+      "A verified parent/guardian relationship is required before a minor student can subscribe",
+    );
+  }
 }
 
 export async function createDraftSubscription(input: CreateDraftSubscriptionInput): Promise<Subscription> {

@@ -9,6 +9,7 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 import * as academicStructureController from "./academic-structure.controller.js";
 import * as academicYearController from "./academic-year.controller.js";
 import * as campusController from "./campus.controller.js";
+import * as minorConsentSettingController from "./minor-consent-setting.controller.js";
 import * as programController from "./program.controller.js";
 import * as subjectCoefficientController from "./subject-coefficient.controller.js";
 import * as subjectController from "./subject.controller.js";
@@ -101,4 +102,14 @@ schoolConfigRouter.delete(
   "/timetables/:id/entries/:entryId",
   manageSettings,
   timetableController.removeTimetableEntry,
+);
+
+// §16 : seuil de majorité/activation du consentement parental requis pour
+// l'abonnement individuel d'un élève — lu par la garde du pipeline
+// /subscriptions/student/:studentId (subscription.controller.ts).
+schoolConfigRouter.get("/minor-consent-setting", minorConsentSettingController.getMinorConsentSetting);
+schoolConfigRouter.put(
+  "/minor-consent-setting",
+  manageSettings,
+  minorConsentSettingController.updateMinorConsentSetting,
 );

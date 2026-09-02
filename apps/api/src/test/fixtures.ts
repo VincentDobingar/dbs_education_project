@@ -75,7 +75,11 @@ export async function grantRole(
   });
 }
 
-export async function createStudent(tenantId: string, matriculePrefix = "MAT") {
+export async function createStudent(
+  tenantId: string,
+  matriculePrefix = "MAT",
+  overrides: { dateOfBirth?: Date } = {},
+) {
   return testAdminPrisma.student.create({
     data: {
       tenantId,
@@ -83,6 +87,7 @@ export async function createStudent(tenantId: string, matriculePrefix = "MAT") {
       firstName: "Eleve",
       lastName: "Test",
       status: "ACTIVE",
+      ...overrides,
     },
   });
 }

@@ -11,6 +11,7 @@ describe("school configuration (§20)", () => {
   const createdTenantIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.tenantSetting.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.educationCycle.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -217,5 +218,46 @@ describe("school configuration (§20)", () => {
         departmentId: "unknown-department",
       });
     expect(badSubject.status).toBe(404);
+  });
+
+  // §16 : seuil de majorité/activation du consentement parental, configurable par
+  // tenant sans migration (TenantSetting) — lu par requireMinorConsentForStudentSubscription.
+  it("reads the default minor-consent setting, lets a SCHOOL_ADMIN update it, but refuses a TEACHER", async () => {
+    const { subdomain, adminToken, teacherToken } = await setUpTenantWithAdmin();
+
+    const initial = await request(app)
+      .get("/api/v1/school-config/minor-consent-setting")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(initial.status).toBe(200);
+    expect(initial.body).toEqual({ enabled: true, majorityAge: 18 });
+
+    const deniedUpdate = await request(app)
+      .put("/api/v1/school-config/minor-consent-setting")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ enabled: false, majorityAge: 18 });
+    expect(deniedUpdate.status).toBe(403);
+
+    const invalidAge = await request(app)
+      .put("/api/v1/school-config/minor-consent-setting")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ enabled: true, majorityAge: 0 });
+    expect(invalidAge.status).toBe(400);
+
+    const updated = await request(app)
+      .put("/api/v1/school-config/minor-consent-setting")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ enabled: true, majorityAge: 21 });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toEqual({ enabled: true, majorityAge: 21 });
+
+    const afterUpdate = await request(app)
+      .get("/api/v1/school-config/minor-consent-setting")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(afterUpdate.body).toEqual({ enabled: true, majorityAge: 21 });
   });
 });
