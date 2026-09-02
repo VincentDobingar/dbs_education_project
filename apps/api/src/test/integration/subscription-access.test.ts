@@ -335,6 +335,31 @@ describe("requireActiveSubscription / requireEntitlement", () => {
       expect((second.body as TestResponseBody).code).toBe("QUOTA_EXCEEDED");
     });
 
+    // §37 : deux appels concurrents ne doivent jamais tous deux consommer le dernier
+    // crédit de quota — le findUnique+update séparé laissait passer les deux avant
+    // que l'incrément n'ait été écrit (même forme TOCTOU que le refresh token/code
+    // promo/code de secours MFA déjà corrigés).
+    it("refuses to let two concurrent calls both consume the last unit of quota", async () => {
+      const studentId = await newStudent();
+      const subscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
+      const entitlement = await grantEntitlement(subscription.id, "report_card.download", {
+        quotaLimit: 1,
+        quotaUsed: 0,
+      });
+
+      const [raceA, raceB] = await Promise.all([
+        request(app).get(`/protected/${studentId}`),
+        request(app).get(`/protected/${studentId}`),
+      ]);
+      const raceStatuses = [raceA.status, raceB.status].sort();
+      expect(raceStatuses).toEqual([200, 403]);
+
+      const afterRace = await testAdminPrisma.entitlement.findUniqueOrThrow({
+        where: { id: entitlement.id },
+      });
+      expect(afterRace.quotaUsed).toBe(1);
+    });
+
     // §6/§37 : « les quotas sont respectés » suppose qu'ils se rechargent à chaque
     // nouvelle période payée — recalculateEntitlements ne remettait jamais quotaUsed
     // à zéro, un quota épuisé restait donc épuisé à vie même après un renouvellement

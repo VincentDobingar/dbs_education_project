@@ -54,12 +54,19 @@ export function requireEntitlement(
       // §37 : "les quotas sont respectés" — compte cet appel comme une consommation
       // réelle, jamais un compteur qui ne bouge jamais. Seules les fonctionnalités
       // plafonnées sont comptées (quotaLimit non nul) ; une fonctionnalité illimitée
-      // n'a rien à mesurer ici.
+      // n'a rien à mesurer ici. Le garde `quotaUsed: { lt: quotaLimit }` sur l'update
+      // (au lieu du seul id) rend l'incrément atomique : deux appels concurrents ne
+      // peuvent pas tous deux passer le check ci-dessus puis tous deux consommer le
+      // dernier crédit de quota.
       if (entitlement.quotaLimit !== null) {
-        await prisma.entitlement.update({
-          where: { id: entitlement.id },
+        const { count } = await prisma.entitlement.updateMany({
+          where: { id: entitlement.id, quotaUsed: { lt: entitlement.quotaLimit } },
           data: { quotaUsed: { increment: 1 } },
         });
+        if (count === 0) {
+          res.status(403).json({ code: "QUOTA_EXCEEDED", message: `Quota exceeded for: ${featureCode}` });
+          return;
+        }
       }
 
       next();
