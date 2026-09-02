@@ -166,19 +166,6 @@ export async function refundStudentPayment(
 ): Promise<StudentPaymentRefund> {
   const payment = await requireStudentPayment(paymentId);
 
-  const existingRefunds = await prisma.studentPaymentRefund.findMany({
-    where: { studentPaymentId: paymentId },
-  });
-  const alreadyRefundedCents = existingRefunds.reduce((sum, refund) => sum + refund.amountCents, 0);
-  const refundableCents = payment.amountCents - alreadyRefundedCents;
-  if (input.amountCents > refundableCents) {
-    throw new AppError(
-      400,
-      "REFUND_EXCEEDS_PAYMENT",
-      `Refund of ${input.amountCents} exceeds the refundable amount of ${refundableCents}`,
-    );
-  }
-
   const refundedByEmployeeId = await resolveActingEmployeeId(actor.actorUserId);
   if (!refundedByEmployeeId) {
     throw new AppError(
@@ -191,6 +178,26 @@ export async function refundStudentPayment(
   const tenantId = requireCurrentTenantId();
 
   const refund = await withTenantSession(tenantId, async (tx) => {
+    // Lock the payment row so two concurrent refund requests on the same payment
+    // serialize instead of both reading `alreadyRefundedCents` from before either
+    // commits and both passing the refundable-amount check below (TOCTOU that would
+    // otherwise let a payment be refunded more than once, same shape already fixed
+    // for consumeMfaRecoveryCode/refresh/redeemPromotionCode).
+    await tx.$queryRaw`SELECT id FROM "StudentPayment" WHERE id = ${paymentId} FOR UPDATE`;
+
+    const existingRefunds = await tx.studentPaymentRefund.findMany({
+      where: { studentPaymentId: paymentId },
+    });
+    const alreadyRefundedCents = existingRefunds.reduce((sum, r) => sum + r.amountCents, 0);
+    const refundableCents = payment.amountCents - alreadyRefundedCents;
+    if (input.amountCents > refundableCents) {
+      throw new AppError(
+        400,
+        "REFUND_EXCEEDS_PAYMENT",
+        `Refund of ${input.amountCents} exceeds the refundable amount of ${refundableCents}`,
+      );
+    }
+
     const created = await tx.studentPaymentRefund.create({
       data: {
         tenantId,

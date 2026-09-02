@@ -185,6 +185,97 @@ describe("remboursements et situation financière (§23)", () => {
     expect(receiptPdfAfterFullRefund.status).toBe(200);
   }, 20000);
 
+  it("refuse de laisser deux remboursements concurrents rembourser deux fois le même paiement", async () => {
+    // §23 : refundStudentPayment lisait alreadyRefundedCents hors transaction puis
+    // créait le remboursement sans jamais reverifier ce total sous verrou — deux
+    // requêtes concurrentes sur le même paiement passaient toutes deux le contrôle
+    // "montant remboursable" avant que l'une des deux n'écrive son remboursement.
+    const { tenant, subdomain } = await createTenant("RefundRaceTenant");
+    createdTenantIds.push(tenant.id);
+
+    const agent = await createUser("refund-race-agent");
+    await addMembership(agent.id, tenant.id);
+    await grantRole(agent.id, "SCHOOL_OWNER", tenant.id);
+    const agentToken = signAccessToken({ sub: agent.id });
+
+    await request(app)
+      .post("/api/v1/employees")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        employeeNumber: `EMP-${uniqueSuffix()}`,
+        firstName: "Fatou",
+        lastName: "Diallo",
+        jobTitle: "Agent comptable",
+        userId: agent.id,
+      });
+
+    const year = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+    const academicYearId = (year.body as { id: string }).id;
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Ismael", lastName: "Sow" });
+    const studentId = (student.body as { id: string }).id;
+
+    const invoice = await request(app)
+      .post("/api/v1/finance/student-invoices")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        studentId,
+        academicYearId,
+        items: [{ description: "Scolarité annuelle", amountCents: 100_000 }],
+      });
+    const invoiceId = (invoice.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/issue`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
+
+    const payment = await request(app)
+      .post(`/api/v1/finance/student-invoices/${invoiceId}/payments`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ amountCents: 100_000 });
+    const paymentId = (payment.body as { id: string }).id;
+
+    const [raceA, raceB] = await Promise.all([
+      request(app)
+        .post(`/api/v1/finance/payments/${paymentId}/refunds`)
+        .set("Authorization", `Bearer ${agentToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ amountCents: 100_000, reason: "Remboursement A" }),
+      request(app)
+        .post(`/api/v1/finance/payments/${paymentId}/refunds`)
+        .set("Authorization", `Bearer ${agentToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ amountCents: 100_000, reason: "Remboursement B" }),
+    ]);
+    const raceStatuses = [raceA.status, raceB.status].sort();
+    expect(raceStatuses).toEqual([201, 400]);
+
+    const totalRefunded = await testAdminPrisma.studentPaymentRefund.aggregate({
+      where: { studentPaymentId: paymentId },
+      _sum: { amountCents: true },
+    });
+    expect(totalRefunded._sum.amountCents).toBe(100_000);
+
+    const invoiceAfterRace = await request(app)
+      .get(`/api/v1/finance/student-invoices/${invoiceId}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect((invoiceAfterRace.body as { paidCents: number }).paidCents).toBe(0);
+  }, 20000);
+
   it("calcule la situation financière consolidée et les impayés d'un élève", async () => {
     const { tenant, subdomain } = await createTenant("SituationTenant");
     createdTenantIds.push(tenant.id);
