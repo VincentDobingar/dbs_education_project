@@ -74,6 +74,28 @@ describe("appareils connectés et révocation de session (§15/§34)", () => {
     expect((afterRevoke.body as SessionEntry[])[0]?.userAgent).toBe("Mobile App");
   });
 
+  it("refuses to redeem the same refresh token twice concurrently (rotation must be atomic)", async () => {
+    // §34 : la rotation doit être un `updateMany` gardé par `revokedAt: null` — sinon
+    // deux requêtes /refresh concurrentes avec le même token passent toutes les deux
+    // le check "non révoqué" avant que l'une des deux marque le token comme révoqué,
+    // produisant deux sessions valides à partir d'un seul token à usage unique.
+    const user = await createUser("refresh-race");
+    createdUserIds.push(user.id);
+
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: user.email, password: PASSWORD });
+    expect(login.status).toBe(200);
+    const { refreshToken } = login.body as { refreshToken: string };
+
+    const [raceA, raceB] = await Promise.all([
+      request(app).post("/api/v1/auth/refresh").send({ refreshToken }),
+      request(app).post("/api/v1/auth/refresh").send({ refreshToken }),
+    ]);
+    const raceStatuses = [raceA.status, raceB.status].sort();
+    expect(raceStatuses).toEqual([200, 401]);
+  });
+
   it("refuses to revoke another user's session (never confirms it exists)", async () => {
     const owner = await createUser("sessions-victim");
     const attacker = await createUser("sessions-attacker");

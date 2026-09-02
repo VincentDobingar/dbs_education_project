@@ -309,10 +309,15 @@ export async function refresh(refreshToken: string): Promise<AuthTokens> {
   }
 
   // Rotation (§34): the used token is revoked immediately, a brand new one is issued.
-  await prisma.session.update({
-    where: { id: session.id },
+  // Atomic guard on revokedAt: null prevents two concurrent refreshes of the same
+  // token from both passing the check above and each minting a valid session.
+  const { count } = await prisma.session.updateMany({
+    where: { id: session.id, revokedAt: null },
     data: { revokedAt: new Date(), revokedReason: "ROTATED" },
   });
+  if (count === 0) {
+    throw new AppError(401, "INVALID_REFRESH_TOKEN", "Refresh token is invalid or expired");
+  }
 
   return createSession(session.userId, {
     ...(session.userAgent ? { userAgent: session.userAgent } : {}),
