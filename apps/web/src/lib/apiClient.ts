@@ -16,6 +16,10 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   accessToken?: string;
+  // Dev-only stand-in for real wildcard-subdomain DNS (see enforceTenantScope.ts
+  // on the API side) — every tenant-scoped route needs this until the app is
+  // actually served from each school's own subdomain.
+  subdomain?: string;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -24,6 +28,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers: {
       "Content-Type": "application/json",
       ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
+      ...(options.subdomain ? { "X-Tenant-Slug": options.subdomain } : {}),
     },
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });

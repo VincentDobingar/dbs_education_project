@@ -113,7 +113,9 @@
   "signup.review.title": "Vérifiez vos informations",
   "signup.success.title": "Votre espace a été créé",
   "signup.success.subtitle": "Votre établissement est en attente de vérification. Vous pouvez déjà vous connecter à votre espace.",
+  "signup.success.login": "Se connecter à mon espace",
   "signup.error.subdomainTaken": "Ce sous-domaine est déjà utilisé, choisissez-en un autre.",
   "signup.error.promoCodeInvalid": "Ce code promo n'est pas valide, a expiré, ou ne s'applique pas à cette formule.",
+  "signup.error.emailTakenWrongPassword": "Un compte existe déjà avec cet email, mais le mot de passe saisi ne correspond pas. Connectez-vous avec le mot de passe d'origine ou utilisez une autre adresse email.",
   "signup.error.generic": "Une erreur est survenue. Merci de réessayer."
 }

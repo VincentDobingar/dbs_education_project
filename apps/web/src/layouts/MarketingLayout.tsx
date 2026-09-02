@@ -40,6 +40,12 @@ export function MarketingLayout(): ReactNode {
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <Link
+              to="/connexion"
+              className="text-sm font-medium text-white/80 transition-colors hover:text-white"
+            >
+              {t("nav.login")}
+            </Link>
+            <Link
               to="/inscription"
               className="rounded-md bg-brand-teal px-4 py-2 text-sm font-medium text-brand-night transition-colors hover:brightness-110"
             >

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 
 import { login, onboardTenant, registerAccount, verifyEmail } from "../../lib/api.js";
@@ -89,18 +90,29 @@ export function SignupPage(): ReactNode {
   const onSubmit = handleSubmit(async (formValues) => {
     setSubmitError(null);
     try {
-      const registered = await registerAccount({
-        email: formValues.email,
-        password: formValues.password,
-        firstName: formValues.firstName,
-        lastName: formValues.lastName,
-      });
-      // Le compte démarre PENDING (§34, vérification email obligatoire) — login le
-      // refuserait sinon. Aucun fournisseur email réel n'étant branché par défaut, le
-      // jeton renvoyé par l'inscription est consommé immédiatement plutôt que
-      // d'attendre un email qui ne partira jamais.
-      await verifyEmail(registered.emailVerificationToken);
-      const tokens = await login(formValues.email, formValues.password);
+      let accessToken: string;
+      try {
+        const registered = await registerAccount({
+          email: formValues.email,
+          password: formValues.password,
+          firstName: formValues.firstName,
+          lastName: formValues.lastName,
+        });
+        // Le compte démarre PENDING (§34, vérification email obligatoire) — login le
+        // refuserait sinon. Aucun fournisseur email réel n'étant branché par défaut, le
+        // jeton renvoyé par l'inscription est consommé immédiatement plutôt que
+        // d'attendre un email qui ne partira jamais.
+        await verifyEmail(registered.emailVerificationToken);
+        accessToken = (await login(formValues.email, formValues.password)).accessToken;
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.code !== "EMAIL_ALREADY_REGISTERED") {
+          throw error;
+        }
+        // Une soumission précédente a déjà créé ce compte (retry après une coupure
+        // réseau, ou double clic) — on ne bloque pas sur une inscription en double,
+        // on se reconnecte simplement avec les identifiants déjà fournis.
+        accessToken = (await login(formValues.email, formValues.password)).accessToken;
+      }
       const onboarded = await onboardTenant(
         {
           name: formValues.schoolName,
@@ -112,7 +124,7 @@ export function SignupPage(): ReactNode {
           ...(formValues.planCode ? { planCode: formValues.planCode, billingPeriod: "MONTHLY" } : {}),
           ...(formValues.planCode && formValues.promoCode ? { promoCode: formValues.promoCode } : {}),
         },
-        tokens.accessToken,
+        accessToken,
       );
       setResult({ subdomain: onboarded.subdomain });
     } catch (error) {
@@ -124,6 +136,13 @@ export function SignupPage(): ReactNode {
       if (error instanceof ApiError && error.code.startsWith("PROMOTION_CODE_")) {
         setSubmitError(t("signup.error.promoCodeInvalid"));
         setStep(2);
+        return;
+      }
+      if (error instanceof ApiError && error.code === "INVALID_CREDENTIALS") {
+        // Ne peut venir que du login() de repli après EMAIL_ALREADY_REGISTERED (§34) :
+        // ce compte existe déjà mais avec un autre mot de passe que celui saisi ici.
+        setSubmitError(t("signup.error.emailTakenWrongPassword"));
+        setStep(0);
         return;
       }
       setSubmitError(t("signup.error.generic"));
@@ -138,6 +157,12 @@ export function SignupPage(): ReactNode {
         <p className="mt-6 rounded-md bg-slate-100 p-4 font-mono text-sm text-slate-700">
           {result.subdomain}.edumanage.africa
         </p>
+        <Link
+          to="/connexion"
+          className="mt-6 inline-block rounded-md bg-teal-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-400"
+        >
+          {t("signup.success.login")}
+        </Link>
       </div>
     );
   }
@@ -153,6 +178,8 @@ export function SignupPage(): ReactNode {
           </li>
         ))}
       </ol>
+
+      {submitError ? <p className="mt-4 text-sm text-red-600">{submitError}</p> : null}
 
       <form onSubmit={(event) => void onSubmit(event)} className="mt-8 space-y-4" noValidate>
         {step === 0 ? (
@@ -235,7 +262,6 @@ export function SignupPage(): ReactNode {
               {values.schoolName} ({selectedCountry.nameFr})
             </p>
             <p>{values.subdomain}.edumanage.africa</p>
-            {submitError ? <p className="text-red-600">{submitError}</p> : null}
           </div>
         ) : null}
 
@@ -253,7 +279,17 @@ export function SignupPage(): ReactNode {
               {t("signup.next")}
             </Button>
           ) : (
-            <Button type="submit" variant="secondary" disabled={isSubmitting}>
+            // type="button" + explicit onSubmit() call, not type="submit": the step-2
+            // "Continuer" button occupies this exact same flex-slot position, and React
+            // reconciles it into the very same <button> DOM node when step advances to 3
+            // rather than mounting a new one. If that button were type="submit", the
+            // browser resolves the native click-to-submit default action against the
+            // node's CURRENT (post-render) type — so a single click advancing step 2->3
+            // could flip the element to type="submit" synchronously during that same
+            // click and silently auto-submit the form before the user ever saw the
+            // review step. Keeping this button type="button" everywhere removes the only
+            // path a click on it could submit natively.
+            <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => void onSubmit()}>
               {isSubmitting ? t("signup.submitting") : t("signup.submit")}
             </Button>
           )}

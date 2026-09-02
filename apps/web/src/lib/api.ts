@@ -55,3 +55,60 @@ export interface OnboardTenantResult {
 export function onboardTenant(input: OnboardTenantInput, accessToken: string): Promise<OnboardTenantResult> {
   return apiRequest("/tenants/onboarding", { method: "POST", body: input, accessToken });
 }
+
+export interface CurrentUserTenantMembership {
+  tenantId: string;
+  tenantName: string;
+  subdomain: string;
+  roleCodes: string[];
+}
+
+export interface CurrentUserProfile {
+  id: string;
+  email: string;
+  tenantMemberships: CurrentUserTenantMembership[];
+}
+
+export function getCurrentUser(accessToken: string): Promise<CurrentUserProfile> {
+  return apiRequest("/auth/me", { accessToken });
+}
+
+export interface DirectionDashboard {
+  windowDays: number;
+  students: {
+    total: number;
+    byStatus: Record<string, number>;
+    byGender: { gender: string; count: number }[];
+    byClassroom: { classroomId: string; classroomName: string; count: number }[];
+    recentEnrollments: number;
+  };
+  staff: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  attendance: {
+    presentCount: number;
+    totalCount: number;
+    presenceRate: number | null;
+  };
+  academics: {
+    reportCardCount: number;
+    averageScore: number | null;
+  };
+  finance: {
+    totalInvoicedCents: number;
+    totalPaidCents: number;
+    outstandingCents: number;
+    overdueInvoiceCount: number;
+    overdueCents: number;
+    recentRevenueCents: number;
+    recentExpensesCents: number;
+  };
+  discipline: {
+    recentIncidentCount: number;
+  };
+}
+
+export function getDirectionDashboard(accessToken: string, subdomain: string): Promise<DirectionDashboard> {
+  return apiRequest("/dashboard/direction", { accessToken, subdomain });
+}
