@@ -12,6 +12,13 @@ export class ApiError extends Error {
   }
 }
 
+// Shared by every tenant-scoped API call (school-config, students, ...) so callers
+// pass one object instead of two positional args at each call site.
+export interface TenantCredentials {
+  accessToken: string;
+  subdomain: string;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;

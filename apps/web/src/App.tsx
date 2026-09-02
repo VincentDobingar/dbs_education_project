@@ -4,8 +4,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
+import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
 import { DashboardPage } from "./pages/app/DashboardPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
+import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
+import { StudentsPage } from "./pages/app/StudentsPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
 import { HomePage } from "./pages/marketing/HomePage.js";
 import { PricingPage } from "./pages/marketing/PricingPage.js";
@@ -34,6 +37,9 @@ export function App(): ReactNode {
 
           <Route element={<AppLayout />}>
             <Route path="/tableau-de-bord" element={<DashboardPage />} />
+            <Route path="/configuration" element={<ConfigurationPage />} />
+            <Route path="/eleves" element={<StudentsPage />} />
+            <Route path="/eleves/:id" element={<StudentDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,8 +1,18 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, Outlet } from "react-router-dom";
+import { NavLink, Navigate, Outlet } from "react-router-dom";
 
 import { clearSession, loadSession } from "../lib/session.js";
+
+const NAV_LINKS = [
+  { to: "/tableau-de-bord", key: "layout.nav.dashboard" },
+  { to: "/eleves", key: "layout.nav.students" },
+  { to: "/configuration", key: "layout.nav.configuration" },
+] as const;
+
+function navLinkClassName({ isActive }: { isActive: boolean }): string {
+  return `text-sm font-medium transition-colors ${isActive ? "text-brand-teal" : "text-white/70 hover:text-white"}`;
+}
 
 export function AppLayout(): ReactNode {
   const { t } = useTranslation("app");
@@ -25,6 +35,15 @@ export function AppLayout(): ReactNode {
             <p className="text-sm font-semibold text-white">{session.tenantName}</p>
             <p className="text-xs text-white/60">{session.email}</p>
           </div>
+
+          <nav className="hidden items-center gap-6 md:flex">
+            {NAV_LINKS.map((link) => (
+              <NavLink key={link.to} to={link.to} className={navLinkClassName}>
+                {t(link.key)}
+              </NavLink>
+            ))}
+          </nav>
+
           <button
             type="button"
             onClick={handleLogout}
