@@ -5,7 +5,14 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { rawPrisma } from "../../lib/prisma.js";
 import { testAdminPrisma } from "../admin-client.js";
-import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import {
+  addMembership,
+  createTenant,
+  createUser,
+  createVerifiedRelationship,
+  grantRole,
+  uniqueSuffix,
+} from "../fixtures.js";
 
 describe("transferts inter-établissements (§10, §19)", () => {
   const app = createApp();
@@ -16,6 +23,11 @@ describe("transferts inter-établissements (§10, §19)", () => {
       where: { OR: [{ fromTenantId: { in: tenantIds } }, { toTenantId: { in: tenantIds } }] },
     });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.educationCycle.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.academicYear.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.campus.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -40,6 +52,55 @@ describe("transferts inter-établissements (§10, §19)", () => {
       subdomain,
       ownerToken: signAccessToken({ sub: owner.id }),
       teacherToken: signAccessToken({ sub: teacher.id }),
+    };
+  }
+
+  /** Builds one campus/academic-year/cycle/grade-level/classroom chain via the school-config API. */
+  async function setUpClassroom(
+    subdomain: string,
+    ownerToken: string,
+  ): Promise<{ academicYearId: string; campusId: string; gradeLevelId: string; classroomId: string }> {
+    const campus = await request(app)
+      .post("/api/v1/school-config/campuses")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: "Campus principal", code: `CP-${uniqueSuffix()}` });
+
+    const year = await request(app)
+      .post("/api/v1/school-config/academic-years")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+
+    const cycle = await request(app)
+      .post("/api/v1/school-config/education-cycles")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `CYC-${uniqueSuffix()}`, nameFr: "Collège", nameEn: "Middle school", order: 1 });
+
+    const gradeLevel = await request(app)
+      .post(`/api/v1/school-config/education-cycles/${(cycle.body as { id: string }).id}/grade-levels`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `6EME-${uniqueSuffix()}`, nameFr: "6ème", nameEn: "Grade 6", order: 1 });
+
+    const classroom = await request(app)
+      .post("/api/v1/school-config/classrooms")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        name: `6e A ${uniqueSuffix()}`,
+        academicYearId: (year.body as { id: string }).id,
+        campusId: (campus.body as { id: string }).id,
+        gradeLevelId: (gradeLevel.body as { id: string }).id,
+        capacity: 40,
+      });
+
+    return {
+      academicYearId: (year.body as { id: string }).id,
+      campusId: (campus.body as { id: string }).id,
+      gradeLevelId: (gradeLevel.body as { id: string }).id,
+      classroomId: (classroom.body as { id: string }).id,
     };
   }
 
@@ -154,6 +215,85 @@ describe("transferts inter-établissements (§10, §19)", () => {
       .set("Authorization", `Bearer ${source.ownerToken}`)
       .set("X-Tenant-Slug", source.subdomain);
     expect((sourceAfter.body as { status: string }).status).toBe("TRANSFERRED");
+  });
+
+  // §10 : completing a transfer used to only mark the source Student TRANSFERRED —
+  // the family's Enrollment/ParentStudentRelationship/StudentUserLink at the source
+  // kept looking live forever, a dangling-access gap identified during the §1-§41
+  // coverage audit (docs/architecture.md). This proves the cascade closes it.
+  it("revokes the source-tenant Enrollment/ParentStudentRelationship/StudentUserLink when a transfer completes", async () => {
+    const source = await setUpTenantWithOwnerAndTeacher("SrcE");
+    const destination = await setUpTenantWithOwnerAndTeacher("DstE");
+    const studentId = await createStudentIn(source.subdomain, source.ownerToken);
+    const { academicYearId, campusId, gradeLevelId, classroomId } = await setUpClassroom(
+      source.subdomain,
+      source.ownerToken,
+    );
+
+    const enrolled = await request(app)
+      .post(`/api/v1/students/${studentId}/enrollments`)
+      .set("Authorization", `Bearer ${source.ownerToken}`)
+      .set("X-Tenant-Slug", source.subdomain)
+      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+    expect(enrolled.status).toBe(201);
+    const enrollmentId = (enrolled.body as { id: string }).id;
+
+    const sourceDomain = await testAdminPrisma.tenantDomain.findFirstOrThrow({
+      where: { subdomain: source.subdomain },
+    });
+    const sourceTenantId = sourceDomain.tenantId;
+
+    const parent = await createUser("srcE-parent");
+    const relationship = await createVerifiedRelationship(parent.id, studentId, sourceTenantId);
+
+    const studentUser = await createUser("srcE-student-account");
+    await testAdminPrisma.studentUserLink.create({
+      data: { tenantId: sourceTenantId, studentId, userId: studentUser.id },
+    });
+
+    const requested = await request(app)
+      .post("/api/v1/student-transfers")
+      .set("Authorization", `Bearer ${source.ownerToken}`)
+      .set("X-Tenant-Slug", source.subdomain)
+      .send({ studentId, toTenantSubdomain: destination.subdomain });
+    const transferId = (requested.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/student-transfers/${transferId}/approve`)
+      .set("Authorization", `Bearer ${destination.ownerToken}`)
+      .set("X-Tenant-Slug", destination.subdomain)
+      .send();
+
+    const completed = await request(app)
+      .post(`/api/v1/student-transfers/${transferId}/complete`)
+      .set("Authorization", `Bearer ${source.ownerToken}`)
+      .set("X-Tenant-Slug", source.subdomain)
+      .send({ matricule: `NEW-${uniqueSuffix()}` });
+    expect(completed.status).toBe(200);
+
+    const enrollmentAfter = await testAdminPrisma.enrollment.findUniqueOrThrow({
+      where: { id: enrollmentId },
+    });
+    expect(enrollmentAfter.status).toBe("TRANSFERRED_OUT");
+    expect(enrollmentAfter.withdrawnAt).not.toBeNull();
+
+    const relationshipAfter = await testAdminPrisma.parentStudentRelationship.findUniqueOrThrow({
+      where: { id: relationship.id },
+    });
+    expect(relationshipAfter.status).toBe("REVOKED");
+    expect(relationshipAfter.revokedAt).not.toBeNull();
+    expect(relationshipAfter.revokedReason).toBeTruthy();
+
+    const linkAfter = await testAdminPrisma.studentUserLink.findUnique({ where: { studentId } });
+    expect(linkAfter).toBeNull();
+
+    // The revocation is real, not just a database flag: the parent can no longer
+    // reach this specific child through the portal.
+    const parentDashboard = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/attendance`)
+      .set("Authorization", `Bearer ${signAccessToken({ sub: parent.id })}`)
+      .set("X-Tenant-Slug", source.subdomain);
+    expect(parentDashboard.status).toBe(403);
   });
 
   it("rejects a transfer request to the same tenant, an unknown destination, and a duplicate pending request", async () => {

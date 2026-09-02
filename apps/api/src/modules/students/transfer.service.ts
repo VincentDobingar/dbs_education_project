@@ -1,7 +1,9 @@
 import type { Student, StudentTransfer } from "@prisma/client";
 
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
 import { rawPrisma, withTenantSession } from "../../lib/prisma.js";
+import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { isTenantBlocked } from "../../lib/tenant-status.js";
 
@@ -162,10 +164,20 @@ export interface CompleteTransferResult {
  * across the tenant boundary; a failure between the two steps leaves the source
  * student not-yet-marked-TRANSFERRED, which is safe to retry (matricule reuse is
  * blocked, so a retried create would fail loudly rather than double-create).
+ *
+ * §10 : marking the source Student TRANSFERRED used to be the only signal written —
+ * Enrollment stayed ENROLLED (despite TRANSFERRED_OUT existing in the enum for
+ * exactly this), and the family's ParentStudentRelationship/StudentUserLink kept a
+ * live link to a school the student had just left, with no automatic path to the
+ * new one either (that still requires a fresh activation invitation, §8). The
+ * concrete access exploit was already closed elsewhere (isStudentUnavailable), but
+ * the dangling links themselves were still an open gap — closed here by cascading
+ * the same source-side writes atomically with the TRANSFERRED status change.
  */
 export async function completeTransfer(
   id: string,
   input: CompleteStudentTransferInput,
+  actor: TenantActor,
 ): Promise<CompleteTransferResult> {
   const transfer = await requireTransferForParty(id, "from");
   if (transfer.status !== "APPROVED") {
@@ -201,6 +213,58 @@ export async function completeTransfer(
 
   await withTenantSession(transfer.fromTenantId, async (tx) => {
     await tx.student.update({ where: { id: sourceStudent.id }, data: { status: "TRANSFERRED" } });
+
+    await tx.enrollment.updateMany({
+      where: {
+        tenantId: transfer.fromTenantId,
+        studentId: sourceStudent.id,
+        deletedAt: null,
+        status: { in: ["ENROLLED", "RE_ENROLLED"] },
+      },
+      data: { status: "TRANSFERRED_OUT", withdrawnAt: new Date() },
+    });
+
+    // ParentStudentRelationship/StudentUserLink carry no RLS (bootstrap tables, see
+    // docs/architecture.md) and `tx` here is the raw, non-tenant-guarded client — so
+    // tenantId is filtered explicitly rather than relied on implicitly, same as the
+    // destination-side writes above.
+    const relationshipsToRevoke = await tx.parentStudentRelationship.findMany({
+      where: { tenantId: transfer.fromTenantId, studentId: sourceStudent.id, revokedAt: null },
+    });
+    if (relationshipsToRevoke.length > 0) {
+      await tx.parentStudentRelationship.updateMany({
+        where: { tenantId: transfer.fromTenantId, studentId: sourceStudent.id, revokedAt: null },
+        data: {
+          status: "REVOKED",
+          revokedAt: new Date(),
+          revokedById: actor.actorUserId,
+          revokedReason: "Transfert de l'élève vers un autre établissement",
+        },
+      });
+      for (const relationship of relationshipsToRevoke) {
+        await recordAuditLog({
+          tenantId: transfer.fromTenantId,
+          actorUserId: actor.actorUserId,
+          ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+          action: "parent_student_relationship.revoke",
+          entityType: "ParentStudentRelationship",
+          entityId: relationship.id,
+          beforeData: { status: relationship.status },
+          afterData: { status: "REVOKED" },
+          justification: "Transfert de l'élève vers un autre établissement",
+        });
+      }
+    }
+
+    // StudentUserLink is a 1:1 link (unique studentId) to the student's own portal
+    // account — once the source Student is a permanently-inert TRANSFERRED record,
+    // the link is dead weight, not history worth keeping: deleting it (rather than
+    // adding a revocation column, which nothing else needs) is enough, and a fresh
+    // link at the destination tenant is unaffected since it targets a different
+    // Student id.
+    await tx.studentUserLink.deleteMany({
+      where: { tenantId: transfer.fromTenantId, studentId: sourceStudent.id },
+    });
   });
 
   const updatedTransfer = await withTenantSession(transfer.fromTenantId, (tx) =>

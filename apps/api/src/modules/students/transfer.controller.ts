@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { resolveTenantActor } from "../../lib/tenant-actor.js";
 
 import * as transferService from "./transfer.service.js";
 import { completeStudentTransferSchema, requestStudentTransferSchema } from "./transfer.validation.js";
@@ -42,7 +43,8 @@ export function rejectTransfer(req: Request, res: Response, next: NextFunction):
 export function completeTransfer(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = completeStudentTransferSchema.parse(req.body);
-    const result = await transferService.completeTransfer(req.params.id as string, input);
+    const actor = await resolveTenantActor(req);
+    const result = await transferService.completeTransfer(req.params.id as string, input, actor);
     res.status(200).json(result);
   })().catch(next);
 }
