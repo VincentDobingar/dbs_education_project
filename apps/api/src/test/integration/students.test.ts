@@ -245,6 +245,54 @@ describe("élèves et inscriptions (§19)", () => {
     expect((unknownClassroom.body as { code: string }).code).toBe("CLASSROOM_NOT_FOUND");
   });
 
+  // §22 : GET /students?classroomId= est le seul moyen de retrouver "les élèves
+  // d'une classe" (nécessaire pour un appel de présences réel) — vérifie qu'il ne
+  // renvoie que les élèves avec une inscription courante (ENROLLED/RE_ENROLLED)
+  // dans cette classe précise, jamais un élève inscrit ailleurs ou pas du tout.
+  it("filters students by classroomId, returning only those currently enrolled there", async () => {
+    const { subdomain, ownerToken } = await setUpTenantWithOwner();
+    const { academicYearId, campusId, gradeLevelId, classroomId } = await setUpClassroom(
+      subdomain,
+      ownerToken,
+    );
+
+    const enrolledStudent = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Inscrite", lastName: "Dans6eA" });
+    const enrolledStudentId = (enrolledStudent.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/students/${enrolledStudentId}/enrollments`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+
+    const unenrolledStudent = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "NonInscrite", lastName: "Ailleurs" });
+    const unenrolledStudentId = (unenrolledStudent.body as { id: string }).id;
+
+    const filtered = await request(app)
+      .get(`/api/v1/students?classroomId=${classroomId}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(filtered.status).toBe(200);
+    const filteredIds = (filtered.body as { id: string }[]).map((s) => s.id);
+    expect(filteredIds).toContain(enrolledStudentId);
+    expect(filteredIds).not.toContain(unenrolledStudentId);
+
+    const unfiltered = await request(app)
+      .get("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    const unfilteredIds = (unfiltered.body as { id: string }[]).map((s) => s.id);
+    expect(unfilteredIds).toContain(enrolledStudentId);
+    expect(unfilteredIds).toContain(unenrolledStudentId);
+  });
+
   it("rejects an enrollment whose classroom belongs to a different academic year", async () => {
     const { subdomain, ownerToken } = await setUpTenantWithOwner();
     const { campusId, gradeLevelId, classroomId } = await setUpClassroom(subdomain, ownerToken);

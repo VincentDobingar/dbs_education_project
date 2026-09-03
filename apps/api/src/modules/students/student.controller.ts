@@ -4,6 +4,7 @@ import * as studentService from "./student.service.js";
 import {
   checkDuplicateStudentsQuerySchema,
   createStudentSchema,
+  listStudentsQuerySchema,
   updateStudentSchema,
 } from "./student.validation.js";
 
@@ -27,9 +28,10 @@ export function checkDuplicateStudents(req: Request, res: Response, next: NextFu
   })().catch(next);
 }
 
-export function listStudents(_req: Request, res: Response, next: NextFunction): void {
+export function listStudents(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    const students = await studentService.listStudents();
+    const query = listStudentsQuerySchema.parse(req.query);
+    const students = await studentService.listStudents(query);
     res.status(200).json(students);
   })().catch(next);
 }

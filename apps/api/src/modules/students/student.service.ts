@@ -4,7 +4,7 @@ import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
-import type { CreateStudentInput, UpdateStudentInput } from "./student.validation.js";
+import type { CreateStudentInput, ListStudentsQuery, UpdateStudentInput } from "./student.validation.js";
 
 async function assertMatriculeAvailable(matricule: string): Promise<void> {
   const existing = await prisma.student.findFirst({ where: { matricule } });
@@ -121,10 +121,28 @@ export async function createStudent(
  * medicalNotes is deliberately never returned here (§19): the platform has no
  * infirmary/direction-only endpoint yet to read it back, so it stays write-only
  * through the general student API until that dedicated access path exists.
+ *
+ * classroomId (§22, roll-call): filters to students with a *current* (ENROLLED or
+ * RE_ENROLLED) enrollment in that classroom — the roster a teacher/staff member
+ * actually needs to take attendance against, not every enrollment that classroom
+ * has ever had.
  */
-export async function listStudents(): Promise<Omit<Student, "medicalNotes">[]> {
+export async function listStudents(query: ListStudentsQuery = {}): Promise<Omit<Student, "medicalNotes">[]> {
   return prisma.student.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(query.classroomId
+        ? {
+            enrollments: {
+              some: {
+                classroomId: query.classroomId,
+                deletedAt: null,
+                status: { in: ["ENROLLED", "RE_ENROLLED"] },
+              },
+            },
+          }
+        : {}),
+    },
     orderBy: { lastName: "asc" },
     omit: { medicalNotes: true },
   });

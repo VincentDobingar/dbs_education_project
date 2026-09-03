@@ -37,6 +37,11 @@ export const updateStudentSchema = z.object({
 });
 export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
 
+export const listStudentsQuerySchema = z.object({
+  classroomId: z.string().min(1).optional(),
+});
+export type ListStudentsQuery = z.infer<typeof listStudentsQuerySchema>;
+
 export const checkDuplicateStudentsQuerySchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
