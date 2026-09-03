@@ -9,6 +9,7 @@ import { DashboardPage } from "./pages/app/DashboardPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
 import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
 import { StudentsPage } from "./pages/app/StudentsPage.js";
+import { UsersPage } from "./pages/app/UsersPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
 import { HomePage } from "./pages/marketing/HomePage.js";
 import { PricingPage } from "./pages/marketing/PricingPage.js";
@@ -40,6 +41,7 @@ export function App(): ReactNode {
             <Route path="/configuration" element={<ConfigurationPage />} />
             <Route path="/eleves" element={<StudentsPage />} />
             <Route path="/eleves/:id" element={<StudentDetailPage />} />
+            <Route path="/utilisateurs" element={<UsersPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
