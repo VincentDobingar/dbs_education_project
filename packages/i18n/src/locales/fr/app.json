@@ -16,6 +16,7 @@
   "layout.nav.students": "Élèves",
   "layout.nav.configuration": "Configuration",
   "layout.nav.users": "Utilisateurs",
+  "layout.nav.employees": "Personnel",
   "dashboard.title": "Tableau de bord",
   "dashboard.subtitle": "Vue d'ensemble de votre établissement",
   "dashboard.loading": "Chargement…",
@@ -102,5 +103,21 @@
   "users.error.roleExceedsPermissions": "Vous ne pouvez pas attribuer un rôle qui inclut des permissions que vous ne détenez pas vous-même.",
   "users.error.roleAlreadyGranted": "Cette personne a déjà ce rôle.",
   "users.error.roleNotGranted": "Cette personne n'a pas ce rôle.",
-  "users.error.generic": "Une erreur est survenue. Merci de réessayer."
+  "users.error.generic": "Une erreur est survenue. Merci de réessayer.",
+
+  "employees.title": "Personnel",
+  "employees.subtitle": "Liste du personnel de l'établissement",
+  "employees.add": "Ajouter un employé",
+  "employees.number": "Matricule",
+  "employees.firstName": "Prénom",
+  "employees.lastName": "Nom",
+  "employees.jobTitle": "Poste",
+  "employees.status": "Statut",
+  "employees.empty": "Aucun employé enregistré pour l'instant.",
+  "employees.error.required": "Le matricule, le prénom, le nom et le poste sont obligatoires.",
+
+  "employeeDetail.notFound": "Employé introuvable.",
+  "employeeDetail.status": "Statut",
+  "employeeDetail.archived": "Cet employé a été archivé.",
+  "employeeDetail.archive": "Archiver"
 }

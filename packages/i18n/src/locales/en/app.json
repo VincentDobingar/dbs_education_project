@@ -16,6 +16,7 @@
   "layout.nav.students": "Students",
   "layout.nav.configuration": "Configuration",
   "layout.nav.users": "Users",
+  "layout.nav.employees": "Staff",
   "dashboard.title": "Dashboard",
   "dashboard.subtitle": "Overview of your school",
   "dashboard.loading": "Loading…",
@@ -102,5 +103,21 @@
   "users.error.roleExceedsPermissions": "You cannot grant a role that includes permissions you do not hold yourself.",
   "users.error.roleAlreadyGranted": "This person already has this role.",
   "users.error.roleNotGranted": "This person does not have this role.",
-  "users.error.generic": "Something went wrong. Please try again."
+  "users.error.generic": "Something went wrong. Please try again.",
+
+  "employees.title": "Staff",
+  "employees.subtitle": "List of the school's staff",
+  "employees.add": "Add a staff member",
+  "employees.number": "Employee number",
+  "employees.firstName": "First name",
+  "employees.lastName": "Last name",
+  "employees.jobTitle": "Job title",
+  "employees.status": "Status",
+  "employees.empty": "No staff registered yet.",
+  "employees.error.required": "Employee number, first name, last name, and job title are required.",
+
+  "employeeDetail.notFound": "Employee not found.",
+  "employeeDetail.status": "Status",
+  "employeeDetail.archived": "This employee has been archived.",
+  "employeeDetail.archive": "Archive"
 }

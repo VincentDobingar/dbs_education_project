@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { to: "/tableau-de-bord", key: "layout.nav.dashboard" },
   { to: "/eleves", key: "layout.nav.students" },
   { to: "/utilisateurs", key: "layout.nav.users" },
+  { to: "/personnel", key: "layout.nav.employees" },
   { to: "/configuration", key: "layout.nav.configuration" },
 ] as const;
 
