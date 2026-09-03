@@ -17,6 +17,7 @@
   "layout.nav.configuration": "Configuration",
   "layout.nav.users": "Users",
   "layout.nav.employees": "Staff",
+  "layout.nav.discipline": "Discipline",
   "dashboard.title": "Dashboard",
   "dashboard.subtitle": "Overview of your school",
   "dashboard.loading": "Loading…",
@@ -119,5 +120,24 @@
   "employeeDetail.notFound": "Employee not found.",
   "employeeDetail.status": "Status",
   "employeeDetail.archived": "This employee has been archived.",
-  "employeeDetail.archive": "Archive"
+  "employeeDetail.archive": "Archive",
+
+  "discipline.title": "Discipline",
+  "discipline.subtitle": "School disciplinary incidents",
+  "discipline.report": "Report an incident",
+  "discipline.student": "Student",
+  "discipline.selectStudent": "Select a student",
+  "discipline.date": "Date",
+  "discipline.severity": "Severity",
+  "discipline.severity.MINOR": "Minor",
+  "discipline.severity.MODERATE": "Moderate",
+  "discipline.severity.SEVERE": "Severe",
+  "discipline.description": "Description",
+  "discipline.sanction": "Sanction",
+  "discipline.correctiveAction": "Corrective action",
+  "discipline.remove": "Remove",
+  "discipline.empty": "No incidents recorded.",
+  "discipline.error.required": "Student, date, and description are required.",
+  "discipline.error.employeeRecordRequired": "Only a staff member with a linked employee record can report an incident.",
+  "discipline.error.generic": "Something went wrong. Please try again."
 }

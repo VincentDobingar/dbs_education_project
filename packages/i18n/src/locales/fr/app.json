@@ -17,6 +17,7 @@
   "layout.nav.configuration": "Configuration",
   "layout.nav.users": "Utilisateurs",
   "layout.nav.employees": "Personnel",
+  "layout.nav.discipline": "Discipline",
   "dashboard.title": "Tableau de bord",
   "dashboard.subtitle": "Vue d'ensemble de votre établissement",
   "dashboard.loading": "Chargement…",
@@ -119,5 +120,24 @@
   "employeeDetail.notFound": "Employé introuvable.",
   "employeeDetail.status": "Statut",
   "employeeDetail.archived": "Cet employé a été archivé.",
-  "employeeDetail.archive": "Archiver"
+  "employeeDetail.archive": "Archiver",
+
+  "discipline.title": "Discipline",
+  "discipline.subtitle": "Incidents disciplinaires de l'établissement",
+  "discipline.report": "Signaler un incident",
+  "discipline.student": "Élève",
+  "discipline.selectStudent": "Choisir un élève",
+  "discipline.date": "Date",
+  "discipline.severity": "Gravité",
+  "discipline.severity.MINOR": "Mineure",
+  "discipline.severity.MODERATE": "Modérée",
+  "discipline.severity.SEVERE": "Grave",
+  "discipline.description": "Description",
+  "discipline.sanction": "Sanction",
+  "discipline.correctiveAction": "Action corrective",
+  "discipline.remove": "Supprimer",
+  "discipline.empty": "Aucun incident enregistré.",
+  "discipline.error.required": "L'élève, la date et la description sont obligatoires.",
+  "discipline.error.employeeRecordRequired": "Seul un membre du personnel avec une fiche employé liée peut signaler un incident.",
+  "discipline.error.generic": "Une erreur est survenue. Merci de réessayer."
 }

@@ -6,6 +6,7 @@ import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
 import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
 import { DashboardPage } from "./pages/app/DashboardPage.js";
+import { DisciplinePage } from "./pages/app/DisciplinePage.js";
 import { EmployeeDetailPage } from "./pages/app/EmployeeDetailPage.js";
 import { EmployeesPage } from "./pages/app/EmployeesPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
@@ -46,6 +47,7 @@ export function App(): ReactNode {
             <Route path="/utilisateurs" element={<UsersPage />} />
             <Route path="/personnel" element={<EmployeesPage />} />
             <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
+            <Route path="/discipline" element={<DisciplinePage />} />
           </Route>
         </Routes>
       </BrowserRouter>
