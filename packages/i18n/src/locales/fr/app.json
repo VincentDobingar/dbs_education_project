@@ -18,6 +18,7 @@
   "layout.nav.users": "Utilisateurs",
   "layout.nav.employees": "Personnel",
   "layout.nav.discipline": "Discipline",
+  "layout.nav.attendance": "Présences",
   "dashboard.title": "Tableau de bord",
   "dashboard.subtitle": "Vue d'ensemble de votre établissement",
   "dashboard.loading": "Chargement…",
@@ -139,5 +140,20 @@
   "discipline.empty": "Aucun incident enregistré.",
   "discipline.error.required": "L'élève, la date et la description sont obligatoires.",
   "discipline.error.employeeRecordRequired": "Seul un membre du personnel avec une fiche employé liée peut signaler un incident.",
-  "discipline.error.generic": "Une erreur est survenue. Merci de réessayer."
+  "discipline.error.generic": "Une erreur est survenue. Merci de réessayer.",
+
+  "attendance.title": "Présences",
+  "attendance.subtitle": "Appel quotidien par classe",
+  "attendance.classroom": "Classe",
+  "attendance.date": "Date",
+  "attendance.status": "Statut",
+  "attendance.status.PRESENT": "Présent",
+  "attendance.status.ABSENT": "Absent",
+  "attendance.status.LATE": "En retard",
+  "attendance.status.EXCUSED": "Excusé",
+  "attendance.save": "Enregistrer l'appel",
+  "attendance.saving": "Enregistrement…",
+  "attendance.saved": "Appel enregistré.",
+  "attendance.emptyRoster": "Aucun élève inscrit dans cette classe.",
+  "attendance.error.generic": "Une erreur est survenue. Merci de réessayer."
 }

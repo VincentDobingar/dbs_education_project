@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
+import { AttendancePage } from "./pages/app/AttendancePage.js";
 import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
 import { DashboardPage } from "./pages/app/DashboardPage.js";
 import { DisciplinePage } from "./pages/app/DisciplinePage.js";
@@ -48,6 +49,7 @@ export function App(): ReactNode {
             <Route path="/personnel" element={<EmployeesPage />} />
             <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
             <Route path="/discipline" element={<DisciplinePage />} />
+            <Route path="/presences" element={<AttendancePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

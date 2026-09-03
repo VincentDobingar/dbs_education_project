@@ -18,6 +18,7 @@
   "layout.nav.users": "Users",
   "layout.nav.employees": "Staff",
   "layout.nav.discipline": "Discipline",
+  "layout.nav.attendance": "Attendance",
   "dashboard.title": "Dashboard",
   "dashboard.subtitle": "Overview of your school",
   "dashboard.loading": "Loading…",
@@ -139,5 +140,20 @@
   "discipline.empty": "No incidents recorded.",
   "discipline.error.required": "Student, date, and description are required.",
   "discipline.error.employeeRecordRequired": "Only a staff member with a linked employee record can report an incident.",
-  "discipline.error.generic": "Something went wrong. Please try again."
+  "discipline.error.generic": "Something went wrong. Please try again.",
+
+  "attendance.title": "Attendance",
+  "attendance.subtitle": "Daily roll call by classroom",
+  "attendance.classroom": "Classroom",
+  "attendance.date": "Date",
+  "attendance.status": "Status",
+  "attendance.status.PRESENT": "Present",
+  "attendance.status.ABSENT": "Absent",
+  "attendance.status.LATE": "Late",
+  "attendance.status.EXCUSED": "Excused",
+  "attendance.save": "Save roll call",
+  "attendance.saving": "Saving…",
+  "attendance.saved": "Roll call saved.",
+  "attendance.emptyRoster": "No students enrolled in this classroom.",
+  "attendance.error.generic": "Something went wrong. Please try again."
 }

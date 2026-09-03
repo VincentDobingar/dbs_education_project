@@ -20,7 +20,7 @@ export interface TenantCredentials {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   accessToken?: string;
   // Dev-only stand-in for real wildcard-subdomain DNS (see enforceTenantScope.ts

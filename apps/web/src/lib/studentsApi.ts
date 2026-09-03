@@ -19,8 +19,9 @@ export interface CreateStudentInput {
   gender?: string;
 }
 
-export function listStudents(creds: TenantCredentials): Promise<Student[]> {
-  return apiRequest("/students", { ...creds });
+export function listStudents(creds: TenantCredentials, classroomId?: string): Promise<Student[]> {
+  const query = classroomId ? `?classroomId=${encodeURIComponent(classroomId)}` : "";
+  return apiRequest(`/students${query}`, { ...creds });
 }
 
 export function createStudent(input: CreateStudentInput, creds: TenantCredentials): Promise<Student> {
