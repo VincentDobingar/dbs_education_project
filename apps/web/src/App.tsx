@@ -13,6 +13,7 @@ import { EmployeesPage } from "./pages/app/EmployeesPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
 import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
 import { StudentsPage } from "./pages/app/StudentsPage.js";
+import { TimetablePage } from "./pages/app/TimetablePage.js";
 import { UsersPage } from "./pages/app/UsersPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
 import { HomePage } from "./pages/marketing/HomePage.js";
@@ -50,6 +51,7 @@ export function App(): ReactNode {
             <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
             <Route path="/discipline" element={<DisciplinePage />} />
             <Route path="/presences" element={<AttendancePage />} />
+            <Route path="/emplois-du-temps" element={<TimetablePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

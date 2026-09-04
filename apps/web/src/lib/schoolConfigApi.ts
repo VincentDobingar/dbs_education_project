@@ -128,3 +128,25 @@ export function listClassrooms(creds: TenantCredentials): Promise<Classroom[]> {
 export function createClassroom(input: CreateClassroomInput, creds: TenantCredentials): Promise<Classroom> {
   return apiRequest("/school-config/classrooms", { method: "POST", body: input, ...creds });
 }
+
+export interface Subject {
+  id: string;
+  code: string;
+  nameFr: string;
+  nameEn: string;
+  departmentId: string | null;
+}
+
+export interface CreateSubjectInput {
+  code: string;
+  nameFr: string;
+  nameEn: string;
+}
+
+export function listSubjects(creds: TenantCredentials): Promise<Subject[]> {
+  return apiRequest("/school-config/subjects", { ...creds });
+}
+
+export function createSubject(input: CreateSubjectInput, creds: TenantCredentials): Promise<Subject> {
+  return apiRequest("/school-config/subjects", { method: "POST", body: input, ...creds });
+}

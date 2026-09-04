@@ -12,11 +12,13 @@ import {
   createClassroom,
   createEducationCycle,
   createGradeLevel,
+  createSubject,
   listAcademicYears,
   listCampuses,
   listClassrooms,
   listEducationCycles,
   listGradeLevels,
+  listSubjects,
 } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
@@ -95,6 +97,11 @@ const classroomSchema = z.object({
   gradeLevelId: z.string().min(1),
   capacity: z.coerce.number().int().positive().optional(),
 });
+const subjectSchema = z.object({
+  code: z.string().min(1),
+  nameFr: z.string().min(1),
+  nameEn: z.string().min(1),
+});
 
 export function ConfigurationPage(): ReactNode {
   const { t } = useTranslation("app");
@@ -121,6 +128,10 @@ export function ConfigurationPage(): ReactNode {
   const classrooms = useQuery({
     queryKey: ["classrooms", session.subdomain],
     queryFn: () => listClassrooms(creds),
+  });
+  const subjects = useQuery({
+    queryKey: ["subjects", session.subdomain],
+    queryFn: () => listSubjects(creds),
   });
 
   const campusForm = useForm<z.infer<typeof campusSchema>>({ resolver: zodResolver(campusSchema) });
@@ -172,6 +183,15 @@ export function ConfigurationPage(): ReactNode {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["classrooms", session.subdomain] });
       classroomForm.reset();
+    },
+  });
+
+  const subjectForm = useForm<z.infer<typeof subjectSchema>>({ resolver: zodResolver(subjectSchema) });
+  const createSubjectMutation = useMutation({
+    mutationFn: (input: z.infer<typeof subjectSchema>) => createSubject(input, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["subjects", session.subdomain] });
+      subjectForm.reset();
     },
   });
 
@@ -367,6 +387,39 @@ export function ConfigurationPage(): ReactNode {
             placeholder={t("config.form.capacity")}
             className="input w-28"
             {...classroomForm.register("capacity")}
+          />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.subjects")}>
+        <Table
+          columns={[t("config.col.code"), t("config.col.nameFr")]}
+          rows={(subjects.data ?? []).map((s) => [s.code, s.nameFr])}
+          empty={t("config.empty")}
+        />
+        <form
+          onSubmit={(event) =>
+            void subjectForm.handleSubmit((values) => createSubjectMutation.mutate(values))(event)
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("config.form.code")}
+            className="input w-28"
+            {...subjectForm.register("code")}
+          />
+          <input
+            placeholder={t("config.form.nameFr")}
+            className="input w-40"
+            {...subjectForm.register("nameFr")}
+          />
+          <input
+            placeholder={t("config.form.nameEn")}
+            className="input w-40"
+            {...subjectForm.register("nameEn")}
           />
           <Button type="submit" variant="secondary">
             {t("config.add")}
