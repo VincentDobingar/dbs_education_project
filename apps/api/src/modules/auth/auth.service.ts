@@ -168,13 +168,18 @@ export async function verifyPhone(email: string, code: string): Promise<User> {
   });
 }
 
-export async function resendEmailVerification(email: string): Promise<string> {
+/**
+ * §34 (audit pass 24) : renvoie `null` plutôt que de distinguer "compte inexistant" /
+ * "déjà vérifié" par un code d'erreur différent — cette route est appelable par
+ * n'importe qui avec un simple email, avant toute authentification ; un statut/code
+ * différent par cas en faisait un oracle d'existence et de statut de compte à trois
+ * issues. Le contrôleur renvoie toujours 200 avec un message générique, le jeton
+ * n'étant présent dans la réponse que lorsqu'un compte réel et non vérifié existe.
+ */
+export async function resendEmailVerification(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    throw new AppError(404, "USER_NOT_FOUND", `No account with email: ${email}`);
-  }
-  if (user.emailVerifiedAt) {
-    throw new AppError(409, "EMAIL_ALREADY_VERIFIED", "This email is already verified");
+  if (!user || user.emailVerifiedAt) {
+    return null;
   }
 
   const { token, hash } = generateEmailVerificationToken();
@@ -195,16 +200,13 @@ export async function resendEmailVerification(email: string): Promise<string> {
   return token;
 }
 
-export async function resendPhoneVerification(email: string): Promise<string> {
+/** §34 (audit pass 24) : same reasoning as resendEmailVerification above — `null`
+ * covers "no such account", "no phone on file", and "already verified" alike,
+ * rather than a distinct code per case. */
+export async function resendPhoneVerification(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    throw new AppError(404, "USER_NOT_FOUND", `No account with email: ${email}`);
-  }
-  if (!user.phone) {
-    throw new AppError(400, "PHONE_NOT_SET", "This account has no phone number on file");
-  }
-  if (user.phoneVerifiedAt) {
-    throw new AppError(409, "PHONE_ALREADY_VERIFIED", "This phone number is already verified");
+  if (!user || !user.phone || user.phoneVerifiedAt) {
+    return null;
   }
 
   const code = generatePhoneVerificationCode();

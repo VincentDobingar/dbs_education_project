@@ -44,11 +44,19 @@ export function verifyPhone(req: Request, res: Response, next: NextFunction): vo
   })().catch(next);
 }
 
+// §34 (audit pass 24) : toujours 200 avec un message générique — le jeton/code n'est
+// inclus que lorsque authService a effectivement quelque chose à renvoyer, jamais un
+// statut/champ différent selon "compte inexistant"/"déjà vérifié"/"pas de téléphone".
+const GENERIC_RESEND_MESSAGE = "If this account exists and needs verification, a new code was sent.";
+
 export function resendEmailVerification(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const input = resendVerificationSchema.parse(req.body);
     const emailVerificationToken = await authService.resendEmailVerification(input.email);
-    res.status(200).json({ emailVerificationToken });
+    res.status(200).json({
+      message: GENERIC_RESEND_MESSAGE,
+      ...(emailVerificationToken ? { emailVerificationToken } : {}),
+    });
   })().catch(next);
 }
 
@@ -56,7 +64,10 @@ export function resendPhoneVerification(req: Request, res: Response, next: NextF
   void (async () => {
     const input = resendVerificationSchema.parse(req.body);
     const phoneVerificationCode = await authService.resendPhoneVerification(input.email);
-    res.status(200).json({ phoneVerificationCode });
+    res.status(200).json({
+      message: GENERIC_RESEND_MESSAGE,
+      ...(phoneVerificationCode ? { phoneVerificationCode } : {}),
+    });
   })().catch(next);
 }
 

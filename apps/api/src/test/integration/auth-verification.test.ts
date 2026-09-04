@@ -102,7 +102,7 @@ describe("vérification email/téléphone à l'inscription (§34)", () => {
     expect(loginAllowed.status).toBe(200);
   });
 
-  it("refuse un email/téléphone déjà utilisé, et le renvoi de code sans téléphone sur le compte", async () => {
+  it("refuse un email/téléphone déjà utilisé, et le renvoi de code reste générique sans téléphone sur le compte", async () => {
     const email = `verif-dup-${uniqueSuffix()}@example.test`;
     const phone = `+237691${uniqueSuffix().slice(0, 6)}`;
     const password = "Sup3r-Secret-Passw0rd!";
@@ -137,10 +137,22 @@ describe("vérification email/téléphone à l'inscription (§34)", () => {
       .send({ email: noPhoneEmail, password, firstName: "Sans", lastName: "Telephone" });
     createdUserIds.push((noPhoneRegistered.body as { id: string }).id);
 
+    // §34 (audit pass 24) : plus de code d'erreur distinct — toujours 200/générique,
+    // sans champ phoneVerificationCode puisque ce compte n'a pas de téléphone à vérifier.
     const resendNoPhone = await request(app)
       .post("/api/v1/auth/resend-phone-verification")
       .send({ email: noPhoneEmail });
-    expect(resendNoPhone.status).toBe(400);
-    expect((resendNoPhone.body as { code: string }).code).toBe("PHONE_NOT_SET");
+    expect(resendNoPhone.status).toBe(200);
+    expect((resendNoPhone.body as { phoneVerificationCode?: string }).phoneVerificationCode).toBeUndefined();
+
+    // Même réponse générique pour un email totalement inconnu — aucun moyen de
+    // distinguer "n'existe pas" de "pas de téléphone sur le compte" ou "déjà vérifié".
+    const resendUnknown = await request(app)
+      .post("/api/v1/auth/resend-email-verification")
+      .send({ email: `verif-unknown-${uniqueSuffix()}@example.test` });
+    expect(resendUnknown.status).toBe(200);
+    expect(
+      (resendUnknown.body as { emailVerificationToken?: string }).emailVerificationToken,
+    ).toBeUndefined();
   });
 });
