@@ -2,40 +2,29 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Navigate, Outlet } from "react-router-dom";
 
-import { clearSession, loadSession } from "../lib/session.js";
+import { clearPortalSession, loadPortalSession } from "../lib/portalSession.js";
 
 const NAV_LINKS = [
-  { to: "/tableau-de-bord", key: "layout.nav.dashboard" },
-  { to: "/eleves", key: "layout.nav.students" },
-  { to: "/utilisateurs", key: "layout.nav.users" },
-  { to: "/personnel", key: "layout.nav.employees" },
-  { to: "/emplois-du-temps", key: "layout.nav.timetable" },
-  { to: "/presences", key: "layout.nav.attendance" },
-  { to: "/discipline", key: "layout.nav.discipline" },
-  { to: "/notes", key: "layout.nav.grading" },
-  { to: "/bulletins", key: "layout.nav.reportCards" },
-  { to: "/finances", key: "layout.nav.finance" },
-  { to: "/devoirs", key: "layout.nav.homework" },
-  { to: "/annonces", key: "layout.nav.announcements" },
-  { to: "/support", key: "layout.nav.support" },
-  { to: "/configuration", key: "layout.nav.configuration" },
+  { to: "/portail/parent", key: "portal.nav.parent" },
+  { to: "/portail/eleve", key: "portal.nav.student" },
+  { to: "/portail/activation", key: "portal.nav.redeem" },
 ] as const;
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return `text-sm font-medium transition-colors ${isActive ? "text-brand-teal" : "text-white/70 hover:text-white"}`;
 }
 
-export function AppLayout(): ReactNode {
+export function PortalLayout(): ReactNode {
   const { t } = useTranslation("app");
-  const session = loadSession();
+  const session = loadPortalSession();
 
   if (!session) {
-    return <Navigate to="/connexion" replace />;
+    return <Navigate to="/portail/connexion" replace />;
   }
 
   function handleLogout(): void {
-    clearSession();
-    window.location.assign("/connexion");
+    clearPortalSession();
+    window.location.assign("/portail/connexion");
   }
 
   return (
@@ -43,7 +32,7 @@ export function AppLayout(): ReactNode {
       <header className="bg-brand-night">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-sm font-semibold text-white">{session.tenantName}</p>
+            <p className="text-sm font-semibold text-white">{t("portal.title")}</p>
             <p className="text-xs text-white/60">{session.email}</p>
           </div>
 

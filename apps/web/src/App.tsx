@@ -4,6 +4,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
+import { PortalLayout } from "./layouts/PortalLayout.js";
+import { AnnouncementsPage } from "./pages/app/AnnouncementsPage.js";
 import { AttendancePage } from "./pages/app/AttendancePage.js";
 import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
 import { DashboardPage } from "./pages/app/DashboardPage.js";
@@ -12,10 +14,12 @@ import { EmployeeDetailPage } from "./pages/app/EmployeeDetailPage.js";
 import { EmployeesPage } from "./pages/app/EmployeesPage.js";
 import { FinancePage } from "./pages/app/FinancePage.js";
 import { GradingPage } from "./pages/app/GradingPage.js";
+import { HomeworkPage } from "./pages/app/HomeworkPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
 import { ReportCardsPage } from "./pages/app/ReportCardsPage.js";
 import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
 import { StudentsPage } from "./pages/app/StudentsPage.js";
+import { SupportTicketsPage } from "./pages/app/SupportTicketsPage.js";
 import { TimetablePage } from "./pages/app/TimetablePage.js";
 import { UsersPage } from "./pages/app/UsersPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
@@ -25,6 +29,11 @@ import { PrivacyPage } from "./pages/marketing/PrivacyPage.js";
 import { RefundPolicyPage } from "./pages/marketing/RefundPolicyPage.js";
 import { SignupPage } from "./pages/marketing/SignupPage.js";
 import { TermsPage } from "./pages/marketing/TermsPage.js";
+import { ParentChildPage } from "./pages/portal/ParentChildPage.js";
+import { ParentDashboardPage } from "./pages/portal/ParentDashboardPage.js";
+import { PortalLoginPage } from "./pages/portal/PortalLoginPage.js";
+import { PortalRedeemPage } from "./pages/portal/PortalRedeemPage.js";
+import { StudentPortalPage } from "./pages/portal/StudentPortalPage.js";
 
 const queryClient = new QueryClient();
 
@@ -58,7 +67,18 @@ export function App(): ReactNode {
             <Route path="/notes" element={<GradingPage />} />
             <Route path="/bulletins" element={<ReportCardsPage />} />
             <Route path="/finances" element={<FinancePage />} />
+            <Route path="/devoirs" element={<HomeworkPage />} />
+            <Route path="/annonces" element={<AnnouncementsPage />} />
+            <Route path="/support" element={<SupportTicketsPage />} />
           </Route>
+
+          <Route element={<PortalLayout />}>
+            <Route path="/portail/parent" element={<ParentDashboardPage />} />
+            <Route path="/portail/parent/enfants/:studentId" element={<ParentChildPage />} />
+            <Route path="/portail/eleve" element={<StudentPortalPage />} />
+            <Route path="/portail/activation" element={<PortalRedeemPage />} />
+          </Route>
+          <Route path="/portail/connexion" element={<PortalLoginPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

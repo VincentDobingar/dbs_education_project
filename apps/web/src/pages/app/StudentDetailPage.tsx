@@ -7,6 +7,14 @@ import { useParams } from "react-router-dom";
 
 import type { TenantCredentials } from "../../lib/apiClient.js";
 import {
+  createInvitation,
+  listInvitations,
+  listRelationships,
+  revokeInvitation,
+  revokeRelationship,
+  type BeneficiaryCategory,
+} from "../../lib/familyApi.js";
+import {
   cancelStudentInvoice,
   createStudentInvoice,
   fetchReceiptPdf,
@@ -297,6 +305,49 @@ export function StudentDetailPage(): ReactNode {
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
 
+  const invitations = useQuery({
+    queryKey: ["invitations", session.subdomain, studentId],
+    queryFn: () => listInvitations(creds, studentId),
+  });
+  const relationships = useQuery({
+    queryKey: ["relationships", session.subdomain, studentId],
+    queryFn: () => listRelationships(creds, studentId),
+  });
+
+  const [inviteCategory, setInviteCategory] = useState<BeneficiaryCategory>("PARENT");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [lastCode, setLastCode] = useState<string | null>(null);
+  const createInvitationMutation = useMutation({
+    mutationFn: () =>
+      createInvitation({ studentId, beneficiaryCategory: inviteCategory, invitedEmail: inviteEmail }, creds),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["invitations", session.subdomain, studentId] });
+      setInviteEmail("");
+      setLastCode(result.code);
+    },
+  });
+
+  const revokeInvitationMutation = useMutation({
+    mutationFn: (invitationId: string) => revokeInvitation(invitationId, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["invitations", session.subdomain, studentId] });
+    },
+  });
+
+  const [revokingRelationshipId, setRevokingRelationshipId] = useState<string | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const revokeRelationshipMutation = useMutation({
+    mutationFn: () => {
+      if (!revokingRelationshipId) throw new Error("No relationship selected");
+      return revokeRelationship(revokingRelationshipId, revokeReason, creds);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["relationships", session.subdomain, studentId] });
+      setRevokingRelationshipId(null);
+      setRevokeReason("");
+    },
+  });
+
   const enrollMutation = useMutation({
     mutationFn: () => {
       const classroom = classrooms.data?.find((candidate) => candidate.id === selectedClassroomId);
@@ -545,6 +596,124 @@ export function StudentDetailPage(): ReactNode {
         </form>
         {createInvoiceMutation.isError ? (
           <p className="mt-2 text-sm text-red-600">{t("studentDetail.error.generic")}</p>
+        ) : null}
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.family")}</h2>
+
+        {(relationships.data ?? []).length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">{t("studentDetail.noRelationships")}</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm">
+            {(relationships.data ?? []).map((relationship) => (
+              <li
+                key={relationship.id}
+                className="flex items-center justify-between border-b border-slate-100 pb-2"
+              >
+                <span className="text-slate-700">
+                  {relationship.parentUserId} — {t(`studentDetail.relationshipStatus.${relationship.status}`)}
+                </span>
+                {relationship.status === "VERIFIED" ? (
+                  <button
+                    type="button"
+                    className="text-xs text-slate-400 hover:text-red-600"
+                    onClick={() => setRevokingRelationshipId(relationship.id)}
+                  >
+                    {t("studentDetail.revokeRelationship")}
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {revokingRelationshipId ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              revokeRelationshipMutation.mutate();
+            }}
+            className="mt-3 flex flex-wrap items-end gap-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+          >
+            <input
+              placeholder={t("studentDetail.reason")}
+              className="input w-56"
+              value={revokeReason}
+              onChange={(event) => setRevokeReason(event.target.value)}
+            />
+            <Button type="submit" variant="secondary" disabled={!revokeReason}>
+              {t("studentDetail.confirmRevoke")}
+            </Button>
+            <button
+              type="button"
+              className="text-xs text-slate-400"
+              onClick={() => setRevokingRelationshipId(null)}
+            >
+              {t("grading.cancelCorrection")}
+            </button>
+          </form>
+        ) : null}
+
+        <h3 className="mt-4 text-sm font-semibold text-slate-900">{t("studentDetail.invitations")}</h3>
+        {(invitations.data ?? []).length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">{t("studentDetail.noInvitations")}</p>
+        ) : (
+          <ul className="mt-2 space-y-2 text-sm">
+            {(invitations.data ?? []).map((invitation) => (
+              <li
+                key={invitation.id}
+                className="flex items-center justify-between border-b border-slate-100 pb-2"
+              >
+                <span className="text-slate-700">
+                  {invitation.invitedEmail ?? invitation.invitedPhone} —{" "}
+                  {t(`studentDetail.beneficiaryCategory.${invitation.beneficiaryCategory}`)} —{" "}
+                  {t(`studentDetail.invitationStatus.${invitation.status}`)}
+                </span>
+                {invitation.status === "SENT" || invitation.status === "PENDING" ? (
+                  <button
+                    type="button"
+                    className="text-xs text-slate-400 hover:text-red-600"
+                    onClick={() => revokeInvitationMutation.mutate(invitation.id)}
+                  >
+                    {t("studentDetail.revokeInvitation")}
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            createInvitationMutation.mutate();
+          }}
+          className="mt-3 flex flex-wrap items-end gap-3"
+        >
+          <select
+            className="input w-32"
+            value={inviteCategory}
+            onChange={(event) => setInviteCategory(event.target.value as BeneficiaryCategory)}
+          >
+            <option value="PARENT">{t("studentDetail.beneficiaryCategory.PARENT")}</option>
+            <option value="STUDENT">{t("studentDetail.beneficiaryCategory.STUDENT")}</option>
+          </select>
+          <input
+            type="email"
+            placeholder={t("studentDetail.invitedEmail")}
+            className="input w-56"
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+          />
+          <Button type="submit" variant="secondary" disabled={!inviteEmail}>
+            {t("studentDetail.sendInvitation")}
+          </Button>
+        </form>
+        {lastCode ? (
+          <p className="mt-2 text-sm text-teal-600">
+            {t("studentDetail.invitationCode")}: <strong>{lastCode}</strong>
+          </p>
         ) : null}
       </section>
     </div>
