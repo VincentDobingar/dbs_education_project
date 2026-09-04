@@ -2,23 +2,28 @@ import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
+import { createAssessmentType, listAssessmentTypes } from "../../lib/gradingApi.js";
 import {
+  createAcademicPeriod,
   createAcademicYear,
   createCampus,
   createClassroom,
   createEducationCycle,
   createGradeLevel,
   createSubject,
+  listAcademicPeriods,
   listAcademicYears,
   listCampuses,
   listClassrooms,
   listEducationCycles,
   listGradeLevels,
   listSubjects,
+  type AcademicPeriodType,
 } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
@@ -102,6 +107,18 @@ const subjectSchema = z.object({
   nameFr: z.string().min(1),
   nameEn: z.string().min(1),
 });
+const periodSchema = z.object({
+  name: z.string().min(2),
+  type: z.enum(["TRIMESTER", "SEMESTER", "CUSTOM"]),
+  sequence: z.coerce.number().int().positive(),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+});
+const assessmentTypeSchema = z.object({
+  code: z.string().min(1),
+  nameFr: z.string().min(1),
+  nameEn: z.string().min(1),
+});
 
 export function ConfigurationPage(): ReactNode {
   const { t } = useTranslation("app");
@@ -132,6 +149,17 @@ export function ConfigurationPage(): ReactNode {
   const subjects = useQuery({
     queryKey: ["subjects", session.subdomain],
     queryFn: () => listSubjects(creds),
+  });
+  const assessmentTypes = useQuery({
+    queryKey: ["assessment-types", session.subdomain],
+    queryFn: () => listAssessmentTypes(creds),
+  });
+
+  const [periodYearId, setPeriodYearId] = useState("");
+  const periods = useQuery({
+    queryKey: ["academic-periods", session.subdomain, periodYearId],
+    queryFn: () => listAcademicPeriods(periodYearId, creds),
+    enabled: Boolean(periodYearId),
   });
 
   const campusForm = useForm<z.infer<typeof campusSchema>>({ resolver: zodResolver(campusSchema) });
@@ -192,6 +220,26 @@ export function ConfigurationPage(): ReactNode {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["subjects", session.subdomain] });
       subjectForm.reset();
+    },
+  });
+
+  const periodForm = useForm<z.infer<typeof periodSchema>>({ resolver: zodResolver(periodSchema) });
+  const createPeriodMutation = useMutation({
+    mutationFn: (input: z.infer<typeof periodSchema>) => createAcademicPeriod(periodYearId, input, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["academic-periods", session.subdomain, periodYearId] });
+      periodForm.reset();
+    },
+  });
+
+  const assessmentTypeForm = useForm<z.infer<typeof assessmentTypeSchema>>({
+    resolver: zodResolver(assessmentTypeSchema),
+  });
+  const createAssessmentTypeMutation = useMutation({
+    mutationFn: (input: z.infer<typeof assessmentTypeSchema>) => createAssessmentType(input, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["assessment-types", session.subdomain] });
+      assessmentTypeForm.reset();
     },
   });
 
@@ -420,6 +468,110 @@ export function ConfigurationPage(): ReactNode {
             placeholder={t("config.form.nameEn")}
             className="input w-40"
             {...subjectForm.register("nameEn")}
+          />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.periods")}>
+        <label className="block text-xs font-medium text-slate-600">{t("config.form.selectYear")}</label>
+        <select
+          className="input w-56"
+          value={periodYearId}
+          onChange={(event) => setPeriodYearId(event.target.value)}
+        >
+          <option value="">{t("config.form.selectYear")}</option>
+          {(years.data ?? []).map((y) => (
+            <option key={y.id} value={y.id}>
+              {y.name}
+            </option>
+          ))}
+        </select>
+
+        {periodYearId ? (
+          <>
+            <Table
+              columns={[
+                t("config.col.name"),
+                t("config.col.periodType"),
+                t("config.col.startDate"),
+                t("config.col.endDate"),
+              ]}
+              rows={(periods.data ?? [])
+                .slice()
+                .sort((a, b) => a.sequence - b.sequence)
+                .map((p) => [
+                  p.name,
+                  t(`config.periodType.${p.type}`),
+                  p.startDate.slice(0, 10),
+                  p.endDate.slice(0, 10),
+                ])}
+              empty={t("config.empty")}
+            />
+            <form
+              onSubmit={(event) =>
+                void periodForm.handleSubmit((values) => createPeriodMutation.mutate(values))(event)
+              }
+              className="flex flex-wrap items-end gap-3"
+            >
+              <input
+                placeholder={t("config.form.periodName")}
+                className="input w-40"
+                {...periodForm.register("name")}
+              />
+              <select className="input w-32" {...periodForm.register("type")}>
+                {(["TRIMESTER", "SEMESTER", "CUSTOM"] satisfies AcademicPeriodType[]).map((type) => (
+                  <option key={type} value={type}>
+                    {t(`config.periodType.${type}`)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder={t("config.form.sequence")}
+                className="input w-24"
+                {...periodForm.register("sequence")}
+              />
+              <input type="date" className="input w-40" {...periodForm.register("startDate")} />
+              <input type="date" className="input w-40" {...periodForm.register("endDate")} />
+              <Button type="submit" variant="secondary">
+                {t("config.add")}
+              </Button>
+            </form>
+          </>
+        ) : null}
+      </Section>
+
+      <Section title={t("config.assessmentTypes")}>
+        <Table
+          columns={[t("config.col.code"), t("config.col.nameFr")]}
+          rows={(assessmentTypes.data ?? []).map((a) => [a.code, a.nameFr])}
+          empty={t("config.empty")}
+        />
+        <form
+          onSubmit={(event) =>
+            void assessmentTypeForm.handleSubmit((values) => createAssessmentTypeMutation.mutate(values))(
+              event,
+            )
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("config.form.code")}
+            className="input w-28"
+            {...assessmentTypeForm.register("code")}
+          />
+          <input
+            placeholder={t("config.form.nameFr")}
+            className="input w-40"
+            {...assessmentTypeForm.register("nameFr")}
+          />
+          <input
+            placeholder={t("config.form.nameEn")}
+            className="input w-40"
+            {...assessmentTypeForm.register("nameEn")}
           />
           <Button type="submit" variant="secondary">
             {t("config.add")}

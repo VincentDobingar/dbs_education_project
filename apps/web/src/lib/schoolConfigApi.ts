@@ -129,6 +129,45 @@ export function createClassroom(input: CreateClassroomInput, creds: TenantCreden
   return apiRequest("/school-config/classrooms", { method: "POST", body: input, ...creds });
 }
 
+export type AcademicPeriodType = "TRIMESTER" | "SEMESTER" | "CUSTOM";
+
+export interface AcademicPeriod {
+  id: string;
+  academicYearId: string;
+  name: string;
+  type: AcademicPeriodType;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface CreateAcademicPeriodInput {
+  name: string;
+  type: AcademicPeriodType;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+}
+
+export function listAcademicPeriods(
+  academicYearId: string,
+  creds: TenantCredentials,
+): Promise<AcademicPeriod[]> {
+  return apiRequest(`/school-config/academic-years/${academicYearId}/periods`, { ...creds });
+}
+
+export function createAcademicPeriod(
+  academicYearId: string,
+  input: CreateAcademicPeriodInput,
+  creds: TenantCredentials,
+): Promise<AcademicPeriod> {
+  return apiRequest(`/school-config/academic-years/${academicYearId}/periods`, {
+    method: "POST",
+    body: input,
+    ...creds,
+  });
+}
+
 export interface Subject {
   id: string;
   code: string;

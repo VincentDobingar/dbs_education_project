@@ -12,6 +12,8 @@ const NAV_LINKS = [
   { to: "/emplois-du-temps", key: "layout.nav.timetable" },
   { to: "/presences", key: "layout.nav.attendance" },
   { to: "/discipline", key: "layout.nav.discipline" },
+  { to: "/notes", key: "layout.nav.grading" },
+  { to: "/bulletins", key: "layout.nav.reportCards" },
   { to: "/configuration", key: "layout.nav.configuration" },
 ] as const;
 

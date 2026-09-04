@@ -10,7 +10,9 @@ import { DashboardPage } from "./pages/app/DashboardPage.js";
 import { DisciplinePage } from "./pages/app/DisciplinePage.js";
 import { EmployeeDetailPage } from "./pages/app/EmployeeDetailPage.js";
 import { EmployeesPage } from "./pages/app/EmployeesPage.js";
+import { GradingPage } from "./pages/app/GradingPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
+import { ReportCardsPage } from "./pages/app/ReportCardsPage.js";
 import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
 import { StudentsPage } from "./pages/app/StudentsPage.js";
 import { TimetablePage } from "./pages/app/TimetablePage.js";
@@ -52,6 +54,8 @@ export function App(): ReactNode {
             <Route path="/discipline" element={<DisciplinePage />} />
             <Route path="/presences" element={<AttendancePage />} />
             <Route path="/emplois-du-temps" element={<TimetablePage />} />
+            <Route path="/notes" element={<GradingPage />} />
+            <Route path="/bulletins" element={<ReportCardsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
