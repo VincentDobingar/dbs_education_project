@@ -23,6 +23,16 @@ import { consumeMfaRecoveryCode } from "./mfa.service.js";
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
+/**
+ * §34 (audit pass 24) : hash argon2id fixe, sans rapport avec un vrai mot de passe —
+ * uniquement utilisé pour faire payer à `login` le même coût CPU sur les branches
+ * "compte inexistant" et "compte verrouillé" que sur la branche "mauvais mot de
+ * passe", pour qu'un attaquant ne puisse pas distinguer les trois par le temps de
+ * réponse (le code/statut HTTP est déjà rendu identique ci-dessous).
+ */
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=19456,t=2,p=1$b02vZ/JzQpd9tA4xGU3kyQ$o+wkTe8GeLLJssB24GW4DrAORyplJkQpYd38PYirF5s";
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -234,11 +244,18 @@ export async function login(email: string, password: string, meta: SessionMeta):
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
+    await verifyPassword(DUMMY_PASSWORD_HASH, password);
     throw new AppError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
+  // §34 (audit pass 24) : jamais exposer le verrouillage au client — sinon un
+  // attaquant distingue un compte réel verrouillé d'un compte inexistant en
+  // comparant les codes de statut (423 vs 401 auparavant). Le verrouillage reste
+  // pleinement appliqué (aucune vérification du mot de passe fourni n'a lieu),
+  // seule la réponse HTTP redevient indiscernable d'un mauvais mot de passe.
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new AppError(423, "ACCOUNT_LOCKED", "Too many failed attempts, try again later");
+    await verifyPassword(DUMMY_PASSWORD_HASH, password);
+    throw new AppError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
 
   const passwordValid = await verifyPassword(user.passwordHash, password);
