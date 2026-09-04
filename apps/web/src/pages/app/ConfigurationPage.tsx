@@ -7,6 +7,12 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
+import {
+  createFeeCategory,
+  createFeeStructure,
+  listFeeCategories,
+  listFeeStructures,
+} from "../../lib/financeApi.js";
 import { createAssessmentType, listAssessmentTypes } from "../../lib/gradingApi.js";
 import {
   createAcademicPeriod,
@@ -76,6 +82,10 @@ function Table({
   );
 }
 
+function formatAmount(cents: number): string {
+  return (cents / 100).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+}
+
 const campusSchema = z.object({ name: z.string().min(2), code: z.string().min(1) });
 const yearSchema = z.object({
   name: z.string().min(2),
@@ -119,6 +129,19 @@ const assessmentTypeSchema = z.object({
   nameFr: z.string().min(1),
   nameEn: z.string().min(1),
 });
+const feeCategorySchema = z.object({
+  code: z.string().min(1),
+  nameFr: z.string().min(1),
+  nameEn: z.string().min(1),
+});
+const feeStructureSchema = z.object({
+  academicYearId: z.string().min(1),
+  gradeLevelId: z.string().optional(),
+  feeCategoryId: z.string().min(1),
+  amount: z.coerce.number().positive(),
+  dueDate: z.string().optional(),
+  isMandatory: z.boolean().optional(),
+});
 
 export function ConfigurationPage(): ReactNode {
   const { t } = useTranslation("app");
@@ -160,6 +183,15 @@ export function ConfigurationPage(): ReactNode {
     queryKey: ["academic-periods", session.subdomain, periodYearId],
     queryFn: () => listAcademicPeriods(periodYearId, creds),
     enabled: Boolean(periodYearId),
+  });
+
+  const feeCategories = useQuery({
+    queryKey: ["fee-categories", session.subdomain],
+    queryFn: () => listFeeCategories(creds),
+  });
+  const feeStructures = useQuery({
+    queryKey: ["fee-structures", session.subdomain],
+    queryFn: () => listFeeStructures(creds),
   });
 
   const campusForm = useForm<z.infer<typeof campusSchema>>({ resolver: zodResolver(campusSchema) });
@@ -240,6 +272,40 @@ export function ConfigurationPage(): ReactNode {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["assessment-types", session.subdomain] });
       assessmentTypeForm.reset();
+    },
+  });
+
+  const feeCategoryForm = useForm<z.infer<typeof feeCategorySchema>>({
+    resolver: zodResolver(feeCategorySchema),
+  });
+  const createFeeCategoryMutation = useMutation({
+    mutationFn: (input: z.infer<typeof feeCategorySchema>) => createFeeCategory(input, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["fee-categories", session.subdomain] });
+      feeCategoryForm.reset();
+    },
+  });
+
+  const feeStructureForm = useForm<z.infer<typeof feeStructureSchema>>({
+    resolver: zodResolver(feeStructureSchema),
+  });
+  const createFeeStructureMutation = useMutation({
+    mutationFn: (values: z.infer<typeof feeStructureSchema>) => {
+      const { amount, gradeLevelId, dueDate, isMandatory, ...rest } = values;
+      return createFeeStructure(
+        {
+          ...rest,
+          amountCents: Math.round(amount * 100),
+          ...(gradeLevelId ? { gradeLevelId } : {}),
+          ...(dueDate ? { dueDate } : {}),
+          ...(isMandatory !== undefined ? { isMandatory } : {}),
+        },
+        creds,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["fee-structures", session.subdomain] });
+      feeStructureForm.reset();
     },
   });
 
@@ -573,6 +639,103 @@ export function ConfigurationPage(): ReactNode {
             className="input w-40"
             {...assessmentTypeForm.register("nameEn")}
           />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.feeCategories")}>
+        <Table
+          columns={[t("config.col.code"), t("config.col.nameFr")]}
+          rows={(feeCategories.data ?? []).map((c) => [c.code, c.nameFr])}
+          empty={t("config.empty")}
+        />
+        <form
+          onSubmit={(event) =>
+            void feeCategoryForm.handleSubmit((values) => createFeeCategoryMutation.mutate(values))(event)
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("config.form.code")}
+            className="input w-28"
+            {...feeCategoryForm.register("code")}
+          />
+          <input
+            placeholder={t("config.form.nameFr")}
+            className="input w-40"
+            {...feeCategoryForm.register("nameFr")}
+          />
+          <input
+            placeholder={t("config.form.nameEn")}
+            className="input w-40"
+            {...feeCategoryForm.register("nameEn")}
+          />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.feeStructures")}>
+        <Table
+          columns={[
+            t("config.col.feeCategory"),
+            t("config.col.gradeLevel"),
+            t("config.col.amount"),
+            t("config.col.mandatory"),
+          ]}
+          rows={(feeStructures.data ?? []).map((fs) => [
+            feeCategories.data?.find((c) => c.id === fs.feeCategoryId)?.nameFr ?? fs.feeCategoryId,
+            gradeLevels.data?.find((g) => g.id === fs.gradeLevelId)?.nameFr ?? t("config.allGradeLevels"),
+            formatAmount(fs.amountCents),
+            fs.isMandatory ? t("config.yes") : t("config.no"),
+          ])}
+          empty={t("config.empty")}
+        />
+        <form
+          onSubmit={(event) =>
+            void feeStructureForm.handleSubmit((values) => createFeeStructureMutation.mutate(values))(event)
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <select className="input w-40" {...feeStructureForm.register("academicYearId")}>
+            <option value="">{t("config.form.selectYear")}</option>
+            {(years.data ?? []).map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.name}
+              </option>
+            ))}
+          </select>
+          <select className="input w-40" {...feeStructureForm.register("feeCategoryId")}>
+            <option value="">{t("config.form.selectFeeCategory")}</option>
+            {(feeCategories.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nameFr}
+              </option>
+            ))}
+          </select>
+          <select className="input w-40" {...feeStructureForm.register("gradeLevelId")}>
+            <option value="">{t("config.allGradeLevels")}</option>
+            {(gradeLevels.data ?? []).map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.nameFr}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            step="0.01"
+            placeholder={t("config.form.amount")}
+            className="input w-28"
+            {...feeStructureForm.register("amount")}
+          />
+          <input type="date" className="input w-40" {...feeStructureForm.register("dueDate")} />
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" defaultChecked {...feeStructureForm.register("isMandatory")} />
+            {t("config.form.mandatory")}
+          </label>
           <Button type="submit" variant="secondary">
             {t("config.add")}
           </Button>

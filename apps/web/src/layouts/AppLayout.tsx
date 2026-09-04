@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: "/discipline", key: "layout.nav.discipline" },
   { to: "/notes", key: "layout.nav.grading" },
   { to: "/bulletins", key: "layout.nav.reportCards" },
+  { to: "/finances", key: "layout.nav.finance" },
   { to: "/configuration", key: "layout.nav.configuration" },
 ] as const;
 
