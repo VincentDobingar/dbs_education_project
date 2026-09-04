@@ -91,6 +91,13 @@ parentPortalRouter.get(
   parentPortalController.getChildFinancialSituation,
 );
 parentPortalRouter.get(
+  "/children/:studentId/receipts",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  parentPortalController.getChildReceipts,
+);
+parentPortalRouter.get(
   "/children/:studentId/receipts/:receiptId/pdf",
   requireAuth,
   verifiedChild,

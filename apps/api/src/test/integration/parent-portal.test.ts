@@ -350,6 +350,12 @@ describe("portail parent — lecture (§25)", () => {
     expect(financialSituation.status).toBe(200);
     expect((financialSituation.body as { outstandingCents: number }).outstandingCents).toBe(60_000);
 
+    const receipts = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/receipts`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(receipts.status).toBe(200);
+    expect((receipts.body as { id: string }[]).some((r) => r.id === receiptId)).toBe(true);
+
     const receiptPdf = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/receipts/${receiptId}/pdf`)
       .set("Authorization", `Bearer ${parentToken}`);

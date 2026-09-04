@@ -22,7 +22,8 @@ import {
 } from "../finance/financial-situation.service.js";
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
-import { requireReceipt } from "../finance/student-payment.service.js";
+import { listReceiptsForStudent, requireReceipt } from "../finance/student-payment.service.js";
+import type { StudentReceiptWithRefund } from "../finance/student-payment.service.js";
 import { generateReportCardPdf } from "../grading/report-card-pdf.service.js";
 import * as reportCardService from "../grading/report-card.service.js";
 import type { ReportCardWithItems } from "../grading/report-card.service.js";
@@ -92,6 +93,12 @@ export async function getChildHomework(studentId: string): Promise<Homework[]> {
 
 export async function getChildFinancialSituation(studentId: string): Promise<StudentFinancialSituation> {
   return getStudentFinancialSituation(studentId);
+}
+
+/** Same reasoning as getChildHomework above — reuses the student-portal's own
+ * listReceiptsForStudent as-is, read-only (§25 "consulter ses reçus"). */
+export async function getChildReceipts(studentId: string): Promise<StudentReceiptWithRefund[]> {
+  return listReceiptsForStudent(studentId);
 }
 
 /** Never confirm the existence of another student's receipt (404, not 403). */

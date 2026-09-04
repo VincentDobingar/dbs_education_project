@@ -96,6 +96,13 @@ export function getChildFinancialSituation(req: Request, res: Response, next: Ne
   })().catch(next);
 }
 
+export function getChildReceipts(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const receipts = await parentPortalService.getChildReceipts(req.params.studentId as string);
+    res.status(200).json(receipts);
+  })().catch(next);
+}
+
 export function getChildReceiptPdf(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const tenant = requireTenant(req);
