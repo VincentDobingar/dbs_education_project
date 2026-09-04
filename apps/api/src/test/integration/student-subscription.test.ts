@@ -3,7 +3,6 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
-import * as subscriptionService from "../../modules/subscriptions/subscription.service.js";
 import { testAdminPrisma } from "../admin-client.js";
 import {
   addMembership,
@@ -173,9 +172,9 @@ describe("abonnement individuel de l'élève — libre-service (§26)", () => {
     const paymentIntentId = (intent.body as { id: string }).id;
 
     // DRAFT -> ACTIVE exige de passer par PENDING_PAYMENT (subscription-transitions.ts) —
-    // aucune route self-service ne l'expose encore, même limite déjà en place côté
-    // "school" et "family" (subscription.routes.ts n'a pas non plus cette transition en HTTP).
-    await subscriptionService.transitionSubscription(subscriptionBody.id, "PENDING_PAYMENT");
+    // createInvoiceForSubscription (payment.service.ts) déclenche désormais cette
+    // transition elle-même dès qu'une facture est émise sur un abonnement DRAFT, donc
+    // déjà fait par l'appel /invoice ci-dessus, plus besoin de l'appeler manuellement ici.
 
     const cashPayment = await request(app)
       .post(`/api/v1/subscriptions/student/${studentId}/cash-payment`)

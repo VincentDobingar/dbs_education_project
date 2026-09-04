@@ -104,6 +104,20 @@ export async function createInvoiceForSubscription(
     : null;
 
   return prisma.$transaction(async (tx) => {
+    // §3.1/§9/§26 : aucune route self-service n'exposait jusqu'ici la transition
+    // DRAFT -> PENDING_PAYMENT (subscription-transitions.ts n'autorise pas
+    // DRAFT -> ACTIVE en un saut) — un abonnement école/famille/élève payé au comptant
+    // restait bloqué en DRAFT pour toujours, handleSuccessfulTransaction refusant
+    // silencieusement de l'activer. Émettre une facture est le geste naturel qui fait
+    // entrer un abonnement dans le pipeline de paiement, donc c'est ici qu'on la
+    // déclenche — idempotent (no-op si déjà au-delà de DRAFT), même geste que
+    // license-admin.service.ts pour les licences sponsorisées.
+    if (subscription.status === "DRAFT") {
+      await applySubscriptionTransition(tx, subscription.id, "PENDING_PAYMENT", {
+        reason: "Invoice issued",
+      });
+    }
+
     const price = await resolvePlanPrice(
       tx,
       subscription.planId,
