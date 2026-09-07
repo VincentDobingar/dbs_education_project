@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "../../lib/apiClient.js";
+import { getCourseForStudent, listCoursesForStudent, markResourceComplete } from "../../lib/elearningApi.js";
 import { listLinkedStudents } from "../../lib/familyApi.js";
 import { getMySubmission, listHomeworkForStudent, submitHomework } from "../../lib/homeworkApi.js";
 import { loadPortalSession } from "../../lib/portalSession.js";
@@ -87,6 +88,73 @@ function HomeworkItem({
           </Button>
         </form>
       )}
+    </li>
+  );
+}
+
+function CourseItem({
+  studentId,
+  courseId,
+  title,
+  accessToken,
+}: {
+  studentId: string;
+  courseId: string;
+  title: string;
+  accessToken: string;
+}): ReactNode {
+  const { t } = useTranslation("app");
+  const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
+
+  const course = useQuery({
+    queryKey: ["student-course", studentId, courseId],
+    queryFn: () => getCourseForStudent(studentId, courseId, accessToken),
+    enabled: expanded,
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (resourceId: string) => markResourceComplete(studentId, courseId, resourceId, accessToken),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["student-course", studentId, courseId] });
+    },
+  });
+
+  return (
+    <li className="border-b border-slate-100 py-3">
+      <button
+        type="button"
+        className="font-medium text-slate-900 hover:underline"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {title}
+      </button>
+      {expanded && course.data ? (
+        <ul className="mt-2 space-y-1 text-sm">
+          {course.data.resources.map((resource) => {
+            const completed = course.data.completedResourceIds.includes(resource.id);
+            return (
+              <li key={resource.id} className="flex items-center justify-between">
+                <span className="text-slate-700">
+                  {resource.title} ({t(`elearning.resourceType.${resource.type}`)})
+                </span>
+                {completed ? (
+                  <span className="text-xs text-teal-600">{t("portal.course.completed")}</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-xs text-brand-teal hover:underline disabled:opacity-50"
+                    disabled={completeMutation.isPending}
+                    onClick={() => completeMutation.mutate(resource.id)}
+                  >
+                    {t("portal.course.markComplete")}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </li>
   );
 }
@@ -205,6 +273,11 @@ export function StudentPortalPage(): ReactNode {
     queryFn: () => getStudentReceipts(studentId as string, accessToken),
     enabled: Boolean(studentId),
   });
+  const courses = useQuery({
+    queryKey: ["student-courses", studentId],
+    queryFn: () => listCoursesForStudent(studentId as string, accessToken),
+    enabled: Boolean(studentId),
+  });
 
   async function openReportCardPdf(reportCardId: string): Promise<void> {
     if (!studentId) return;
@@ -250,7 +323,7 @@ export function StudentPortalPage(): ReactNode {
   // Same reasoning as ParentChildPage: every route here but the dashboard itself is
   // gated behind an active individual subscription (§37) — a 402 means "subscribe to
   // unlock", not "there is nothing yet".
-  const subscriptionRequired = [timetable, reportCards, announcements, homework, receipts].some(
+  const subscriptionRequired = [timetable, reportCards, announcements, homework, receipts, courses].some(
     (query) => query.error instanceof ApiError && query.error.status === 402,
   );
 
@@ -351,6 +424,25 @@ export function StudentPortalPage(): ReactNode {
                 title={hw.title}
                 dueAt={hw.dueAt}
                 studentId={studentId}
+                accessToken={accessToken}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">{t("portal.course.title")}</h2>
+        {(courses.data ?? []).length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">{t("portal.course.empty")}</p>
+        ) : (
+          <ul className="mt-1">
+            {(courses.data ?? []).map((course) => (
+              <CourseItem
+                key={course.id}
+                studentId={studentId}
+                courseId={course.id}
+                title={course.title}
                 accessToken={accessToken}
               />
             ))}

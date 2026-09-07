@@ -19,20 +19,25 @@ import { AdminSupportTicketsPage } from "./pages/admin/AdminSupportTicketsPage.j
 import { AdminTenantsPage } from "./pages/admin/AdminTenantsPage.js";
 import { AnnouncementsPage } from "./pages/app/AnnouncementsPage.js";
 import { AttendancePage } from "./pages/app/AttendancePage.js";
+import { BoardingPage } from "./pages/app/BoardingPage.js";
+import { CafeteriaPage } from "./pages/app/CafeteriaPage.js";
 import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
 import { DashboardPage } from "./pages/app/DashboardPage.js";
 import { DisciplinePage } from "./pages/app/DisciplinePage.js";
+import { ElearningPage } from "./pages/app/ElearningPage.js";
 import { EmployeeDetailPage } from "./pages/app/EmployeeDetailPage.js";
 import { EmployeesPage } from "./pages/app/EmployeesPage.js";
 import { FinancePage } from "./pages/app/FinancePage.js";
 import { GradingPage } from "./pages/app/GradingPage.js";
 import { HomeworkPage } from "./pages/app/HomeworkPage.js";
+import { LibraryPage } from "./pages/app/LibraryPage.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
 import { ReportCardsPage } from "./pages/app/ReportCardsPage.js";
 import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
 import { StudentsPage } from "./pages/app/StudentsPage.js";
 import { SupportTicketsPage } from "./pages/app/SupportTicketsPage.js";
 import { TimetablePage } from "./pages/app/TimetablePage.js";
+import { TransportPage } from "./pages/app/TransportPage.js";
 import { UsersPage } from "./pages/app/UsersPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
 import { HomePage } from "./pages/marketing/HomePage.js";
@@ -82,6 +87,11 @@ export function App(): ReactNode {
             <Route path="/devoirs" element={<HomeworkPage />} />
             <Route path="/annonces" element={<AnnouncementsPage />} />
             <Route path="/support" element={<SupportTicketsPage />} />
+            <Route path="/bibliotheque" element={<LibraryPage />} />
+            <Route path="/transport" element={<TransportPage />} />
+            <Route path="/cantine" element={<CafeteriaPage />} />
+            <Route path="/internat" element={<BoardingPage />} />
+            <Route path="/e-learning" element={<ElearningPage />} />
           </Route>
 
           <Route element={<PortalLayout />}>

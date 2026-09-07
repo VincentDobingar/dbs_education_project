@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
-import { createEmployee, listEmployees } from "../../lib/employeesApi.js";
+import { createEmployee, fetchPayrollExportCsv, listEmployees } from "../../lib/employeesApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
 const employeeSchema = z.object({
@@ -43,11 +43,25 @@ export function EmployeesPage(): ReactNode {
     },
   });
 
+  async function downloadPayrollCsv(): Promise<void> {
+    const blob = await fetchPayrollExportCsv(creds);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "export-paie.csv";
+    link.click();
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t("employees.title")}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t("employees.subtitle")}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{t("employees.title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("employees.subtitle")}</p>
+        </div>
+        <Button type="button" variant="secondary" onClick={() => void downloadPayrollCsv()}>
+          {t("employees.exportPayroll")}
+        </Button>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">

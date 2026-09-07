@@ -18,6 +18,11 @@ const NAV_LINKS = [
   { to: "/devoirs", key: "layout.nav.homework" },
   { to: "/annonces", key: "layout.nav.announcements" },
   { to: "/support", key: "layout.nav.support" },
+  { to: "/bibliotheque", key: "layout.nav.library" },
+  { to: "/transport", key: "layout.nav.transport" },
+  { to: "/cantine", key: "layout.nav.cafeteria" },
+  { to: "/internat", key: "layout.nav.boarding" },
+  { to: "/e-learning", key: "layout.nav.elearning" },
   { to: "/configuration", key: "layout.nav.configuration" },
 ] as const;
 
