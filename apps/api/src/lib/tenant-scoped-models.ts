@@ -24,6 +24,8 @@ export const TENANT_SCOPED_MODELS = [
   "TeacherAssignment",
   "Timetable",
   "TimetableEntry",
+  "Room",
+  "CalendarEvent",
   "Announcement",
   "ParentStudentRelationship",
   "ActivationInvitation",

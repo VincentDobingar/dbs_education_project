@@ -108,17 +108,17 @@ model MessageTemplate {
 }
 
 model SupportTicket {
-  id              String               @id @default(cuid())
-  tenantId        String?
-  createdByUserId String
-  subject         String
-  category        String?
-  status          SupportTicketStatus  @default(OPEN)
-  priority        TicketPriority       @default(MEDIUM)
+  id               String              @id @default(cuid())
+  tenantId         String?
+  createdByUserId  String
+  subject          String
+  category         String?
+  status           SupportTicketStatus @default(OPEN)
+  priority         TicketPriority      @default(MEDIUM)
   assignedToUserId String?
-  closedAt        DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  closedAt         DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   messages SupportTicketMessage[]
 
@@ -143,15 +143,15 @@ model SupportTicketMessage {
 /// Documents administratifs generaux (distincts de StudentDocument qui est lie a
 /// un eleve precis).
 model Document {
-  id              String    @id @default(cuid())
-  tenantId        String?
-  category        String
-  title           String
-  fileUrl         String
+  id               String    @id @default(cuid())
+  tenantId         String?
+  category         String
+  title            String
+  fileUrl          String
   uploadedByUserId String?
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([category])

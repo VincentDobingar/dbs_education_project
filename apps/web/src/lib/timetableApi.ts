@@ -37,6 +37,7 @@ export interface TimetableEntry {
   startTime: string;
   endTime: string;
   roomLabel: string | null;
+  roomId: string | null;
 }
 
 export interface CreateTimetableEntryInput {
@@ -46,6 +47,7 @@ export interface CreateTimetableEntryInput {
   startTime: string;
   endTime: string;
   roomLabel?: string;
+  roomId?: string;
 }
 
 export function listTimetableEntries(

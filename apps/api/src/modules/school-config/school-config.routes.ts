@@ -8,9 +8,11 @@ import { requireTenantMembership } from "../../middleware/requireTenantMembershi
 
 import * as academicStructureController from "./academic-structure.controller.js";
 import * as academicYearController from "./academic-year.controller.js";
+import * as calendarEventController from "./calendar-event.controller.js";
 import * as campusController from "./campus.controller.js";
 import * as minorConsentSettingController from "./minor-consent-setting.controller.js";
 import * as programController from "./program.controller.js";
+import * as roomController from "./room.controller.js";
 import * as subjectCoefficientController from "./subject-coefficient.controller.js";
 import * as subjectController from "./subject.controller.js";
 import * as teacherAssignmentController from "./teacher-assignment.controller.js";
@@ -102,6 +104,20 @@ schoolConfigRouter.delete(
   "/timetables/:id/entries/:entryId",
   manageSettings,
   timetableController.removeTimetableEntry,
+);
+
+schoolConfigRouter.post("/rooms", manageSettings, roomController.createRoom);
+schoolConfigRouter.get("/rooms", roomController.listRooms);
+schoolConfigRouter.patch("/rooms/:id", manageSettings, roomController.updateRoom);
+schoolConfigRouter.post("/rooms/:id/archive", manageSettings, roomController.archiveRoom);
+
+schoolConfigRouter.post("/calendar-events", manageSettings, calendarEventController.createCalendarEvent);
+schoolConfigRouter.get("/calendar-events", calendarEventController.listCalendarEvents);
+schoolConfigRouter.patch("/calendar-events/:id", manageSettings, calendarEventController.updateCalendarEvent);
+schoolConfigRouter.delete(
+  "/calendar-events/:id",
+  manageSettings,
+  calendarEventController.removeCalendarEvent,
 );
 
 // §16 : seuil de majorité/activation du consentement parental requis pour

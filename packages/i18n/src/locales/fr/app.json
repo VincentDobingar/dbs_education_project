@@ -742,5 +742,17 @@
   "finance.exportExcel": "Exporter Excel",
   "students.exportCsv": "Exporter CSV",
   "students.exportExcel": "Exporter Excel",
-  "employees.exportPayrollExcel": "Exporter la paie (Excel)"
+  "employees.exportPayrollExcel": "Exporter la paie (Excel)",
+  "config.rooms": "Salles",
+  "config.calendarEvents": "Calendrier",
+  "config.col.title": "Titre",
+  "config.col.eventType": "Type",
+  "config.form.roomName": "Nom de la salle",
+  "config.form.eventTitle": "Titre de l'événement",
+  "config.eventType.HOLIDAY": "Jour férié",
+  "config.eventType.EXAM_PERIOD": "Période d'examens",
+  "config.eventType.SCHOOL_EVENT": "Événement scolaire",
+  "config.eventType.OTHER": "Autre",
+  "timetable.selectRoom": "Choisir une salle",
+  "timetable.error.roomConflict": "Cette salle est déjà réservée sur ce créneau."
 }

@@ -73,15 +73,19 @@ export async function addTimetableEntry(
 ): Promise<TimetableEntry> {
   const timetable = await requireTimetable(timetableId);
 
-  const [subject, teacher] = await Promise.all([
+  const [subject, teacher, room] = await Promise.all([
     prisma.subject.findUnique({ where: { id: input.subjectId } }),
     prisma.employee.findUnique({ where: { id: input.teacherEmployeeId } }),
+    input.roomId ? prisma.room.findUnique({ where: { id: input.roomId } }) : Promise.resolve(undefined),
   ]);
   if (!subject) {
     throw new AppError(404, "SUBJECT_NOT_FOUND", `Subject not found: ${input.subjectId}`);
   }
   if (!teacher) {
     throw new AppError(404, "EMPLOYEE_NOT_FOUND", `Employee not found: ${input.teacherEmployeeId}`);
+  }
+  if (input.roomId && (!room || room.deletedAt)) {
+    throw new AppError(404, "ROOM_NOT_FOUND", `Room not found: ${input.roomId}`);
   }
 
   const sameClassroomEntries = await prisma.timetableEntry.findMany({
@@ -116,6 +120,31 @@ export async function addTimetableEntry(
     );
   }
 
+  // §20 : "salles comme entité propre" — même garde que le conflit enseignant
+  // ci-dessus (cross-timetable, sur toute l'année scolaire), jamais juste au sein
+  // de cette grille : une salle physique n'a qu'une seule classe à la fois, quelle
+  // que soit la classe qui la réserve. Seulement quand roomId est fourni — une
+  // entrée qui garde roomLabel en texte libre n'a par construction rien à vérifier.
+  if (input.roomId) {
+    const roomEntriesThisYear = await prisma.timetableEntry.findMany({
+      where: {
+        roomId: input.roomId,
+        dayOfWeek: input.dayOfWeek,
+        timetable: { academicYearId: timetable.academicYearId },
+      },
+    });
+    const roomConflict = roomEntriesThisYear.some((entry) =>
+      timeRangesOverlap(input.startTime, input.endTime, entry.startTime, entry.endTime),
+    );
+    if (roomConflict) {
+      throw new AppError(
+        409,
+        "ROOM_SCHEDULE_CONFLICT",
+        "This room already has an entry overlapping this time slot",
+      );
+    }
+  }
+
   return prisma.timetableEntry.create({
     data: {
       tenantId: requireCurrentTenantId(),
@@ -126,6 +155,7 @@ export async function addTimetableEntry(
       startTime: input.startTime,
       endTime: input.endTime,
       ...(input.roomLabel ? { roomLabel: input.roomLabel } : {}),
+      ...(input.roomId ? { roomId: input.roomId } : {}),
     },
   });
 }

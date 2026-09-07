@@ -19,12 +19,13 @@ model AcademicYear {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  periods    AcademicPeriod[]
-  classrooms Classroom[]
-  timetables Timetable[]
-  enrollments Enrollment[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  periods            AcademicPeriod[]
+  classrooms         Classroom[]
+  timetables         Timetable[]
+  enrollments        Enrollment[]
   teacherAssignments TeacherAssignment[]
+  calendarEvents     CalendarEvent[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -60,7 +61,7 @@ model EducationCycle {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   gradeLevels GradeLevel[]
 
   @@unique([tenantId, code])
@@ -81,10 +82,10 @@ model GradeLevel {
   tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cycle  EducationCycle @relation(fields: [cycleId], references: [id])
 
-  programs             Program[]
-  classrooms           Classroom[]
-  subjectCoefficients  SubjectCoefficient[]
-  enrollments          Enrollment[]
+  programs            Program[]
+  classrooms          Classroom[]
+  subjectCoefficients SubjectCoefficient[]
+  enrollments         Enrollment[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -110,14 +111,14 @@ model Program {
 }
 
 model Department {
-  id              String   @id @default(cuid())
-  tenantId        String
-  code            String
-  nameFr          String
-  nameEn          String
-  headEmployeeId  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  tenantId       String
+  code           String
+  nameFr         String
+  nameEn         String
+  headEmployeeId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   subjects Subject[]
@@ -244,14 +245,75 @@ model TimetableEntry {
   dayOfWeek         Int // 0 = lundi ... 6 = dimanche
   startTime         String // "08:00"
   endTime           String // "09:00"
+  // roomLabel reste pour une salle en texte libre (établissement qui ne veut pas
+  // gérer de référentiel de salles) ; roomId est la nouvelle voie recommandée
+  // (§20 : "salles comme entité propre", noté hors périmètre jusqu'ici) — les deux
+  // coexistent, jamais une migration destructive de l'un vers l'autre. Quand roomId
+  // est renseigné, le service vérifie qu'une même salle n'a pas deux cours en même
+  // temps (même logique que le conflit enseignant, cross-timetable sur l'année).
   roomLabel         String?
+  roomId            String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   timetable       Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
   subject         Subject   @relation(fields: [subjectId], references: [id])
   teacherEmployee Employee  @relation(fields: [teacherEmployeeId], references: [id])
+  room            Room?     @relation(fields: [roomId], references: [id])
 
   @@index([tenantId])
   @@index([timetableId])
+  @@index([roomId])
+}
+
+// §20 : "salles comme entité propre" — jusqu'ici juste roomLabel en texte libre sur
+// TimetableEntry, aucun moyen de lister les salles d'un campus ni de détecter
+// qu'une salle est déjà prise. Même paire suppression douce que Campus/Classroom.
+model Room {
+  id        String    @id @default(cuid())
+  tenantId  String
+  campusId  String?
+  name      String
+  capacity  Int?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  campus  Campus?          @relation(fields: [campusId], references: [id])
+  entries TimetableEntry[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([campusId])
+}
+
+enum CalendarEventType {
+  HOLIDAY
+  EXAM_PERIOD
+  SCHOOL_EVENT
+  OTHER
+}
+
+// §20 : "calendrier/jours fériés dédié" — AcademicPeriod ne couvre que le découpage
+// trimestre/semestre, jamais un jour férié ou un événement ponctuel. academicYearId
+// optionnel : un jour férié national reste une vraie date calendaire, pas forcément
+// rattachée à une année scolaire déjà créée quand l'établissement le planifie.
+model CalendarEvent {
+  id             String            @id @default(cuid())
+  tenantId       String
+  academicYearId String?
+  type           CalendarEventType
+  title          String
+  startDate      DateTime
+  endDate        DateTime?
+  description    String?
+  deletedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id])
+
+  @@index([tenantId])
+  @@index([academicYearId])
+  @@index([startDate])
 }

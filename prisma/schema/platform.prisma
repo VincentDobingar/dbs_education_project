@@ -79,27 +79,27 @@ model Tenant {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  country  Country @relation(fields: [countryId], references: [id])
+  country  Country  @relation(fields: [countryId], references: [id])
   currency Currency @relation(fields: [currencyId], references: [id])
 
-  domains      TenantDomain[]
-  settings     TenantSetting[]
-  campuses     Campus[]
-  memberships  TenantMembership[]
-  auditLogs    AuditLog[]
+  domains           TenantDomain[]
+  settings          TenantSetting[]
+  campuses          Campus[]
+  memberships       TenantMembership[]
+  auditLogs         AuditLog[]
   subscriptionOwner SubscriptionOwner?
 
-  academicYears    AcademicYear[]
-  educationCycles  EducationCycle[]
-  gradeLevels      GradeLevel[]
-  programs         Program[]
-  departments      Department[]
-  classrooms       Classroom[]
-  subjects         Subject[]
-  assessmentTypes  AssessmentType[]
-  students         Student[]
-  employees        Employee[]
-  feeCategories    FeeCategory[]
+  academicYears   AcademicYear[]
+  educationCycles EducationCycle[]
+  gradeLevels     GradeLevel[]
+  programs        Program[]
+  departments     Department[]
+  classrooms      Classroom[]
+  subjects        Subject[]
+  assessmentTypes AssessmentType[]
+  students        Student[]
+  employees       Employee[]
+  feeCategories   FeeCategory[]
 
   @@index([status])
   @@index([countryId])
@@ -123,11 +123,11 @@ model TenantDomain {
 /// parametre. Les parametres structurels (annee scolaire, devise) restent des colonnes
 /// typees sur Tenant.
 model TenantSetting {
-  id        String   @id @default(cuid())
-  tenantId  String
-  key       String
-  value     Json
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  tenantId    String
+  key         String
+  value       Json
+  updatedAt   DateTime @updatedAt
   updatedById String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -166,9 +166,10 @@ model Campus {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  classrooms Classroom[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classrooms  Classroom[]
   enrollments Enrollment[]
+  rooms       Room[]
 
   @@unique([tenantId, code])
   @@index([tenantId])

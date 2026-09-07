@@ -12,6 +12,7 @@ describe("emplois du temps (§20)", () => {
 
   afterAll(async () => {
     await testAdminPrisma.timetableEntry.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.room.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.timetable.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.teacherAssignment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.employee.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -257,6 +258,73 @@ describe("emplois du temps (§20)", () => {
       .send({ subjectId, teacherEmployeeId: employeeId, dayOfWeek: 1, startTime: "08:30", endTime: "09:30" });
     expect(teacherConflict.status).toBe(409);
     expect((teacherConflict.body as { code: string }).code).toBe("TEACHER_SCHEDULE_CONFLICT");
+
+    // §20 : salle en tant qu'entité propre — même garde que le conflit enseignant
+    // ci-dessus, mais pour un lieu physique plutôt qu'une personne. Un second
+    // enseignant isole ce cas du conflit enseignant déjà couvert.
+    const room = await request(app)
+      .post("/api/v1/school-config/rooms")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `Salle ${uniqueSuffix()}`, capacity: 30 });
+    expect(room.status).toBe(201);
+    const roomId = (room.body as { id: string }).id;
+
+    const thirdClassroom = await request(app)
+      .post("/api/v1/school-config/classrooms")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ name: `6e C ${uniqueSuffix()}`, academicYearId, campusId, gradeLevelId, capacity: 40 });
+    const thirdTimetable = await request(app)
+      .post("/api/v1/school-config/timetables")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ classroomId: (thirdClassroom.body as { id: string }).id, academicYearId });
+
+    const roomBooked = await request(app)
+      .post(`/api/v1/school-config/timetables/${(thirdTimetable.body as { id: string }).id}/entries`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        subjectId,
+        teacherEmployeeId: employeeId,
+        dayOfWeek: 2,
+        startTime: "10:00",
+        endTime: "11:00",
+        roomId,
+      });
+    expect(roomBooked.status).toBe(201);
+
+    const secondEmployeeId = await createTeacherEmployee(subdomain, adminToken);
+    const roomConflict = await request(app)
+      .post(`/api/v1/school-config/timetables/${(secondTimetable.body as { id: string }).id}/entries`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        subjectId,
+        teacherEmployeeId: secondEmployeeId,
+        dayOfWeek: 2,
+        startTime: "10:30",
+        endTime: "11:30",
+        roomId,
+      });
+    expect(roomConflict.status).toBe(409);
+    expect((roomConflict.body as { code: string }).code).toBe("ROOM_SCHEDULE_CONFLICT");
+
+    // Same room, same day, but a non-overlapping time slot — must succeed.
+    const roomNoConflict = await request(app)
+      .post(`/api/v1/school-config/timetables/${(secondTimetable.body as { id: string }).id}/entries`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        subjectId,
+        teacherEmployeeId: secondEmployeeId,
+        dayOfWeek: 2,
+        startTime: "11:00",
+        endTime: "12:00",
+        roomId,
+      });
+    expect(roomNoConflict.status).toBe(201);
 
     const listed = await request(app)
       .get(`/api/v1/school-config/timetables/${timetableId}/entries`)

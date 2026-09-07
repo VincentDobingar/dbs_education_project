@@ -76,13 +76,13 @@ model RouteStop {
 /// un doublon. stopId optionnel : un itinéraire peut être affecté avant que ses
 /// arrêts précis soient saisis.
 model StudentRouteAssignment {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   tenantId  String
-  studentId String    @unique
+  studentId String   @unique
   routeId   String
   stopId    String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
   route   TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)

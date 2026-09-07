@@ -189,3 +189,74 @@ export function listSubjects(creds: TenantCredentials): Promise<Subject[]> {
 export function createSubject(input: CreateSubjectInput, creds: TenantCredentials): Promise<Subject> {
   return apiRequest("/school-config/subjects", { method: "POST", body: input, ...creds });
 }
+
+// §20 : salles comme entité propre.
+export interface Room {
+  id: string;
+  name: string;
+  campusId: string | null;
+  capacity: number | null;
+  deletedAt: string | null;
+}
+
+export interface CreateRoomInput {
+  name: string;
+  campusId?: string;
+  capacity?: number;
+}
+
+export function listRooms(creds: TenantCredentials, campusId?: string): Promise<Room[]> {
+  const query = campusId ? `?campusId=${encodeURIComponent(campusId)}` : "";
+  return apiRequest(`/school-config/rooms${query}`, { ...creds });
+}
+
+export function createRoom(input: CreateRoomInput, creds: TenantCredentials): Promise<Room> {
+  return apiRequest("/school-config/rooms", { method: "POST", body: input, ...creds });
+}
+
+export function archiveRoom(id: string, creds: TenantCredentials): Promise<Room> {
+  return apiRequest(`/school-config/rooms/${id}/archive`, { method: "POST", ...creds });
+}
+
+// §20 : calendrier / jours fériés dédié.
+export type CalendarEventType = "HOLIDAY" | "EXAM_PERIOD" | "SCHOOL_EVENT" | "OTHER";
+
+export interface CalendarEvent {
+  id: string;
+  academicYearId: string | null;
+  type: CalendarEventType;
+  title: string;
+  startDate: string;
+  endDate: string | null;
+  description: string | null;
+}
+
+export interface CreateCalendarEventInput {
+  academicYearId?: string;
+  type: CalendarEventType;
+  title: string;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+}
+
+export function listCalendarEvents(
+  creds: TenantCredentials,
+  query: { academicYearId?: string } = {},
+): Promise<CalendarEvent[]> {
+  const params = new URLSearchParams();
+  if (query.academicYearId) params.set("academicYearId", query.academicYearId);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest(`/school-config/calendar-events${suffix}`, { ...creds });
+}
+
+export function createCalendarEvent(
+  input: CreateCalendarEventInput,
+  creds: TenantCredentials,
+): Promise<CalendarEvent> {
+  return apiRequest("/school-config/calendar-events", { method: "POST", body: input, ...creds });
+}
+
+export function removeCalendarEvent(id: string, creds: TenantCredentials): Promise<void> {
+  return apiRequest(`/school-config/calendar-events/${id}`, { method: "DELETE", ...creds });
+}

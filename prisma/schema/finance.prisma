@@ -26,24 +26,24 @@ model FeeCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  feeStructures  FeeStructure[]
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feeStructures FeeStructure[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
 }
 
 model FeeStructure {
-  id            String   @id @default(cuid())
-  tenantId      String
+  id             String    @id @default(cuid())
+  tenantId       String
   academicYearId String
-  gradeLevelId  String?
-  feeCategoryId String
-  amountCents   Int
-  dueDate       DateTime?
-  isMandatory   Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  gradeLevelId   String?
+  feeCategoryId  String
+  amountCents    Int
+  dueDate        DateTime?
+  isMandatory    Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   feeCategory FeeCategory @relation(fields: [feeCategoryId], references: [id])
 
@@ -79,12 +79,12 @@ model StudentInvoice {
 }
 
 model StudentInvoiceItem {
-  id             String  @id @default(cuid())
+  id             String   @id @default(cuid())
   invoiceId      String
   feeStructureId String?
   description    String
   amountCents    Int
-  discountCents  Int     @default(0)
+  discountCents  Int      @default(0)
   createdAt      DateTime @default(now())
 
   invoice StudentInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -93,16 +93,16 @@ model StudentInvoiceItem {
 }
 
 model StudentPayment {
-  id                  String            @id @default(cuid())
-  tenantId            String
-  studentInvoiceId    String
-  amountCents         Int
-  method              PaymentMethodType
+  id                   String            @id @default(cuid())
+  tenantId             String
+  studentInvoiceId     String
+  amountCents          Int
+  method               PaymentMethodType
   recordedByEmployeeId String? // obligatoire pour un encaissement especes (agent autorise)
   paymentTransactionId String? // renseigne pour un paiement electronique (Mobile Money, carte)
-  paidAt              DateTime          @default(now())
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  paidAt               DateTime          @default(now())
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   invoice StudentInvoice @relation(fields: [studentInvoiceId], references: [id])
 
@@ -161,17 +161,17 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id                  String    @id @default(cuid())
-  tenantId            String
-  categoryId          String
-  supplierName        String?
-  description         String
-  amountCents         Int
-  expenseDate         DateTime
+  id                   String    @id @default(cuid())
+  tenantId             String
+  categoryId           String
+  supplierName         String?
+  description          String
+  amountCents          Int
+  expenseDate          DateTime
   approvedByEmployeeId String?
-  deletedAt           DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   category ExpenseCategory @relation(fields: [categoryId], references: [id])
 
@@ -180,18 +180,18 @@ model Expense {
 }
 
 model CashSession {
-  id                   String             @id @default(cuid())
-  tenantId             String
-  campusId             String?
-  openedByEmployeeId   String
-  openedAt             DateTime           @default(now())
-  closedByEmployeeId   String?
-  closedAt             DateTime?
-  openingBalanceCents  Int
-  closingBalanceCents  Int?
-  status               CashSessionStatus  @default(OPEN)
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  id                  String            @id @default(cuid())
+  tenantId            String
+  campusId            String?
+  openedByEmployeeId  String
+  openedAt            DateTime          @default(now())
+  closedByEmployeeId  String?
+  closedAt            DateTime?
+  openingBalanceCents Int
+  closingBalanceCents Int?
+  status              CashSessionStatus @default(OPEN)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   @@index([tenantId])
   @@index([status])

@@ -23,6 +23,7 @@ export const createTimetableEntrySchema = z
     startTime: z.string().regex(TIME_PATTERN, "Expected HH:MM"),
     endTime: z.string().regex(TIME_PATTERN, "Expected HH:MM"),
     roomLabel: z.string().min(1).optional(),
+    roomId: z.string().min(1).optional(),
   })
   .refine((data) => data.startTime < data.endTime, {
     message: "startTime must be before endTime",

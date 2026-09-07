@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ApiError } from "../../lib/apiClient.js";
 import { listEmployees } from "../../lib/employeesApi.js";
-import { listClassrooms, listSubjects, type Classroom } from "../../lib/schoolConfigApi.js";
+import { listClassrooms, listRooms, listSubjects, type Classroom } from "../../lib/schoolConfigApi.js";
 import {
   addTimetableEntry,
   createTimetable,
@@ -34,6 +35,10 @@ export function TimetablePage(): ReactNode {
   const employees = useQuery({
     queryKey: ["employees", session.subdomain],
     queryFn: () => listEmployees(creds),
+  });
+  const rooms = useQuery({
+    queryKey: ["rooms", session.subdomain],
+    queryFn: () => listRooms(creds),
   });
 
   const [classroomId, setClassroomId] = useState("");
@@ -71,6 +76,7 @@ export function TimetablePage(): ReactNode {
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("09:00");
   const [roomLabel, setRoomLabel] = useState("");
+  const [roomId, setRoomId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   const addEntryMutation = useMutation({
@@ -85,6 +91,7 @@ export function TimetablePage(): ReactNode {
           startTime,
           endTime,
           ...(roomLabel ? { roomLabel } : {}),
+          ...(roomId ? { roomId } : {}),
         },
         creds,
       );
@@ -94,9 +101,16 @@ export function TimetablePage(): ReactNode {
       setSubjectId("");
       setTeacherEmployeeId("");
       setRoomLabel("");
+      setRoomId("");
       setFormError(null);
     },
-    onError: () => setFormError(t("timetable.error.generic")),
+    onError: (error: unknown) => {
+      if (error instanceof ApiError && error.code === "ROOM_SCHEDULE_CONFLICT") {
+        setFormError(t("timetable.error.roomConflict"));
+        return;
+      }
+      setFormError(t("timetable.error.generic"));
+    },
   });
 
   const removeEntryMutation = useMutation({
@@ -113,6 +127,10 @@ export function TimetablePage(): ReactNode {
 
   function subjectName(id: string): string {
     return subjects.data?.find((candidate) => candidate.id === id)?.nameFr ?? id;
+  }
+
+  function roomName(id: string): string {
+    return rooms.data?.find((candidate) => candidate.id === id)?.name ?? id;
   }
 
   return (
@@ -184,7 +202,9 @@ export function TimetablePage(): ReactNode {
                       </td>
                       <td className="py-2 pr-4 text-slate-700">{subjectName(entry.subjectId)}</td>
                       <td className="py-2 pr-4 text-slate-700">{employeeName(entry.teacherEmployeeId)}</td>
-                      <td className="py-2 pr-4 text-slate-700">{entry.roomLabel ?? "—"}</td>
+                      <td className="py-2 pr-4 text-slate-700">
+                        {entry.roomId ? roomName(entry.roomId) : (entry.roomLabel ?? "—")}
+                      </td>
                       <td className="py-2 pr-4">
                         <button
                           type="button"
@@ -254,10 +274,26 @@ export function TimetablePage(): ReactNode {
                 </option>
               ))}
             </select>
+            <select
+              className="input w-40"
+              value={roomId}
+              onChange={(event) => {
+                setRoomId(event.target.value);
+                if (event.target.value) setRoomLabel("");
+              }}
+            >
+              <option value="">{t("timetable.selectRoom")}</option>
+              {(rooms.data ?? []).map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
+            </select>
             <input
               placeholder={t("timetable.room")}
               className="input w-28"
               value={roomLabel}
+              disabled={Boolean(roomId)}
               onChange={(event) => setRoomLabel(event.target.value)}
             />
             <Button type="submit" variant="secondary" disabled={!subjectId || !teacherEmployeeId}>

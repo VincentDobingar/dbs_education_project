@@ -15,20 +15,26 @@ import {
 } from "../../lib/financeApi.js";
 import { createAssessmentType, listAssessmentTypes } from "../../lib/gradingApi.js";
 import {
+  archiveRoom,
   createAcademicPeriod,
   createAcademicYear,
+  createCalendarEvent,
   createCampus,
   createClassroom,
   createEducationCycle,
   createGradeLevel,
+  createRoom,
   createSubject,
   listAcademicPeriods,
   listAcademicYears,
+  listCalendarEvents,
   listCampuses,
   listClassrooms,
   listEducationCycles,
   listGradeLevels,
+  listRooms,
   listSubjects,
+  removeCalendarEvent,
   type AcademicPeriodType,
 } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
@@ -134,6 +140,19 @@ const feeCategorySchema = z.object({
   nameFr: z.string().min(1),
   nameEn: z.string().min(1),
 });
+const roomSchema = z.object({
+  name: z.string().min(1),
+  campusId: z.string().optional(),
+  capacity: z.coerce.number().int().positive().optional(),
+});
+const CALENDAR_EVENT_TYPES = ["HOLIDAY", "EXAM_PERIOD", "SCHOOL_EVENT", "OTHER"] as const;
+const calendarEventSchema = z.object({
+  academicYearId: z.string().optional(),
+  type: z.enum(CALENDAR_EVENT_TYPES),
+  title: z.string().min(1),
+  startDate: z.string().min(1),
+  endDate: z.string().optional(),
+});
 const feeStructureSchema = z.object({
   academicYearId: z.string().min(1),
   gradeLevelId: z.string().optional(),
@@ -201,6 +220,55 @@ export function ConfigurationPage(): ReactNode {
       void queryClient.invalidateQueries({ queryKey: ["campuses", session.subdomain] });
       campusForm.reset();
     },
+  });
+
+  const rooms = useQuery({
+    queryKey: ["rooms", session.subdomain],
+    queryFn: () => listRooms(creds),
+  });
+  const roomForm = useForm<z.infer<typeof roomSchema>>({ resolver: zodResolver(roomSchema) });
+  const createRoomMutation = useMutation({
+    mutationFn: (input: z.infer<typeof roomSchema>) => {
+      const { campusId, capacity, ...rest } = input;
+      return createRoom(
+        { ...rest, ...(campusId ? { campusId } : {}), ...(capacity ? { capacity } : {}) },
+        creds,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["rooms", session.subdomain] });
+      roomForm.reset();
+    },
+  });
+  const archiveRoomMutation = useMutation({
+    mutationFn: (id: string) => archiveRoom(id, creds),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["rooms", session.subdomain] }),
+  });
+
+  const calendarEvents = useQuery({
+    queryKey: ["calendar-events", session.subdomain],
+    queryFn: () => listCalendarEvents(creds),
+  });
+  const calendarEventForm = useForm<z.infer<typeof calendarEventSchema>>({
+    resolver: zodResolver(calendarEventSchema),
+    defaultValues: { type: "HOLIDAY" },
+  });
+  const createCalendarEventMutation = useMutation({
+    mutationFn: (input: z.infer<typeof calendarEventSchema>) => {
+      const { academicYearId, endDate, ...rest } = input;
+      return createCalendarEvent(
+        { ...rest, ...(academicYearId ? { academicYearId } : {}), ...(endDate ? { endDate } : {}) },
+        creds,
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["calendar-events", session.subdomain] });
+      calendarEventForm.reset({ type: "HOLIDAY" });
+    },
+  });
+  const removeCalendarEventMutation = useMutation({
+    mutationFn: (id: string) => removeCalendarEvent(id, creds),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["calendar-events", session.subdomain] }),
   });
 
   const yearForm = useForm<z.infer<typeof yearSchema>>({ resolver: zodResolver(yearSchema) });
@@ -363,6 +431,138 @@ export function ConfigurationPage(): ReactNode {
             className="input w-32"
             {...campusForm.register("code")}
           />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.rooms")}>
+        {(rooms.data ?? []).length === 0 ? (
+          <p className="text-sm text-slate-500">{t("config.empty")}</p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("config.col.name")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("config.col.capacity")}</th>
+                <th className="pb-2 pr-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {(rooms.data ?? []).map((room) => (
+                <tr key={room.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{room.name}</td>
+                  <td className="py-2 pr-4 text-slate-700">{room.capacity ?? "—"}</td>
+                  <td className="py-2 pr-4">
+                    <button
+                      type="button"
+                      className="text-xs text-red-600 hover:underline"
+                      onClick={() => archiveRoomMutation.mutate(room.id)}
+                    >
+                      {t("admin.common.delete")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <form
+          onSubmit={(event) =>
+            void roomForm.handleSubmit((values) => createRoomMutation.mutate(values))(event)
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("config.form.roomName")}
+            className="input w-48"
+            {...roomForm.register("name")}
+          />
+          <select className="input w-40" {...roomForm.register("campusId")}>
+            <option value="">{t("config.form.selectCampus")}</option>
+            {(campuses.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={1}
+            placeholder={t("config.form.capacity")}
+            className="input w-28"
+            {...roomForm.register("capacity")}
+          />
+          <Button type="submit" variant="secondary">
+            {t("config.add")}
+          </Button>
+        </form>
+      </Section>
+
+      <Section title={t("config.calendarEvents")}>
+        {(calendarEvents.data ?? []).length === 0 ? (
+          <p className="text-sm text-slate-500">{t("config.empty")}</p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("config.col.title")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("config.col.eventType")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("config.col.startDate")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("config.col.endDate")}</th>
+                <th className="pb-2 pr-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {(calendarEvents.data ?? []).map((event) => (
+                <tr key={event.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{event.title}</td>
+                  <td className="py-2 pr-4 text-slate-700">{t(`config.eventType.${event.type}`)}</td>
+                  <td className="py-2 pr-4 text-slate-700">{event.startDate.slice(0, 10)}</td>
+                  <td className="py-2 pr-4 text-slate-700">{event.endDate?.slice(0, 10) ?? "—"}</td>
+                  <td className="py-2 pr-4">
+                    <button
+                      type="button"
+                      className="text-xs text-red-600 hover:underline"
+                      onClick={() => removeCalendarEventMutation.mutate(event.id)}
+                    >
+                      {t("admin.common.delete")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <form
+          onSubmit={(event) =>
+            void calendarEventForm.handleSubmit((values) => createCalendarEventMutation.mutate(values))(event)
+          }
+          className="flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("config.form.eventTitle")}
+            className="input w-48"
+            {...calendarEventForm.register("title")}
+          />
+          <select className="input w-40" {...calendarEventForm.register("type")}>
+            {CALENDAR_EVENT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(`config.eventType.${type}`)}
+              </option>
+            ))}
+          </select>
+          <input type="date" className="input w-40" {...calendarEventForm.register("startDate")} />
+          <input type="date" className="input w-40" {...calendarEventForm.register("endDate")} />
+          <select className="input w-40" {...calendarEventForm.register("academicYearId")}>
+            <option value="">{t("config.form.selectYear")}</option>
+            {(years.data ?? []).map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.name}
+              </option>
+            ))}
+          </select>
           <Button type="submit" variant="secondary">
             {t("config.add")}
           </Button>

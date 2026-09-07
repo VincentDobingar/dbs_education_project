@@ -126,47 +126,47 @@ model Organization {
 }
 
 model SubscriptionPlan {
-  id               String             @id @default(cuid())
-  code             String             @unique // ex: SCHOOL_PROFESSIONAL, PARENT_PREMIUM
-  category         SubscriberCategory
-  nameFr           String
-  nameEn           String
-  descriptionFr    String?
-  descriptionEn    String?
-  defaultPeriod    BillingPeriod      @default(MONTHLY)
-  trialDays        Int                @default(0)
-  gracePeriodDays  Int                @default(0)
-  maxStudents      Int?
-  maxUsers         Int?
-  maxCampuses      Int?
-  storageQuotaMb   Int?
-  smsQuota         Int?
-  childrenCovered  Int? // pertinent pour FAMILY_PLAN
-  supportLevel     String?
-  isActive         Boolean            @default(true)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  code            String             @unique // ex: SCHOOL_PROFESSIONAL, PARENT_PREMIUM
+  category        SubscriberCategory
+  nameFr          String
+  nameEn          String
+  descriptionFr   String?
+  descriptionEn   String?
+  defaultPeriod   BillingPeriod      @default(MONTHLY)
+  trialDays       Int                @default(0)
+  gracePeriodDays Int                @default(0)
+  maxStudents     Int?
+  maxUsers        Int?
+  maxCampuses     Int?
+  storageQuotaMb  Int?
+  smsQuota        Int?
+  childrenCovered Int? // pertinent pour FAMILY_PLAN
+  supportLevel    String?
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
-  prices        PlanPrice[]
-  features      PlanFeature[]
-  subscriptions Subscription[]
-  licenseBatches LicenseBatch[]
+  prices            PlanPrice[]
+  features          PlanFeature[]
+  subscriptions     Subscription[]
+  licenseBatches    LicenseBatch[]
   sponsoredLicenses SponsoredLicense[]
 
   @@index([category])
 }
 
 model PlanPrice {
-  id              String        @id @default(cuid())
-  planId          String
-  countryId       String?
-  currencyId      String
-  billingPeriod   BillingPeriod
-  amountCents     Int
-  taxRatePercent  Decimal       @default(0) @db.Decimal(5, 2)
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  planId         String
+  countryId      String?
+  currencyId     String
+  billingPeriod  BillingPeriod
+  amountCents    Int
+  taxRatePercent Decimal       @default(0) @db.Decimal(5, 2)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   plan     SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   currency Currency         @relation(fields: [currencyId], references: [id])
@@ -191,14 +191,14 @@ model PlanFeature {
 /// Droits effectifs materialises, recalcules a chaque changement de statut d'abonnement
 /// (jamais derives a la volee dans les controleurs). requireEntitlement() ne lit que cette table.
 model Entitlement {
-  id           String    @id @default(cuid())
+  id             String    @id @default(cuid())
   subscriptionId String
-  featureCode  String
-  isEnabled    Boolean   @default(true)
-  quotaLimit   Int?
-  quotaUsed    Int       @default(0)
-  computedAt   DateTime  @default(now())
-  expiresAt    DateTime?
+  featureCode    String
+  isEnabled      Boolean   @default(true)
+  quotaLimit     Int?
+  quotaUsed      Int       @default(0)
+  computedAt     DateTime  @default(now())
+  expiresAt      DateTime?
 
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
@@ -253,11 +253,11 @@ model Subscription {
   owner SubscriptionOwner @relation(fields: [ownerId], references: [id])
   plan  SubscriptionPlan  @relation(fields: [planId], references: [id])
 
-  events              SubscriptionEvent[]
-  entitlements        Entitlement[]
-  invoices            Invoice[]
+  events               SubscriptionEvent[]
+  entitlements         Entitlement[]
+  invoices             Invoice[]
   promotionRedemptions PromotionRedemption[]
-  licenseAssignments  LicenseAssignment[]
+  licenseAssignments   LicenseAssignment[]
 
   @@index([ownerId])
   @@index([status])
@@ -319,9 +319,9 @@ model Invoice {
   billingAccount BillingAccount @relation(fields: [billingAccountId], references: [id])
   subscription   Subscription?  @relation(fields: [subscriptionId], references: [id])
 
-  items         InvoiceItem[]
+  items          InvoiceItem[]
   paymentIntents PaymentIntent[]
-  receipts      Receipt[]
+  receipts       Receipt[]
 
   @@index([billingAccountId])
   @@index([status])
@@ -341,21 +341,21 @@ model InvoiceItem {
 }
 
 model PaymentProvider {
-  id          String            @id @default(cuid())
-  code        String            @unique // ex: ORANGE_MONEY_CM, MTN_MOMO_CM, STRIPE
-  nameFr      String
-  nameEn      String
-  countryId   String?
-  methodType  PaymentMethodType
-  isTestMode  Boolean           @default(true)
-  isActive    Boolean           @default(true)
-  config      Json? // config non sensible uniquement ; secrets = variables d'environnement
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id         String            @id @default(cuid())
+  code       String            @unique // ex: ORANGE_MONEY_CM, MTN_MOMO_CM, STRIPE
+  nameFr     String
+  nameEn     String
+  countryId  String?
+  methodType PaymentMethodType
+  isTestMode Boolean           @default(true)
+  isActive   Boolean           @default(true)
+  config     Json? // config non sensible uniquement ; secrets = variables d'environnement
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
-  paymentIntents     PaymentIntent[]
+  paymentIntents      PaymentIntent[]
   paymentTransactions PaymentTransaction[]
-  webhookEvents      PaymentWebhookEvent[]
+  webhookEvents       PaymentWebhookEvent[]
 
   @@index([countryId])
   @@index([isActive])
@@ -363,23 +363,23 @@ model PaymentProvider {
 
 /// IdempotencyKey empeche la double creation d'intention de paiement (§24, §37).
 model PaymentIntent {
-  id              String                    @id @default(cuid())
-  providerId      String
-  purpose         PaymentPurpose
-  invoiceId       String?
+  id               String                   @id @default(cuid())
+  providerId       String
+  purpose          PaymentPurpose
+  invoiceId        String?
   studentInvoiceId String?
-  licenseBatchId  String?
-  amountCents     Int
-  currencyId      String
-  status          PaymentTransactionStatus  @default(PENDING)
-  idempotencyKey  String                    @unique
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  licenseBatchId   String?
+  amountCents      Int
+  currencyId       String
+  status           PaymentTransactionStatus @default(PENDING)
+  idempotencyKey   String                   @unique
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
-  provider      PaymentProvider @relation(fields: [providerId], references: [id])
-  invoice       Invoice?        @relation(fields: [invoiceId], references: [id])
+  provider       PaymentProvider @relation(fields: [providerId], references: [id])
+  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
   studentInvoice StudentInvoice? @relation(fields: [studentInvoiceId], references: [id])
-  licenseBatch  LicenseBatch?   @relation(fields: [licenseBatchId], references: [id])
+  licenseBatch   LicenseBatch?   @relation(fields: [licenseBatchId], references: [id])
 
   transactions PaymentTransaction[]
 
@@ -391,18 +391,18 @@ model PaymentIntent {
 /// de PaymentIntent.idempotencyKey (§24, §37 : un paiement duplique ne doit jamais
 /// creer deux abonnements ni deux recus).
 model PaymentTransaction {
-  id               String                   @id @default(cuid())
-  paymentIntentId  String
-  providerId       String
+  id                String                   @id @default(cuid())
+  paymentIntentId   String
+  providerId        String
   externalReference String
-  status           PaymentTransactionStatus @default(PENDING)
-  amountCents      Int
-  currencyId       String
-  rawResponse      Json?
-  occurredAt       DateTime                 @default(now())
-  createdAt        DateTime                 @default(now())
+  status            PaymentTransactionStatus @default(PENDING)
+  amountCents       Int
+  currencyId        String
+  rawResponse       Json?
+  occurredAt        DateTime                 @default(now())
+  createdAt         DateTime                 @default(now())
 
-  paymentIntent PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  paymentIntent PaymentIntent   @relation(fields: [paymentIntentId], references: [id])
   provider      PaymentProvider @relation(fields: [providerId], references: [id])
 
   refunds RefundTransaction[]
@@ -416,14 +416,14 @@ model PaymentTransaction {
 /// Idempotence webhook (§24, §37) : externalEventId unique par provider, evenement
 /// traite une seule fois meme si l'operateur le renvoie plusieurs fois.
 model PaymentWebhookEvent {
-  id               String    @id @default(cuid())
-  providerId       String
-  externalEventId  String
-  signatureValid   Boolean
-  payload          Json
-  processedAt      DateTime?
-  processingError  String?
-  receivedAt       DateTime  @default(now())
+  id              String    @id @default(cuid())
+  providerId      String
+  externalEventId String
+  signatureValid  Boolean
+  payload         Json
+  processedAt     DateTime?
+  processingError String?
+  receivedAt      DateTime  @default(now())
 
   provider PaymentProvider @relation(fields: [providerId], references: [id])
 
@@ -466,19 +466,19 @@ enum PromotionDiscountType {
 }
 
 model PromotionCode {
-  id               String                 @id @default(cuid())
-  code             String                 @unique
-  descriptionFr    String?
-  descriptionEn    String?
-  discountType     PromotionDiscountType
-  discountValue    Decimal                @db.Decimal(10, 2)
+  id                 String                @id @default(cuid())
+  code               String                @unique
+  descriptionFr      String?
+  descriptionEn      String?
+  discountType       PromotionDiscountType
+  discountValue      Decimal               @db.Decimal(10, 2)
   applicableCategory SubscriberCategory?
-  maxRedemptions   Int?
-  redemptionCount  Int                    @default(0)
-  startsAt         DateTime?
-  endsAt           DateTime?
-  isActive         Boolean                @default(true)
-  createdAt        DateTime               @default(now())
+  maxRedemptions     Int?
+  redemptionCount    Int                   @default(0)
+  startsAt           DateTime?
+  endsAt             DateTime?
+  isActive           Boolean               @default(true)
+  createdAt          DateTime              @default(now())
 
   redemptions PromotionRedemption[]
 
@@ -486,11 +486,11 @@ model PromotionCode {
 }
 
 model PromotionRedemption {
-  id              String   @id @default(cuid())
-  promotionCodeId String
-  subscriptionId  String
+  id               String   @id @default(cuid())
+  promotionCodeId  String
+  subscriptionId   String
   redeemedByUserId String?
-  redeemedAt      DateTime @default(now())
+  redeemedAt       DateTime @default(now())
 
   promotionCode PromotionCode @relation(fields: [promotionCodeId], references: [id])
   subscription  Subscription  @relation(fields: [subscriptionId], references: [id])
@@ -501,20 +501,20 @@ model PromotionRedemption {
 /// Lot de licences achete en une fois par un etablissement (SCHOOL_SPONSORED) ou une
 /// organisation sponsor (ORGANIZATION_SPONSORED). Genere N lignes SponsoredLicense.
 model LicenseBatch {
-  id                 String               @id @default(cuid())
-  planId             String
-  purchaserType      LicensePurchaserType
-  sponsorTenantId    String?
+  id                    String               @id @default(cuid())
+  planId                String
+  purchaserType         LicensePurchaserType
+  sponsorTenantId       String?
   sponsorOrganizationId String?
-  quantity           Int
-  unitPriceCents     Int
-  currencyId         String
-  purchasedAt        DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  quantity              Int
+  unitPriceCents        Int
+  currencyId            String
+  purchasedAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
-  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
-  sponsorOrganization Organization?   @relation(fields: [sponsorOrganizationId], references: [id])
+  plan                SubscriptionPlan @relation(fields: [planId], references: [id])
+  sponsorOrganization Organization?    @relation(fields: [sponsorOrganizationId], references: [id])
 
   licenses       SponsoredLicense[]
   paymentIntents PaymentIntent[]
@@ -538,9 +538,9 @@ model SponsoredLicense {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  batch              LicenseBatch? @relation(fields: [batchId], references: [id])
-  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
-  sponsorOrganization Organization? @relation(fields: [sponsorOrganizationId], references: [id])
+  batch               LicenseBatch?    @relation(fields: [batchId], references: [id])
+  plan                SubscriptionPlan @relation(fields: [planId], references: [id])
+  sponsorOrganization Organization?    @relation(fields: [sponsorOrganizationId], references: [id])
 
   assignments LicenseAssignment[]
 
@@ -551,16 +551,16 @@ model SponsoredLicense {
 /// Historique des attributions d'une licence a un beneficiaire (parent ou eleve).
 /// Une revocation cree une nouvelle ligne plutot que d'ecraser l'historique.
 model LicenseAssignment {
-  id                 String                 @id @default(cuid())
-  licenseId          String
-  beneficiaryType    LicenseBeneficiaryType
-  beneficiaryUserId  String?
+  id                   String                 @id @default(cuid())
+  licenseId            String
+  beneficiaryType      LicenseBeneficiaryType
+  beneficiaryUserId    String?
   beneficiaryStudentId String?
-  subscriptionId     String
-  assignedAt         DateTime               @default(now())
-  revokedAt          DateTime?
-  revokedReason      String?
-  createdAt          DateTime               @default(now())
+  subscriptionId       String
+  assignedAt           DateTime               @default(now())
+  revokedAt            DateTime?
+  revokedReason        String?
+  createdAt            DateTime               @default(now())
 
   license      SponsoredLicense @relation(fields: [licenseId], references: [id])
   subscription Subscription     @relation(fields: [subscriptionId], references: [id])

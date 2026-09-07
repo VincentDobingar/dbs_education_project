@@ -79,13 +79,13 @@ model Grade {
 /// Historique immuable : chaque correction de note (meme autorisee) ajoute une ligne,
 /// n'ecrase jamais les precedentes.
 model GradeChangeLog {
-  id            String   @id @default(cuid())
-  gradeId       String
-  previousScore Decimal? @db.Decimal(5, 2)
-  newScore      Decimal? @db.Decimal(5, 2)
+  id              String   @id @default(cuid())
+  gradeId         String
+  previousScore   Decimal? @db.Decimal(5, 2)
+  newScore        Decimal? @db.Decimal(5, 2)
   changedByUserId String?
-  reason        String?
-  createdAt     DateTime @default(now())
+  reason          String?
+  createdAt       DateTime @default(now())
 
   grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
 
@@ -93,17 +93,17 @@ model GradeChangeLog {
 }
 
 model ReportCard {
-  id               String    @id @default(cuid())
+  id               String   @id @default(cuid())
   tenantId         String
   studentId        String
   academicPeriodId String
-  generatedAt      DateTime  @default(now())
-  averageScore     Decimal?  @db.Decimal(5, 2)
+  generatedAt      DateTime @default(now())
+  averageScore     Decimal? @db.Decimal(5, 2)
   classRank        Int?
   mention          String?
   pdfUrl           String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // FK RESTRICT via student (défaut, onDelete omis) : même raisonnement que Grade
   // ci-dessus — un bulletin ne doit jamais disparaître avec une suppression dure du
@@ -118,13 +118,13 @@ model ReportCard {
 }
 
 model ReportCardItem {
-  id              String   @id @default(cuid())
-  reportCardId    String
-  subjectId       String
-  averageScore    Decimal? @db.Decimal(5, 2)
-  coefficient     Decimal? @db.Decimal(4, 2)
-  teacherComment  String?
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  reportCardId   String
+  subjectId      String
+  averageScore   Decimal? @db.Decimal(5, 2)
+  coefficient    Decimal? @db.Decimal(4, 2)
+  teacherComment String?
+  createdAt      DateTime @default(now())
 
   reportCard ReportCard @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
   subject    Subject    @relation(fields: [subjectId], references: [id])

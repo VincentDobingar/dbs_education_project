@@ -46,13 +46,13 @@ model Employee {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  contracts           EmploymentContract[]
-  leaveRequests        LeaveRequest[]
-  attendances          EmployeeAttendance[]
-  evaluations          PerformanceEvaluation[]
-  documents            EmployeeDocument[]
-  teacherAssignments   TeacherAssignment[]
-  timetableEntries     TimetableEntry[]
+  contracts          EmploymentContract[]
+  leaveRequests      LeaveRequest[]
+  attendances        EmployeeAttendance[]
+  evaluations        PerformanceEvaluation[]
+  documents          EmployeeDocument[]
+  teacherAssignments TeacherAssignment[]
+  timetableEntries   TimetableEntry[]
 
   @@unique([tenantId, employeeNumber])
   @@index([tenantId])
@@ -79,17 +79,17 @@ model EmploymentContract {
 }
 
 model LeaveRequest {
-  id                  String      @id @default(cuid())
-  tenantId            String
-  employeeId          String
-  type                LeaveType
-  startDate           DateTime
-  endDate             DateTime
-  status              LeaveStatus @default(PENDING)
-  reason              String?
+  id                   String      @id @default(cuid())
+  tenantId             String
+  employeeId           String
+  type                 LeaveType
+  startDate            DateTime
+  endDate              DateTime
+  status               LeaveStatus @default(PENDING)
+  reason               String?
   approvedByEmployeeId String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -118,7 +118,7 @@ model EmployeeAttendance {
 /// evaluatedByEmployeeId reste optionnel : une evaluation externe (consultant,
 /// direction reseau) n'a pas forcement de fiche Employee dans ce tenant.
 model PerformanceEvaluation {
-  id                    String    @id @default(cuid())
+  id                    String   @id @default(cuid())
   tenantId              String
   employeeId            String
   evaluatedByEmployeeId String?
@@ -126,8 +126,8 @@ model PerformanceEvaluation {
   periodEnd             DateTime
   score                 Int?
   comments              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
