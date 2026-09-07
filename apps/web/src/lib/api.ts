@@ -67,6 +67,7 @@ export interface CurrentUserProfile {
   id: string;
   email: string;
   tenantMemberships: CurrentUserTenantMembership[];
+  platformRoleCodes: string[];
 }
 
 export function getCurrentUser(accessToken: string): Promise<CurrentUserProfile> {

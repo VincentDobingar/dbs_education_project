@@ -11,6 +11,7 @@ interface CurrentUserResponse {
   id: string;
   email: string;
   tenantMemberships: { tenantId: string; tenantName: string; subdomain: string; roleCodes: string[] }[];
+  platformRoleCodes: string[];
 }
 
 async function login(app: ReturnType<typeof createApp>, email: string): Promise<string> {
@@ -55,6 +56,24 @@ describe("identité courante (GET /auth/me)", () => {
     expect(body.id).toBe(user.id);
     expect(body.email).toBe(user.email);
     expect(body.tenantMemberships).toEqual([]);
+    expect(body.platformRoleCodes).toEqual([]);
+  });
+
+  // §31 : seule façon pour le frontend super-admin (aucune adhésion tenant, donc
+  // rien d'autre dans ce profil ne le distingue) de savoir que /admin doit lui
+  // être ouvert, sans décoder le JWT (qui ne porte que `sub`, voir plus haut).
+  it("returns platform role codes for a super-admin with no tenant membership", async () => {
+    const user = await createUser("me-super-admin");
+    createdUserIds.push(user.id);
+    await grantRole(user.id, "SUPER_ADMIN", null);
+
+    const accessToken = await login(app, user.email);
+    const response = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    const body = response.body as CurrentUserResponse;
+    expect(body.tenantMemberships).toEqual([]);
+    expect(body.platformRoleCodes).toEqual(["SUPER_ADMIN"]);
   });
 
   it("returns the tenant and role codes for a school owner", async () => {

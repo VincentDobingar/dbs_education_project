@@ -2,9 +2,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
+import { AdminLayout } from "./layouts/AdminLayout.js";
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
 import { PortalLayout } from "./layouts/PortalLayout.js";
+import { AdminAuditLogsPage } from "./pages/admin/AdminAuditLogsPage.js";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage.js";
+import { AdminLoginPage } from "./pages/admin/AdminLoginPage.js";
+import { AdminMessageTemplatesPage } from "./pages/admin/AdminMessageTemplatesPage.js";
+import { AdminPlatformSettingsPage } from "./pages/admin/AdminPlatformSettingsPage.js";
+import { AdminPromotionCodesPage } from "./pages/admin/AdminPromotionCodesPage.js";
+import { AdminReferenceDataPage } from "./pages/admin/AdminReferenceDataPage.js";
+import { AdminSponsorsPage } from "./pages/admin/AdminSponsorsPage.js";
+import { AdminSubscriptionsPage } from "./pages/admin/AdminSubscriptionsPage.js";
+import { AdminSupportTicketsPage } from "./pages/admin/AdminSupportTicketsPage.js";
+import { AdminTenantsPage } from "./pages/admin/AdminTenantsPage.js";
 import { AnnouncementsPage } from "./pages/app/AnnouncementsPage.js";
 import { AttendancePage } from "./pages/app/AttendancePage.js";
 import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
@@ -79,6 +91,20 @@ export function App(): ReactNode {
             <Route path="/portail/activation" element={<PortalRedeemPage />} />
           </Route>
           <Route path="/portail/connexion" element={<PortalLoginPage />} />
+
+          <Route path="/admin/connexion" element={<AdminLoginPage />} />
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
+            <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
+            <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
+            <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />
+            <Route path="/admin/codes-promo" element={<AdminPromotionCodesPage />} />
+            <Route path="/admin/support" element={<AdminSupportTicketsPage />} />
+            <Route path="/admin/modeles-messages" element={<AdminMessageTemplatesPage />} />
+            <Route path="/admin/sponsors" element={<AdminSponsorsPage />} />
+            <Route path="/admin/parametres" element={<AdminPlatformSettingsPage />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

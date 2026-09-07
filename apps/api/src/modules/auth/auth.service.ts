@@ -8,6 +8,7 @@ import {
   hashPhoneVerificationCode,
   PHONE_VERIFICATION_TTL_MS,
 } from "../../lib/account-verification.js";
+import { getPlatformRoleCodes } from "../../lib/authorization.js";
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { decrypt } from "../../lib/encryption.js";
 import { AppError } from "../../lib/errors.js";
@@ -405,6 +406,10 @@ export interface CurrentUserProfile {
   id: string;
   email: string;
   tenantMemberships: CurrentUserTenantMembership[];
+  // §31 : rôle(s) plateforme actifs (UserRole.tenantId === null) — un super-admin
+  // n'a typiquement aucune adhésion tenant, donc rien d'autre dans ce profil ne le
+  // révèle. Seule façon pour le frontend de savoir si /admin doit lui être ouvert.
+  platformRoleCodes: string[];
 }
 
 /**
@@ -422,6 +427,7 @@ export interface CurrentUserProfile {
  */
 export async function getCurrentUserProfile(userId: string): Promise<CurrentUserProfile> {
   const user = await rawPrisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const platformRoleCodes = await getPlatformRoleCodes(userId);
 
   const tenantUserRoles = await rawPrisma.userRole.findMany({
     where: {
@@ -468,5 +474,6 @@ export async function getCurrentUserProfile(userId: string): Promise<CurrentUser
         tenant.domains.find((domain) => domain.isPrimary)?.subdomain ?? tenant.domains[0]?.subdomain ?? "",
       roleCodes: roleCodesByTenantId.get(tenant.id) ?? [],
     })),
+    platformRoleCodes,
   };
 }
