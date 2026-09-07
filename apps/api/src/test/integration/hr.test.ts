@@ -387,6 +387,14 @@ describe("ressources humaines — contrats, présences, congés, évaluations, d
     expect(exported.headers["content-type"]).toContain("text/csv");
     expect(exported.text).toContain("2750.00");
     expect(exported.text).toContain("CDI");
+
+    const exportedXlsx = await request(app)
+      .get("/api/v1/employees/payroll/export.xlsx")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(exportedXlsx.status).toBe(200);
+    expect(exportedXlsx.headers["content-type"]).toContain("spreadsheetml");
+    expect((exportedXlsx.body as Buffer).subarray(0, 2).toString("ascii")).toBe("PK");
   });
 
   // resolveActingEmployeeId (lib/acting-employee.ts) already excluded a terminated

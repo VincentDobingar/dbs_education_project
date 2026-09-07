@@ -10,8 +10,10 @@ import {
   createExpenseCategory,
   fetchExpenseReportCsv,
   fetchExpenseReportPdf,
+  fetchExpenseReportXlsx,
   fetchRevenueReportCsv,
   fetchRevenueReportPdf,
+  fetchRevenueReportXlsx,
   getExpenseReport,
   getRevenueReport,
   listCashSessions,
@@ -474,6 +476,20 @@ export function FinancePage(): ReactNode {
             <button
               type="button"
               className="text-xs text-brand-teal hover:underline disabled:opacity-50"
+              disabled={exportLoading === "revenue-xlsx"}
+              onClick={() =>
+                void downloadFile(
+                  "revenue-xlsx",
+                  () => fetchRevenueReportXlsx({ startDate: reportStart, endDate: reportEnd }, creds),
+                  "rapport-recettes.xlsx",
+                )
+              }
+            >
+              {t("finance.exportExcel")}
+            </button>
+            <button
+              type="button"
+              className="text-xs text-brand-teal hover:underline disabled:opacity-50"
               disabled={exportLoading === "revenue-pdf"}
               onClick={() =>
                 void downloadFile(
@@ -512,6 +528,20 @@ export function FinancePage(): ReactNode {
               }
             >
               {t("finance.exportCsv")}
+            </button>
+            <button
+              type="button"
+              className="text-xs text-brand-teal hover:underline disabled:opacity-50"
+              disabled={exportLoading === "expense-xlsx"}
+              onClick={() =>
+                void downloadFile(
+                  "expense-xlsx",
+                  () => fetchExpenseReportXlsx({ startDate: reportStart, endDate: reportEnd }, creds),
+                  "rapport-depenses.xlsx",
+                )
+              }
+            >
+              {t("finance.exportExcel")}
             </button>
             <button
               type="button"

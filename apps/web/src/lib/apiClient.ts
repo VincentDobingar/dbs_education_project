@@ -53,3 +53,25 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return data as T;
 }
+
+// Not JSON — a raw fetch reusing the same auth/tenant headers as apiRequest, but
+// returning bytes for the caller to open/download (PDF/CSV/Excel exports) rather
+// than parsing a JSON body. `subdomain` is optional so both tenant-scoped callers
+// (financeApi.ts, studentsApi.ts...) and portal callers with no tenant context
+// (studentPortalApi.ts, parentPortalApi.ts) can share this one implementation —
+// previously duplicated verbatim in three separate files before this extraction.
+export async function fetchBlob(
+  path: string,
+  options: { accessToken: string; subdomain?: string },
+): Promise<Blob> {
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      ...(options.subdomain ? { "X-Tenant-Slug": options.subdomain } : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "FILE_FETCH_FAILED", "Could not load the file");
+  }
+  return response.blob();
+}

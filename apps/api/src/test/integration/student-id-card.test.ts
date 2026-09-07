@@ -125,6 +125,43 @@ describe("cartes scolaires (§19)", () => {
     expect((card.body as Buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
   });
 
+  // §19/§34 : photoUrl est une URL externe fournie par le client — lib/safe-image-fetch.ts
+  // refuse toute IP privée/réservée (dont 169.254.169.254, cible SSRF classique des
+  // endpoints de métadonnées cloud) avant même d'ouvrir la connexion. La génération de
+  // la carte ne doit jamais échouer pour autant : elle se rabat sur une carte sans photo.
+  it("still generates a card when photoUrl points at a private/reserved IP, without fetching it", async () => {
+    const { subdomain, ownerToken } = await setUpTenantWithOwner();
+    const { academicYearId, campusId, gradeLevelId, classroomId } = await setUpClassroom(
+      subdomain,
+      ownerToken,
+    );
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        matricule: `MAT-${uniqueSuffix()}`,
+        firstName: "Aminata",
+        lastName: "Diallo",
+        photoUrl: "https://169.254.169.254/latest/meta-data/",
+      });
+    const studentId = (student.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/students/${studentId}/enrollments`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+
+    const card = await request(app)
+      .get(`/api/v1/students/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(card.status).toBe(200);
+    expect((card.body as Buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
+  });
+
   it("refuses to generate a card for a student with no active enrollment", async () => {
     const { subdomain, ownerToken } = await setUpTenantWithOwner();
 

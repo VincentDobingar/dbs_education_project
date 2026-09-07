@@ -27,6 +27,7 @@ const manageSalaryData = requirePermission("hr.salary.manage");
 employeeRouter.post("/", manageStaff, employeeController.createEmployee);
 employeeRouter.get("/", manageStaff, employeeController.listEmployees);
 employeeRouter.get("/payroll/export.csv", manageSalaryData, payrollExportController.getPayrollExportCsv);
+employeeRouter.get("/payroll/export.xlsx", manageSalaryData, payrollExportController.getPayrollExportXlsx);
 employeeRouter.get("/:id", manageStaff, employeeController.getEmployee);
 employeeRouter.patch("/:id", manageStaff, employeeController.updateEmployee);
 employeeRouter.post("/:id/archive", manageStaff, employeeController.archiveEmployee);

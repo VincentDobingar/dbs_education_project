@@ -7,7 +7,12 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
-import { createEmployee, fetchPayrollExportCsv, listEmployees } from "../../lib/employeesApi.js";
+import {
+  createEmployee,
+  fetchPayrollExportCsv,
+  fetchPayrollExportXlsx,
+  listEmployees,
+} from "../../lib/employeesApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
 const employeeSchema = z.object({
@@ -43,12 +48,12 @@ export function EmployeesPage(): ReactNode {
     },
   });
 
-  async function downloadPayrollCsv(): Promise<void> {
-    const blob = await fetchPayrollExportCsv(creds);
+  async function downloadPayroll(fetcher: () => Promise<Blob>, filename: string): Promise<void> {
+    const blob = await fetcher();
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "export-paie.csv";
+    link.download = filename;
     link.click();
   }
 
@@ -59,9 +64,22 @@ export function EmployeesPage(): ReactNode {
           <h1 className="text-2xl font-bold text-slate-900">{t("employees.title")}</h1>
           <p className="mt-1 text-sm text-slate-500">{t("employees.subtitle")}</p>
         </div>
-        <Button type="button" variant="secondary" onClick={() => void downloadPayrollCsv()}>
-          {t("employees.exportPayroll")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void downloadPayroll(() => fetchPayrollExportCsv(creds), "export-paie.csv")}
+          >
+            {t("employees.exportPayroll")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void downloadPayroll(() => fetchPayrollExportXlsx(creds), "export-paie.xlsx")}
+          >
+            {t("employees.exportPayrollExcel")}
+          </Button>
+        </div>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">

@@ -8,6 +8,7 @@ export default defineConfig({
     globals: false,
     include: ["src/**/*.test.ts"],
     globalSetup: ["src/test/global-setup.ts"],
+    setupFiles: ["src/test/setup-supertest.ts"],
     env: {
       NODE_ENV: "test",
       DATABASE_URL: TEST_DATABASE_URL,

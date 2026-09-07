@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 import { escapeCsvField } from "../../lib/csv.js";
 import { AppError } from "../../lib/errors.js";
+import { buildXlsxBuffer } from "../../lib/xlsx.js";
 
 import { createStudent, listStudents } from "./student.service.js";
 import { createStudentSchema } from "./student.validation.js";
@@ -107,4 +108,21 @@ export async function exportStudentsToCsv(): Promise<string> {
   );
 
   return [EXPORT_COLUMNS.join(","), ...rows].join("\r\n");
+}
+
+/** Même périmètre de colonnes que exportStudentsToCsv ci-dessus — voir sa note. */
+export async function exportStudentsToXlsx(): Promise<Buffer> {
+  const students = await listStudents();
+
+  const rows = students.map((student) =>
+    EXPORT_COLUMNS.map((column) => {
+      const value = student[column];
+      if (value === null || value === undefined) {
+        return null;
+      }
+      return value instanceof Date ? value.toISOString().slice(0, 10) : value;
+    }),
+  );
+
+  return buildXlsxBuffer("Élèves", EXPORT_COLUMNS, rows);
 }

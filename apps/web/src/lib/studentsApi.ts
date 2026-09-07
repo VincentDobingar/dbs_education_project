@@ -1,4 +1,4 @@
-import { apiRequest, type TenantCredentials } from "./apiClient.js";
+import { apiRequest, fetchBlob, type TenantCredentials } from "./apiClient.js";
 
 export interface Student {
   id: string;
@@ -7,6 +7,7 @@ export interface Student {
   lastName: string;
   dateOfBirth: string | null;
   gender: string | null;
+  photoUrl: string | null;
   status: string;
   possibleDuplicates?: { id: string; matricule: string; firstName: string; lastName: string }[];
 }
@@ -30,6 +31,25 @@ export function createStudent(input: CreateStudentInput, creds: TenantCredential
 
 export function getStudent(id: string, creds: TenantCredentials): Promise<Student> {
   return apiRequest(`/students/${id}`, { ...creds });
+}
+
+// §19 : photo sur la carte scolaire — le seul champ que cette page a besoin de
+// modifier après création pour l'instant, donc typé étroitement plutôt qu'avec
+// l'ensemble des champs PATCH-ables côté backend.
+export function updateStudentPhoto(id: string, photoUrl: string, creds: TenantCredentials): Promise<Student> {
+  return apiRequest(`/students/${id}`, { method: "PATCH", body: { photoUrl }, ...creds });
+}
+
+export function fetchIdCardPdf(id: string, creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob(`/students/${id}/id-card`, creds);
+}
+
+export function fetchStudentsExportCsv(creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob("/students/export", creds);
+}
+
+export function fetchStudentsExportXlsx(creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob("/students/export.xlsx", creds);
 }
 
 export interface Enrollment {

@@ -7,7 +7,12 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
-import { createStudent, listStudents } from "../../lib/studentsApi.js";
+import {
+  createStudent,
+  fetchStudentsExportCsv,
+  fetchStudentsExportXlsx,
+  listStudents,
+} from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
 const studentSchema = z.object({
@@ -42,11 +47,38 @@ export function StudentsPage(): ReactNode {
     },
   });
 
+  async function downloadExport(fetcher: () => Promise<Blob>, filename: string): Promise<void> {
+    const blob = await fetcher();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t("students.title")}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t("students.subtitle")}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{t("students.title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("students.subtitle")}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void downloadExport(() => fetchStudentsExportCsv(creds), "students.csv")}
+          >
+            {t("students.exportCsv")}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void downloadExport(() => fetchStudentsExportXlsx(creds), "students.xlsx")}
+          >
+            {t("students.exportExcel")}
+          </Button>
+        </div>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">

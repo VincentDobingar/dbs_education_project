@@ -154,6 +154,14 @@ describe("rapports de recettes et de dépenses (§23)", () => {
     expect(csv.text).toContain("600.00");
     expect(csv.text).toContain("100.00");
 
+    const xlsx = await request(app)
+      .get(`/api/v1/finance/reports/revenue/xlsx?startDate=${today}&endDate=${today}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(xlsx.status).toBe(200);
+    expect(xlsx.headers["content-type"]).toContain("spreadsheetml");
+    expect((xlsx.body as Buffer).subarray(0, 2).toString("ascii")).toBe("PK");
+
     const pdf = await request(app)
       .get(`/api/v1/finance/reports/revenue/pdf?startDate=${today}&endDate=${today}`)
       .set("Authorization", `Bearer ${agentToken}`)
@@ -216,6 +224,14 @@ describe("rapports de recettes et de dépenses (§23)", () => {
     expect(csv.status).toBe(200);
     expect(csv.headers["content-type"]).toContain("text/csv");
     expect(csv.text).toContain("400.00");
+
+    const xlsx = await request(app)
+      .get("/api/v1/finance/reports/expenses/xlsx?startDate=2026-02-01&endDate=2026-02-02")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(xlsx.status).toBe(200);
+    expect(xlsx.headers["content-type"]).toContain("spreadsheetml");
+    expect((xlsx.body as Buffer).subarray(0, 2).toString("ascii")).toBe("PK");
 
     const pdf = await request(app)
       .get("/api/v1/finance/reports/expenses/pdf?startDate=2026-02-01&endDate=2026-02-02")

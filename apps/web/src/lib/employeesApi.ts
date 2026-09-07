@@ -1,7 +1,4 @@
-import { apiRequest, ApiError, type TenantCredentials } from "./apiClient.js";
-
-const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
+import { apiRequest, fetchBlob, type TenantCredentials } from "./apiClient.js";
 
 export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 
@@ -203,17 +200,10 @@ export function removeEmployeeDocument(
   return apiRequest(`/employees/${employeeId}/documents/${id}`, { method: "DELETE", ...creds });
 }
 
-// Pas JSON — même pattern que financeApi.ts:fetchBlob, un CSV brut à télécharger,
-// jamais un fichier que cette API héberge elle-même.
-export async function fetchPayrollExportCsv(creds: TenantCredentials): Promise<Blob> {
-  const response = await fetch(`${API_URL}/employees/payroll/export.csv`, {
-    headers: {
-      Authorization: `Bearer ${creds.accessToken}`,
-      "X-Tenant-Slug": creds.subdomain,
-    },
-  });
-  if (!response.ok) {
-    throw new ApiError(response.status, "FILE_FETCH_FAILED", "Could not load the file");
-  }
-  return response.blob();
+export function fetchPayrollExportCsv(creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob("/employees/payroll/export.csv", creds);
+}
+
+export function fetchPayrollExportXlsx(creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob("/employees/payroll/export.xlsx", creds);
 }

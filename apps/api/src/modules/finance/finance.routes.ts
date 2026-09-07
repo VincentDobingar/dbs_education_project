@@ -84,7 +84,9 @@ financeRouter.get("/cash-sessions/:id", readFinance, cashSessionController.getCa
 
 financeRouter.get("/reports/revenue", readFinance, financialReportController.getRevenueReport);
 financeRouter.get("/reports/revenue/csv", readFinance, financialReportController.getRevenueReportCsv);
+financeRouter.get("/reports/revenue/xlsx", readFinance, financialReportController.getRevenueReportXlsx);
 financeRouter.get("/reports/revenue/pdf", readFinance, financialReportController.getRevenueReportPdf);
 financeRouter.get("/reports/expenses", readFinance, financialReportController.getExpenseReport);
 financeRouter.get("/reports/expenses/csv", readFinance, financialReportController.getExpenseReportCsv);
+financeRouter.get("/reports/expenses/xlsx", readFinance, financialReportController.getExpenseReportXlsx);
 financeRouter.get("/reports/expenses/pdf", readFinance, financialReportController.getExpenseReportPdf);

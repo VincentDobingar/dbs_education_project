@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./apiClient.js";
+import { apiRequest, fetchBlob } from "./apiClient.js";
 import type { AttendanceEntry } from "./attendanceApi.js";
 import type { Announcement } from "./communicationApi.js";
 import type { FamilyChildStudent } from "./familyApi.js";
@@ -45,19 +45,6 @@ export interface ParentDashboard {
   subscription: Subscription | null;
 }
 
-const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
-
-async function fetchBlob(path: string, accessToken: string): Promise<Blob> {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
-    throw new ApiError(response.status, "PDF_FETCH_FAILED", "Could not load the file");
-  }
-  return response.blob();
-}
-
 export function getParentDashboard(accessToken: string): Promise<ParentDashboard> {
   return apiRequest("/parent-portal/dashboard", { accessToken });
 }
@@ -83,7 +70,7 @@ export function fetchChildReportCardPdf(
   reportCardId: string,
   accessToken: string,
 ): Promise<Blob> {
-  return fetchBlob(`/parent-portal/children/${studentId}/report-cards/${reportCardId}/pdf`, accessToken);
+  return fetchBlob(`/parent-portal/children/${studentId}/report-cards/${reportCardId}/pdf`, { accessToken });
 }
 
 export function getChildTimetable(studentId: string, accessToken: string): Promise<TimetableEntry[]> {
@@ -118,5 +105,5 @@ export function fetchChildReceiptPdf(
   receiptId: string,
   accessToken: string,
 ): Promise<Blob> {
-  return fetchBlob(`/parent-portal/children/${studentId}/receipts/${receiptId}/pdf`, accessToken);
+  return fetchBlob(`/parent-portal/children/${studentId}/receipts/${receiptId}/pdf`, { accessToken });
 }

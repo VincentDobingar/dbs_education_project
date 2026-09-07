@@ -734,5 +734,13 @@
   "portal.course.title": "Cours en ligne",
   "portal.course.empty": "Aucun cours en ligne pour l'instant.",
   "portal.course.completed": "Terminé",
-  "portal.course.markComplete": "Marquer comme terminé"
+  "portal.course.markComplete": "Marquer comme terminé",
+  "studentDetail.photo": "Photo",
+  "studentDetail.photoUrlPlaceholder": "Lien de la photo (URL)",
+  "studentDetail.savePhoto": "Enregistrer la photo",
+  "studentDetail.downloadIdCard": "Télécharger la carte scolaire",
+  "finance.exportExcel": "Exporter Excel",
+  "students.exportCsv": "Exporter CSV",
+  "students.exportExcel": "Exporter Excel",
+  "employees.exportPayrollExcel": "Exporter la paie (Excel)"
 }

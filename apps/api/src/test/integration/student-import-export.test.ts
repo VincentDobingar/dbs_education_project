@@ -139,5 +139,18 @@ describe("import/export CSV des élèves (§19)", () => {
     expect(csvText).toContain("2009-07-15");
     expect(csvText).not.toContain("Traitement confidentiel XYZ");
     expect(csvText).not.toContain("+237600000000");
+
+    // Même EXPORT_COLUMNS que l'export CSV ci-dessus (import-export.service.ts) —
+    // pas de re-vérification du contenu ligne par ligne ici (un .xlsx est une
+    // archive zip, pas du texte brut cherchable), juste que la route répond bien
+    // un classeur Excel valide.
+    const exportedXlsx = await request(app)
+      .get("/api/v1/students/export.xlsx")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(exportedXlsx.status).toBe(200);
+    expect(exportedXlsx.headers["content-type"]).toContain("spreadsheetml");
+    expect(exportedXlsx.headers["content-disposition"]).toContain("students.xlsx");
+    expect((exportedXlsx.body as Buffer).subarray(0, 2).toString("ascii")).toBe("PK");
   });
 });

@@ -27,7 +27,13 @@ import {
   type StudentInvoiceStatus,
 } from "../../lib/financeApi.js";
 import { listAcademicYears, listClassrooms } from "../../lib/schoolConfigApi.js";
-import { enrollStudent, getStudent, listEnrollments } from "../../lib/studentsApi.js";
+import {
+  enrollStudent,
+  fetchIdCardPdf,
+  getStudent,
+  listEnrollments,
+  updateStudentPhoto,
+} from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
 function formatAmount(cents: number): string {
@@ -372,6 +378,29 @@ export function StudentDetailPage(): ReactNode {
     },
   });
 
+  // §19 : photo sur la carte scolaire — édition simple d'un seul champ, pas de
+  // formulaire complet d'édition du profil (qui n'existe pas encore ailleurs
+  // dans cette page non plus).
+  const [photoUrlDraft, setPhotoUrlDraft] = useState("");
+  const updatePhotoMutation = useMutation({
+    mutationFn: () => updateStudentPhoto(studentId, photoUrlDraft, creds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      setPhotoUrlDraft("");
+    },
+  });
+
+  const [idCardLoading, setIdCardLoading] = useState(false);
+  async function downloadIdCard(): Promise<void> {
+    setIdCardLoading(true);
+    try {
+      const blob = await fetchIdCardPdf(studentId, creds);
+      window.open(URL.createObjectURL(blob), "_blank");
+    } finally {
+      setIdCardLoading(false);
+    }
+  }
+
   if (student.isPending) {
     return <p className="mx-auto max-w-3xl px-6 py-10 text-sm text-slate-500">{t("students.loading")}</p>;
   }
@@ -381,14 +410,58 @@ export function StudentDetailPage(): ReactNode {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {student.data.firstName} {student.data.lastName}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {t("students.matricule")} : {student.data.matricule} — {student.data.status}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {student.data.photoUrl ? (
+            <img
+              src={student.data.photoUrl}
+              alt=""
+              className="h-16 w-16 rounded-md border border-slate-200 object-cover"
+            />
+          ) : null}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {student.data.firstName} {student.data.lastName}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {t("students.matricule")} : {student.data.matricule} — {student.data.status}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="whitespace-nowrap text-sm text-brand-teal hover:underline disabled:opacity-50"
+          disabled={idCardLoading}
+          onClick={() => void downloadIdCard()}
+        >
+          {idCardLoading ? t("studentDetail.loadingPdf") : t("studentDetail.downloadIdCard")}
+        </button>
       </div>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.photo")}</h2>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            updatePhotoMutation.mutate();
+          }}
+          className="mt-3 flex flex-wrap items-end gap-3"
+        >
+          <input
+            placeholder={t("studentDetail.photoUrlPlaceholder")}
+            className="input w-72"
+            value={photoUrlDraft}
+            onChange={(event) => setPhotoUrlDraft(event.target.value)}
+          />
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={!photoUrlDraft || updatePhotoMutation.isPending}
+          >
+            {t("studentDetail.savePhoto")}
+          </Button>
+        </form>
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.enrollments")}</h2>

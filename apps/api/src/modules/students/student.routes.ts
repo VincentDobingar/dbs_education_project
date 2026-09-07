@@ -26,6 +26,7 @@ studentRouter.get("/", readStudents, studentController.listStudents);
 studentRouter.get("/check-duplicates", readStudents, studentController.checkDuplicateStudents);
 studentRouter.post("/import", manageStudents, importExportController.importStudents);
 studentRouter.get("/export", readStudents, importExportController.exportStudents);
+studentRouter.get("/export.xlsx", readStudents, importExportController.exportStudentsXlsx);
 studentRouter.get("/:id", readStudents, studentController.getStudent);
 studentRouter.patch("/:id", manageStudents, studentController.updateStudent);
 studentRouter.post("/:id/archive", manageStudents, studentController.archiveStudent);

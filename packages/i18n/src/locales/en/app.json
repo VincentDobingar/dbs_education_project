@@ -734,5 +734,13 @@
   "portal.course.title": "Online courses",
   "portal.course.empty": "No online course yet.",
   "portal.course.completed": "Completed",
-  "portal.course.markComplete": "Mark as complete"
+  "portal.course.markComplete": "Mark as complete",
+  "studentDetail.photo": "Photo",
+  "studentDetail.photoUrlPlaceholder": "Photo link (URL)",
+  "studentDetail.savePhoto": "Save photo",
+  "studentDetail.downloadIdCard": "Download ID card",
+  "finance.exportExcel": "Export Excel",
+  "students.exportCsv": "Export CSV",
+  "students.exportExcel": "Export Excel",
+  "employees.exportPayrollExcel": "Export payroll (Excel)"
 }

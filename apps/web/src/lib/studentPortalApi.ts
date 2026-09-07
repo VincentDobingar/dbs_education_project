@@ -1,23 +1,10 @@
-import { apiRequest, ApiError } from "./apiClient.js";
+import { apiRequest, fetchBlob } from "./apiClient.js";
 import type { Announcement } from "./communicationApi.js";
 import type { StudentReceipt } from "./financeApi.js";
 import type { ReportCard } from "./gradingApi.js";
 import type { Homework } from "./homeworkApi.js";
 import type { Subscription } from "./parentPortalApi.js";
 import type { TimetableEntry } from "./timetableApi.js";
-
-const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
-
-async function fetchBlob(path: string, accessToken: string): Promise<Blob> {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
-    throw new ApiError(response.status, "PDF_FETCH_FAILED", "Could not load the file");
-  }
-  return response.blob();
-}
 
 export interface StudentEnrollmentSummary {
   classroomId: string;
@@ -68,7 +55,7 @@ export function fetchStudentReportCardPdf(
   reportCardId: string,
   accessToken: string,
 ): Promise<Blob> {
-  return fetchBlob(`/student-portal/students/${studentId}/report-cards/${reportCardId}/pdf`, accessToken);
+  return fetchBlob(`/student-portal/students/${studentId}/report-cards/${reportCardId}/pdf`, { accessToken });
 }
 
 export function getStudentAnnouncements(studentId: string, accessToken: string): Promise<Announcement[]> {
@@ -91,5 +78,5 @@ export function fetchStudentReceiptPdf(
   receiptId: string,
   accessToken: string,
 ): Promise<Blob> {
-  return fetchBlob(`/student-portal/students/${studentId}/receipts/${receiptId}/pdf`, accessToken);
+  return fetchBlob(`/student-portal/students/${studentId}/receipts/${receiptId}/pdf`, { accessToken });
 }

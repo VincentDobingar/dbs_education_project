@@ -1,5 +1,6 @@
 import { buildCsv } from "../../lib/csv.js";
 import { prisma } from "../../lib/prisma.js";
+import { buildXlsxBuffer } from "../../lib/xlsx.js";
 
 export interface PayrollLine {
   employeeNumber: string;
@@ -50,6 +51,8 @@ function formatAmount(cents: number | null): string {
   return cents === null ? "" : (cents / 100).toFixed(2);
 }
 
+const PAYROLL_COLUMNS = ["Matricule", "Prénom", "Nom", "Fonction", "Type de contrat", "Salaire"] as const;
+
 export function payrollExportToCsv(lines: PayrollLine[]): string {
   const rows = lines.map((line) => [
     line.employeeNumber,
@@ -59,5 +62,17 @@ export function payrollExportToCsv(lines: PayrollLine[]): string {
     line.contractType ?? "",
     formatAmount(line.salaryCents),
   ]);
-  return buildCsv(["Matricule", "Prénom", "Nom", "Fonction", "Type de contrat", "Salaire"], rows);
+  return buildCsv(PAYROLL_COLUMNS, rows);
+}
+
+export function payrollExportToXlsx(lines: PayrollLine[]): Promise<Buffer> {
+  const rows = lines.map((line) => [
+    line.employeeNumber,
+    line.firstName,
+    line.lastName,
+    line.jobTitle,
+    line.contractType,
+    line.salaryCents === null ? null : line.salaryCents / 100,
+  ]);
+  return buildXlsxBuffer("Paie", PAYROLL_COLUMNS, rows);
 }

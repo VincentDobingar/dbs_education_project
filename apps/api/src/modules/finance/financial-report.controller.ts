@@ -1,9 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { XLSX_CONTENT_TYPE } from "../../lib/xlsx.js";
 
 import { expenseReportToCsv, revenueReportToCsv } from "./financial-report-csv.service.js";
 import { generateExpenseReportPdf, generateRevenueReportPdf } from "./financial-report-pdf.service.js";
+import { expenseReportToXlsx, revenueReportToXlsx } from "./financial-report-xlsx.service.js";
 import * as financialReportService from "./financial-report.service.js";
 import { financialReportQuerySchema } from "./financial-report.validation.js";
 
@@ -32,6 +34,19 @@ export function getRevenueReportCsv(req: Request, res: Response, next: NextFunct
       .set("Content-Type", "text/csv; charset=utf-8")
       .set("Content-Disposition", 'attachment; filename="rapport-recettes.csv"')
       .send(csv);
+  })().catch(next);
+}
+
+export function getRevenueReportXlsx(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const query = financialReportQuerySchema.parse(req.query);
+    const report = await financialReportService.getRevenueReport(query);
+    const xlsx = await revenueReportToXlsx(report);
+    res
+      .status(200)
+      .set("Content-Type", XLSX_CONTENT_TYPE)
+      .set("Content-Disposition", 'attachment; filename="rapport-recettes.xlsx"')
+      .send(xlsx);
   })().catch(next);
 }
 
@@ -67,6 +82,19 @@ export function getExpenseReportCsv(req: Request, res: Response, next: NextFunct
       .set("Content-Type", "text/csv; charset=utf-8")
       .set("Content-Disposition", 'attachment; filename="rapport-depenses.csv"')
       .send(csv);
+  })().catch(next);
+}
+
+export function getExpenseReportXlsx(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const query = financialReportQuerySchema.parse(req.query);
+    const report = await financialReportService.getExpenseReport(query);
+    const xlsx = await expenseReportToXlsx(report);
+    res
+      .status(200)
+      .set("Content-Type", XLSX_CONTENT_TYPE)
+      .set("Content-Disposition", 'attachment; filename="rapport-depenses.xlsx"')
+      .send(xlsx);
   })().catch(next);
 }
 

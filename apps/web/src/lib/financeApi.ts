@@ -1,22 +1,4 @@
-import { apiRequest, ApiError, type TenantCredentials } from "./apiClient.js";
-
-const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
-
-// Not JSON — a raw fetch reusing the same auth/tenant headers as apiRequest,
-// returning bytes for the caller to open/download (PDF/CSV exports).
-async function fetchBlob(path: string, creds: TenantCredentials): Promise<Blob> {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: {
-      Authorization: `Bearer ${creds.accessToken}`,
-      "X-Tenant-Slug": creds.subdomain,
-    },
-  });
-  if (!response.ok) {
-    throw new ApiError(response.status, "FILE_FETCH_FAILED", "Could not load the file");
-  }
-  return response.blob();
-}
+import { apiRequest, fetchBlob, type TenantCredentials } from "./apiClient.js";
 
 export interface FeeCategory {
   id: string;
@@ -375,6 +357,13 @@ export function fetchRevenueReportCsv(
   return fetchBlob(`/finance/reports/revenue/csv${reportQuery(range)}`, creds);
 }
 
+export function fetchRevenueReportXlsx(
+  range: { startDate: string; endDate: string },
+  creds: TenantCredentials,
+): Promise<Blob> {
+  return fetchBlob(`/finance/reports/revenue/xlsx${reportQuery(range)}`, creds);
+}
+
 export function fetchRevenueReportPdf(
   range: { startDate: string; endDate: string },
   creds: TenantCredentials,
@@ -394,6 +383,13 @@ export function fetchExpenseReportCsv(
   creds: TenantCredentials,
 ): Promise<Blob> {
   return fetchBlob(`/finance/reports/expenses/csv${reportQuery(range)}`, creds);
+}
+
+export function fetchExpenseReportXlsx(
+  range: { startDate: string; endDate: string },
+  creds: TenantCredentials,
+): Promise<Blob> {
+  return fetchBlob(`/finance/reports/expenses/xlsx${reportQuery(range)}`, creds);
 }
 
 export function fetchExpenseReportPdf(
