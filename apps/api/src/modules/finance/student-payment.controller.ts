@@ -63,7 +63,7 @@ export function getReceiptPdf(req: Request, res: Response, next: NextFunction): 
     }
 
     const receiptId = req.params.id as string;
-    const pdf = await generateReceiptPdf(receiptId, req.tenant.name);
+    const pdf = await generateReceiptPdf(receiptId, req.tenant);
 
     res
       .status(200)

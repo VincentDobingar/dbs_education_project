@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpUrlSchema } from "../../lib/http-url-schema.js";
+
 const SUBDOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
 
 const BILLING_PERIODS = ["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL", "SCHOOL_YEAR", "CUSTOM"] as const;
@@ -15,6 +17,7 @@ export const onboardTenantSchema = z
     address: z.string().min(1).optional(),
     phone: z.string().min(1).optional(),
     email: z.string().email().optional(),
+    logoUrl: httpUrlSchema.optional(),
     currencyIsoCode: z.string().length(3),
     subdomain: z
       .string()

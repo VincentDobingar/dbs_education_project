@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import type { TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { XLSX_CONTENT_TYPE } from "../../lib/xlsx.js";
 
 import { expenseReportToCsv, revenueReportToCsv } from "./financial-report-csv.service.js";
@@ -9,11 +10,11 @@ import { expenseReportToXlsx, revenueReportToXlsx } from "./financial-report-xls
 import * as financialReportService from "./financial-report.service.js";
 import { financialReportQuerySchema } from "./financial-report.validation.js";
 
-function requireTenantName(req: Request): string {
+function requireTenant(req: Request): TenantLetterhead {
   if (!req.tenant) {
     throw new AppError(400, "TENANT_REQUIRED", "This route must be called on a tenant subdomain");
   }
-  return req.tenant.name;
+  return req.tenant;
 }
 
 export function getRevenueReport(req: Request, res: Response, next: NextFunction): void {
@@ -52,10 +53,10 @@ export function getRevenueReportXlsx(req: Request, res: Response, next: NextFunc
 
 export function getRevenueReportPdf(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    const tenantName = requireTenantName(req);
+    const tenant = requireTenant(req);
     const query = financialReportQuerySchema.parse(req.query);
     const report = await financialReportService.getRevenueReport(query);
-    const pdf = await generateRevenueReportPdf(report, tenantName);
+    const pdf = await generateRevenueReportPdf(report, tenant);
     res
       .status(200)
       .set("Content-Type", "application/pdf")
@@ -100,10 +101,10 @@ export function getExpenseReportXlsx(req: Request, res: Response, next: NextFunc
 
 export function getExpenseReportPdf(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
-    const tenantName = requireTenantName(req);
+    const tenant = requireTenant(req);
     const query = financialReportQuerySchema.parse(req.query);
     const report = await financialReportService.getExpenseReport(query);
-    const pdf = await generateExpenseReportPdf(report, tenantName);
+    const pdf = await generateExpenseReportPdf(report, tenant);
     res
       .status(200)
       .set("Content-Type", "application/pdf")

@@ -8,6 +8,7 @@ import type {
 } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
+import type { TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
@@ -76,10 +77,10 @@ export async function getMyReportCard(studentId: string, reportCardId: string): 
 export async function getMyReportCardPdf(
   studentId: string,
   reportCardId: string,
-  tenantName: string,
+  tenant: TenantLetterhead,
 ): Promise<Buffer> {
   await getMyReportCard(studentId, reportCardId);
-  return generateReportCardPdf(reportCardId, tenantName);
+  return generateReportCardPdf(reportCardId, tenant);
 }
 
 export async function getMyAnnouncements(studentId: string): Promise<Announcement[]> {
@@ -94,14 +95,14 @@ export async function getMyReceipts(studentId: string): Promise<StudentReceiptWi
 export async function getMyReceiptPdf(
   studentId: string,
   receiptId: string,
-  tenantName: string,
+  tenant: TenantLetterhead,
 ): Promise<Buffer> {
   const receipt = await requireReceipt(receiptId);
   const invoice = await requireStudentInvoice(receipt.payment.studentInvoiceId);
   if (invoice.studentId !== studentId) {
     throw new AppError(404, "RECEIPT_NOT_FOUND", `Receipt not found: ${receiptId}`);
   }
-  return generateReceiptPdf(receiptId, tenantName);
+  return generateReceiptPdf(receiptId, tenant);
 }
 
 const RECENT_REPORT_CARDS_LIMIT = 3;

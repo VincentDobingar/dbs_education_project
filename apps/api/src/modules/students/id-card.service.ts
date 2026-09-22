@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 
 import { AppError } from "../../lib/errors.js";
+import { fetchTenantLogo, type TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { fetchImageSafely } from "../../lib/safe-image-fetch.js";
 import { isStudentUnavailable } from "../../lib/student-status.js";
 
@@ -10,6 +11,7 @@ import { getStudent, requireCurrentEnrollment } from "./student.service.js";
 const CARD_WIDTH = 242.65;
 const CARD_HEIGHT = 153.07;
 const PHOTO_SIZE = 56;
+const LOGO_SIZE = 16; // carte trop petite pour le même logo 40pt que les autres documents.
 
 /**
  * `photoUrl` is a client-supplied external URL — embedding it means fetching it
@@ -20,7 +22,7 @@ const PHOTO_SIZE = 56;
  * to the original text-only card rather than failing the whole PDF — a bad or
  * unreachable photo must never block issuing an ID card.
  */
-export async function generateIdCardPdf(studentId: string, tenantName: string): Promise<Buffer> {
+export async function generateIdCardPdf(studentId: string, tenant: TenantLetterhead): Promise<Buffer> {
   const student = await getStudent(studentId);
   // completeTransfer()/withdrawStudent() (transfer.service.ts) posent
   // Student.status sans jamais toucher l'Enrollment courant -- requireCurrentEnrollment
@@ -32,6 +34,7 @@ export async function generateIdCardPdf(studentId: string, tenantName: string): 
   }
   const enrollment = await requireCurrentEnrollment(studentId);
   const photo = student.photoUrl ? await fetchImageSafely(student.photoUrl) : null;
+  const logo = await fetchTenantLogo(tenant.logoUrl);
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: [CARD_WIDTH, CARD_HEIGHT], margin: 12 });
@@ -40,7 +43,18 @@ export async function generateIdCardPdf(studentId: string, tenantName: string): 
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(9).font("Helvetica-Bold").text(tenantName, { align: "center" });
+    // Logo centré au-dessus du nom, en miniature (la carte CR80 n'a pas la largeur
+    // du texte étiré pour l'accueillir en coin sans risquer un chevauchement).
+    if (logo !== null) {
+      try {
+        const logoX = (CARD_WIDTH - LOGO_SIZE) / 2;
+        doc.image(logo, logoX, doc.y, { width: LOGO_SIZE, height: LOGO_SIZE, fit: [LOGO_SIZE, LOGO_SIZE] });
+        doc.y += LOGO_SIZE + 3;
+      } catch {
+        // Octets récupérés mais non décodables par pdfkit -- carte sans logo.
+      }
+    }
+    doc.fontSize(9).font("Helvetica-Bold").text(tenant.name, { align: "center" });
     doc.moveDown(0.6);
 
     // Deux colonnes quand une photo a pu être récupérée (texte réduit à la largeur

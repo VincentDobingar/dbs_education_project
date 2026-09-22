@@ -74,7 +74,7 @@ export function requireVerifiedStudentRelationship(
           res.status(403).json({ code: "TENANT_UNAVAILABLE", message: "This tenant is no longer available" });
           return;
         }
-        req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status };
+        req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status, logoUrl: tenant.logoUrl };
       }
 
       runWithContext({ tenantId: relationship.tenantId, userId: req.user.id }, () => {

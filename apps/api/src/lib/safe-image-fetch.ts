@@ -22,11 +22,13 @@ import net from "node:net";
  * oubli, même esprit que le commentaire qu'il remplace.
  */
 
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3 Mo — largement suffisant pour une photo d'identité.
+export const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3 Mo — largement suffisant pour une photo d'identité.
 const FETCH_TIMEOUT_MS = 5000;
 // image/webp deliberately excluded: pdfkit (the only current consumer, id-card.service.ts)
-// only supports embedding JPEG and PNG buffers.
-const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png"]);
+// only supports embedding JPEG and PNG buffers. Exporté pour lib/file-storage.ts, qui
+// applique la même restriction aux fichiers téléversés (un logo doit lui aussi être
+// embarquable dans un PDF).
+export const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png"]);
 
 function isPrivateOrReservedIpv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);

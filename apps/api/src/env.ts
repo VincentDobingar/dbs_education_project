@@ -25,6 +25,15 @@ const apiEnvSchema = baseEnvSchema.extend({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+
+  // Logo d'établissement téléversé (multipart) plutôt qu'une URL déjà hébergée
+  // (lib/file-storage.ts) : stockage disque local, servi statiquement sous
+  // /uploads. PUBLIC_API_URL doit pointer vers l'origine publique réellement
+  // atteignable de cette API (jamais localhost en production) — c'est ce qui
+  // permet à lib/safe-image-fetch.ts de récupérer le fichier pour l'embarquer
+  // dans un PDF (HTTPS uniquement, IP privées refusées, voir cette lib).
+  PUBLIC_API_URL: z.string().url().default("http://localhost:4000"),
+  UPLOAD_DIR: z.string().min(1).default("storage"),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

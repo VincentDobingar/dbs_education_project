@@ -1,12 +1,13 @@
 import PDFDocument from "pdfkit";
 
 import { AppError } from "../../lib/errors.js";
+import { drawCenteredLetterhead, fetchTenantLogo, type TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { prisma } from "../../lib/prisma.js";
 import { getStudent } from "../students/student.service.js";
 
 import { requireReceipt } from "./student-payment.service.js";
 
-export async function generateReceiptPdf(receiptId: string, tenantName: string): Promise<Buffer> {
+export async function generateReceiptPdf(receiptId: string, tenant: TenantLetterhead): Promise<Buffer> {
   const receipt = await requireReceipt(receiptId);
   const invoice = await prisma.studentInvoice.findUnique({ where: { id: receipt.payment.studentInvoiceId } });
   if (!invoice) {
@@ -17,6 +18,7 @@ export async function generateReceiptPdf(receiptId: string, tenantName: string):
     );
   }
   const student = await getStudent(invoice.studentId);
+  const logo = await fetchTenantLogo(tenant.logoUrl);
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A5", margin: 40 });
@@ -25,7 +27,7 @@ export async function generateReceiptPdf(receiptId: string, tenantName: string):
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(14).font("Helvetica-Bold").text(tenantName, { align: "center" });
+    drawCenteredLetterhead(doc, tenant.name, logo, 14);
     doc.fontSize(11).font("Helvetica").text("Reçu de paiement", { align: "center" });
     doc.moveDown(1);
 

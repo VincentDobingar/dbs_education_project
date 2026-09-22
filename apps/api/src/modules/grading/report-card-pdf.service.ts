@@ -1,12 +1,13 @@
 import PDFDocument from "pdfkit";
 
 import { AppError } from "../../lib/errors.js";
+import { drawCenteredLetterhead, fetchTenantLogo, type TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { prisma } from "../../lib/prisma.js";
 import { getStudent } from "../students/student.service.js";
 
 import { requireReportCard } from "./report-card.service.js";
 
-export async function generateReportCardPdf(reportCardId: string, tenantName: string): Promise<Buffer> {
+export async function generateReportCardPdf(reportCardId: string, tenant: TenantLetterhead): Promise<Buffer> {
   const reportCard = await requireReportCard(reportCardId);
   const student = await getStudent(reportCard.studentId);
   const academicPeriod = await prisma.academicPeriod.findUnique({
@@ -25,6 +26,7 @@ export async function generateReportCardPdf(reportCardId: string, tenantName: st
     where: { id: { in: reportCard.items.map((item) => item.subjectId) } },
   });
   const subjectNameById = new Map(subjects.map((s) => [s.id, s.nameFr]));
+  const logo = await fetchTenantLogo(tenant.logoUrl);
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -33,7 +35,7 @@ export async function generateReportCardPdf(reportCardId: string, tenantName: st
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(16).font("Helvetica-Bold").text(tenantName, { align: "center" });
+    drawCenteredLetterhead(doc, tenant.name, logo, 16);
     doc.fontSize(12).font("Helvetica").text("Bulletin scolaire", { align: "center" });
     doc.moveDown(1);
 

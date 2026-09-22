@@ -10,6 +10,7 @@ export interface RequestTenant {
   id: string;
   name: string;
   status: TenantStatus;
+  logoUrl: string | null;
 }
 
 declare global {

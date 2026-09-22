@@ -8,6 +8,12 @@ import { testAdminPrisma } from "../admin-client.js";
 import { createUser, uniqueSuffix } from "../fixtures.js";
 import { buildTestApp, type TestResponseBody } from "../test-app.js";
 
+// 1x1 pixel PNG, transparent — le plus petit fichier valide que pdfkit sache décoder.
+const TINY_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
 describe("tenant onboarding (§14)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
@@ -117,6 +123,73 @@ describe("tenant onboarding (§14)", () => {
       where: { subdomain: payload.subdomain },
     });
     expect(domain.verifiedAt).not.toBeNull();
+  });
+
+  // Amélioration abonnement : un établissement peut fournir l'URL de son logo dès
+  // l'inscription (même schéma que le formulaire complémentaire de tenant-logo.test.ts
+  // pour un établissement déjà onboardé) — reste optionnel, jamais requis pour souscrire.
+  it("accepts an optional logoUrl at onboarding and persists it", async () => {
+    const user = await createUser("founder-logo");
+    const token = signAccessToken({ sub: user.id });
+    const payload = onboardingPayload({ logoUrl: "https://example.test/logo.png" });
+
+    const response = await request(app)
+      .post("/api/v1/tenants/onboarding")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(201);
+    const body = response.body as { tenant: { id: string; logoUrl: string | null } };
+    createdTenantIds.push(body.tenant.id);
+    expect(body.tenant.logoUrl).toBe("https://example.test/logo.png");
+  });
+
+  // Le champ logo de l'assistant d'inscription (SignupPage.tsx) téléverse le
+  // fichier une fois le compte créé/connecté (accessToken disponible), avant
+  // l'appel à onboarding lui-même — aucun tenant n'existe encore à ce stade.
+  it("uploads a logo file for an authenticated user with no tenant yet, then onboards using the returned URL", async () => {
+    const user = await createUser("founder-logo-upload");
+    const token = signAccessToken({ sub: user.id });
+
+    const uploaded = await request(app)
+      .post("/api/v1/tenants/logo-upload")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("logo", TINY_PNG, { filename: "logo.png", contentType: "image/png" });
+    expect(uploaded.status).toBe(200);
+    const logoUrl = (uploaded.body as { url: string }).url;
+    expect(logoUrl).toMatch(/^http:\/\/localhost:4000\/uploads\/tenant-logos\/.+\.png$/);
+
+    const payload = onboardingPayload({ logoUrl });
+    const response = await request(app)
+      .post("/api/v1/tenants/onboarding")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(201);
+    const body = response.body as { tenant: { id: string; logoUrl: string | null } };
+    createdTenantIds.push(body.tenant.id);
+    expect(body.tenant.logoUrl).toBe(logoUrl);
+  });
+
+  it("rejects a logo upload from an unauthenticated caller", async () => {
+    const response = await request(app)
+      .post("/api/v1/tenants/logo-upload")
+      .attach("logo", TINY_PNG, { filename: "logo.png", contentType: "image/png" });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a non-http(s) logoUrl at onboarding (§34, injection de script)", async () => {
+    const user = await createUser("founder-logo-xss");
+    const token = signAccessToken({ sub: user.id });
+    const payload = onboardingPayload({ logoUrl: "javascript:alert(document.cookie)" });
+
+    const response = await request(app)
+      .post("/api/v1/tenants/onboarding")
+      .set("Authorization", `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(400);
   });
 
   it("rejects a second tenant claiming the same subdomain", async () => {

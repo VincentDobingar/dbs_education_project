@@ -58,7 +58,7 @@ export function getReportCardPdf(req: Request, res: Response, next: NextFunction
     const pdf = await studentPortalService.getMyReportCardPdf(
       req.params.studentId as string,
       reportCardId,
-      tenant.name,
+      tenant,
     );
     res
       .status(200)
@@ -86,11 +86,7 @@ export function getReceiptPdf(req: Request, res: Response, next: NextFunction): 
   void (async () => {
     const tenant = requireTenant(req);
     const receiptId = req.params.receiptId as string;
-    const pdf = await studentPortalService.getMyReceiptPdf(
-      req.params.studentId as string,
-      receiptId,
-      tenant.name,
-    );
+    const pdf = await studentPortalService.getMyReceiptPdf(req.params.studentId as string, receiptId, tenant);
     res
       .status(200)
       .set("Content-Type", "application/pdf")

@@ -2,7 +2,7 @@ import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -25,6 +25,7 @@ import {
   createGradeLevel,
   createRoom,
   createSubject,
+  getTenantLogo,
   listAcademicPeriods,
   listAcademicYears,
   listCalendarEvents,
@@ -35,6 +36,7 @@ import {
   listRooms,
   listSubjects,
   removeCalendarEvent,
+  uploadTenantLogo,
   type AcademicPeriodType,
 } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
@@ -167,6 +169,20 @@ export function ConfigurationPage(): ReactNode {
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
+
+  const tenantLogo = useQuery({
+    queryKey: ["tenant-logo", session.subdomain],
+    queryFn: () => getTenantLogo(creds),
+  });
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+  const uploadLogoMutation = useMutation({
+    mutationFn: (file: File) => uploadTenantLogo(file, creds),
+    onSuccess: () => {
+      setLogoLoadFailed(false);
+      void queryClient.invalidateQueries({ queryKey: ["tenant-logo", session.subdomain] });
+    },
+  });
 
   const campuses = useQuery({
     queryKey: ["campuses", session.subdomain],
@@ -384,6 +400,47 @@ export function ConfigurationPage(): ReactNode {
         <p className="mt-1 text-sm text-slate-500">{t("config.subtitle")}</p>
       </div>
 
+      <Section title={t("config.logo")}>
+        <div className="flex flex-wrap items-center gap-4">
+          {tenantLogo.data?.logoUrl && !logoLoadFailed ? (
+            <img
+              src={tenantLogo.data.logoUrl}
+              alt=""
+              className="h-16 w-16 rounded-md border border-slate-200 object-contain"
+              onError={() => setLogoLoadFailed(true)}
+            />
+          ) : (
+            <p className="text-sm text-slate-500">{t("config.logoEmpty")}</p>
+          )}
+          <input
+            ref={logoFileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            disabled={uploadLogoMutation.isPending}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                uploadLogoMutation.mutate(file);
+              }
+              event.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={uploadLogoMutation.isPending}
+            onClick={() => logoFileInputRef.current?.click()}
+          >
+            {uploadLogoMutation.isPending ? t("config.uploadingLogo") : t("config.chooseLogoFile")}
+          </Button>
+        </div>
+        {uploadLogoMutation.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("config.logoUploadError")}</p>
+        ) : null}
+        <p className="mt-2 text-xs text-slate-500">{t("config.logoHint")}</p>
+      </Section>
+
       <Section title={t("config.academicYears")}>
         <Table
           columns={[t("config.col.name"), t("config.col.startDate"), t("config.col.endDate")]}
@@ -441,32 +498,34 @@ export function ConfigurationPage(): ReactNode {
         {(rooms.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("config.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("config.col.name")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.col.capacity")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(rooms.data ?? []).map((room) => (
-                <tr key={room.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{room.name}</td>
-                  <td className="py-2 pr-4 text-slate-700">{room.capacity ?? "—"}</td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => archiveRoomMutation.mutate(room.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.name")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.capacity")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(rooms.data ?? []).map((room) => (
+                  <tr key={room.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{room.name}</td>
+                    <td className="py-2 pr-4 text-slate-700">{room.capacity ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => archiveRoomMutation.mutate(room.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) =>
@@ -504,36 +563,38 @@ export function ConfigurationPage(): ReactNode {
         {(calendarEvents.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("config.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("config.col.title")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.col.eventType")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.col.startDate")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.col.endDate")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(calendarEvents.data ?? []).map((event) => (
-                <tr key={event.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{event.title}</td>
-                  <td className="py-2 pr-4 text-slate-700">{t(`config.eventType.${event.type}`)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{event.startDate.slice(0, 10)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{event.endDate?.slice(0, 10) ?? "—"}</td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => removeCalendarEventMutation.mutate(event.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.title")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.eventType")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.startDate")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.endDate")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(calendarEvents.data ?? []).map((event) => (
+                  <tr key={event.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{event.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">{t(`config.eventType.${event.type}`)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{event.startDate.slice(0, 10)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{event.endDate?.slice(0, 10) ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => removeCalendarEventMutation.mutate(event.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) =>

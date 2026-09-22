@@ -1,4 +1,4 @@
-import { apiRequest } from "./apiClient.js";
+import { apiRequest, apiUpload } from "./apiClient.js";
 
 export interface RegisterInput {
   email: string;
@@ -41,19 +41,28 @@ export interface OnboardTenantInput {
   currencyIsoCode: string;
   subdomain: string;
   city?: string;
+  logoUrl?: string;
   planCode?: string;
   billingPeriod?: string;
   promoCode?: string;
 }
 
 export interface OnboardTenantResult {
-  tenant: { id: string; name: string; status: string };
+  tenant: { id: string; name: string; status: string; logoUrl: string | null };
   subdomain: string;
   subscription: { id: string; status: string } | null;
 }
 
 export function onboardTenant(input: OnboardTenantInput, accessToken: string): Promise<OnboardTenantResult> {
   return apiRequest("/tenants/onboarding", { method: "POST", body: input, accessToken });
+}
+
+// Assistant d'inscription (SignupPage.tsx) : le fichier est choisi à l'étape
+// "établissement", mais aucun tenant n'existe encore pour le rattacher — appelé
+// juste après login(), juste avant onboardTenant(), avec l'URL renvoyée passée
+// en `logoUrl` de ce dernier.
+export function uploadTenantLogoAtSignup(file: File, accessToken: string): Promise<{ url: string }> {
+  return apiUpload("/tenants/logo-upload", "logo", file, { accessToken });
 }
 
 export interface CurrentUserTenantMembership {

@@ -50,6 +50,7 @@ export async function onboardTenant(userId: string, input: OnboardTenantInput): 
         ...(input.address ? { address: input.address } : {}),
         ...(input.phone ? { phone: input.phone } : {}),
         ...(input.email ? { email: input.email } : {}),
+        ...(input.logoUrl ? { logoUrl: input.logoUrl } : {}),
       },
     });
 

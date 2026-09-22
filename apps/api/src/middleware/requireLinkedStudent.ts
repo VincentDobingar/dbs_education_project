@@ -69,7 +69,7 @@ export function requireLinkedStudent(resolveStudentId: StudentIdResolver = defau
           res.status(403).json({ code: "TENANT_UNAVAILABLE", message: "This tenant is no longer available" });
           return;
         }
-        req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status };
+        req.tenant = { id: tenant.id, name: tenant.name, status: tenant.status, logoUrl: tenant.logoUrl };
       }
 
       runWithContext({ tenantId: link.tenantId, userId: req.user.id }, () => {

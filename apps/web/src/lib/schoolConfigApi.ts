@@ -1,4 +1,4 @@
-import { apiRequest, type TenantCredentials } from "./apiClient.js";
+import { apiRequest, apiUpload, type TenantCredentials } from "./apiClient.js";
 
 export interface Campus {
   id: string;
@@ -259,4 +259,20 @@ export function createCalendarEvent(
 
 export function removeCalendarEvent(id: string, creds: TenantCredentials): Promise<void> {
   return apiRequest(`/school-config/calendar-events/${id}`, { method: "DELETE", ...creds });
+}
+
+export interface TenantLogo {
+  logoUrl: string | null;
+}
+
+export function getTenantLogo(creds: TenantCredentials): Promise<TenantLogo> {
+  return apiRequest("/school-config/tenant-logo", { ...creds });
+}
+
+export function setTenantLogo(logoUrl: string, creds: TenantCredentials): Promise<TenantLogo> {
+  return apiRequest("/school-config/tenant-logo", { method: "PUT", body: { logoUrl }, ...creds });
+}
+
+export function uploadTenantLogo(file: File, creds: TenantCredentials): Promise<TenantLogo> {
+  return apiUpload("/school-config/tenant-logo/upload", "logo", file, creds);
 }

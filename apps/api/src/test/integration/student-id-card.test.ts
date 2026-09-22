@@ -25,6 +25,7 @@ describe("cartes scolaires (§19)", () => {
   });
 
   async function setUpTenantWithOwner(): Promise<{
+    tenantId: string;
     subdomain: string;
     ownerToken: string;
     teacherToken: string;
@@ -41,6 +42,7 @@ describe("cartes scolaires (§19)", () => {
     await grantRole(teacher.id, "TEACHER", tenant.id);
 
     return {
+      tenantId: tenant.id,
       subdomain,
       ownerToken: signAccessToken({ sub: owner.id }),
       teacherToken: signAccessToken({ sub: teacher.id }),
@@ -146,6 +148,41 @@ describe("cartes scolaires (§19)", () => {
         lastName: "Diallo",
         photoUrl: "https://169.254.169.254/latest/meta-data/",
       });
+    const studentId = (student.body as { id: string }).id;
+
+    await request(app)
+      .post(`/api/v1/students/${studentId}/enrollments`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+
+    const card = await request(app)
+      .get(`/api/v1/students/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(card.status).toBe(200);
+    expect((card.body as Buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
+  });
+
+  // Amélioration abonnement : le logo de l'établissement (Tenant.logoUrl, même
+  // convention que photoUrl ci-dessus) est maintenant embarqué sur la carte —
+  // même garde SSRF (lib/safe-image-fetch.ts) et même dégradation gracieuse.
+  it("still generates a card when the tenant's logoUrl points at a private/reserved IP", async () => {
+    const { tenantId, subdomain, ownerToken } = await setUpTenantWithOwner();
+    await testAdminPrisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl: "https://169.254.169.254/latest/meta-data/" },
+    });
+    const { academicYearId, campusId, gradeLevelId, classroomId } = await setUpClassroom(
+      subdomain,
+      ownerToken,
+    );
+
+    const student = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Fatou", lastName: "Kone" });
     const studentId = (student.body as { id: string }).id;
 
     await request(app)

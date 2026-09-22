@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { imageUpload } from "../../lib/upload-middleware.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
@@ -16,6 +17,7 @@ import * as roomController from "./room.controller.js";
 import * as subjectCoefficientController from "./subject-coefficient.controller.js";
 import * as subjectController from "./subject.controller.js";
 import * as teacherAssignmentController from "./teacher-assignment.controller.js";
+import * as tenantLogoController from "./tenant-logo.controller.js";
 import * as timetableController from "./timetable.controller.js";
 
 export const schoolConfigRouter: Router = Router();
@@ -128,4 +130,16 @@ schoolConfigRouter.put(
   "/minor-consent-setting",
   manageSettings,
   minorConsentSettingController.updateMinorConsentSetting,
+);
+
+// Logo de l'établissement, fourni sous forme d'URL déjà hébergée (même convention
+// que Student.photoUrl, §19) — embarqué dans les bulletins, reçus et rapports
+// financiers générés en PDF (lib/pdf-letterhead.ts).
+schoolConfigRouter.get("/tenant-logo", tenantLogoController.getTenantLogo);
+schoolConfigRouter.put("/tenant-logo", manageSettings, tenantLogoController.setTenantLogo);
+schoolConfigRouter.post(
+  "/tenant-logo/upload",
+  manageSettings,
+  imageUpload.single("logo"),
+  tenantLogoController.uploadTenantLogo,
 );

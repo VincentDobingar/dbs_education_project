@@ -1,5 +1,7 @@
 import PDFDocument from "pdfkit";
 
+import { drawCenteredLetterhead, fetchTenantLogo, type TenantLetterhead } from "../../lib/pdf-letterhead.js";
+
 import type { ExpenseReport, FinancialReportBreakdown, RevenueReport } from "./financial-report.service.js";
 
 function formatAmount(amountCents: number): string {
@@ -36,9 +38,13 @@ function buildPdf(build: (doc: PDFKit.PDFDocument) => void): Promise<Buffer> {
   });
 }
 
-export function generateRevenueReportPdf(report: RevenueReport, tenantName: string): Promise<Buffer> {
+export async function generateRevenueReportPdf(
+  report: RevenueReport,
+  tenant: TenantLetterhead,
+): Promise<Buffer> {
+  const logo = await fetchTenantLogo(tenant.logoUrl);
   return buildPdf((doc) => {
-    doc.fontSize(14).font("Helvetica-Bold").text(tenantName, { align: "center" });
+    drawCenteredLetterhead(doc, tenant.name, logo, 14);
     doc.fontSize(11).font("Helvetica").text("Rapport de recettes", { align: "center" });
     doc
       .fontSize(9)
@@ -64,9 +70,13 @@ export function generateRevenueReportPdf(report: RevenueReport, tenantName: stri
   });
 }
 
-export function generateExpenseReportPdf(report: ExpenseReport, tenantName: string): Promise<Buffer> {
+export async function generateExpenseReportPdf(
+  report: ExpenseReport,
+  tenant: TenantLetterhead,
+): Promise<Buffer> {
+  const logo = await fetchTenantLogo(tenant.logoUrl);
   return buildPdf((doc) => {
-    doc.fontSize(14).font("Helvetica-Bold").text(tenantName, { align: "center" });
+    drawCenteredLetterhead(doc, tenant.name, logo, 14);
     doc.fontSize(11).font("Helvetica").text("Rapport de dépenses", { align: "center" });
     doc
       .fontSize(9)

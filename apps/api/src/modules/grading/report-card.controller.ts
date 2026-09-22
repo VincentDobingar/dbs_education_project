@@ -36,7 +36,7 @@ export function getReportCardPdf(req: Request, res: Response, next: NextFunction
     }
 
     const reportCardId = req.params.id as string;
-    const pdf = await generateReportCardPdf(reportCardId, req.tenant.name);
+    const pdf = await generateReportCardPdf(reportCardId, req.tenant);
 
     res
       .status(200)

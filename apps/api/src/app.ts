@@ -52,6 +52,24 @@ export function createApp(): express.Express {
 
   app.use(express.json({ limit: "1mb" }));
 
+  // Fichiers téléversés (logo d'établissement pour l'instant, lib/file-storage.ts)
+  // — servis tels quels, hors du préfixe /api/v1 puisque ce ne sont pas des
+  // réponses JSON. PUBLIC_API_URL doit pointer vers cette même origine.
+  //
+  // `helmet()` pose Cross-Origin-Resource-Policy: same-origin par défaut sur
+  // toute réponse — correct pour l'API JSON, mais un logo est justement fait
+  // pour être embarqué par un <img> depuis l'origine du frontend (un port
+  // différent en dev, un sous-domaine différent en prod) : sans ce relâchement
+  // ciblé, le navigateur bloque silencieusement le chargement de l'image (aucune
+  // erreur réseau visible côté serveur, curl ne reproduit pas le blocage — seule
+  // la politique CORP du navigateur l'applique), même quand le fichier existe et
+  // que l'URL est correcte.
+  app.use(
+    "/uploads",
+    helmet.crossOriginResourcePolicy({ policy: "cross-origin" }),
+    express.static(env.UPLOAD_DIR),
+  );
+
   app.use("/api/v1", healthRouter);
   // Plus strict que le backstop général — brute force de mot de passe/OTP et
   // credential stuffing (§34), complète le verrouillage par compte déjà en place.

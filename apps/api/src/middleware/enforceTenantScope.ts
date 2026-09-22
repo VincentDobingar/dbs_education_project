@@ -46,7 +46,12 @@ export function enforceTenantScope(req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    req.tenant = { id: domain.tenant.id, name: domain.tenant.name, status: domain.tenant.status };
+    req.tenant = {
+      id: domain.tenant.id,
+      name: domain.tenant.name,
+      status: domain.tenant.status,
+      logoUrl: domain.tenant.logoUrl,
+    };
 
     runWithContext({ tenantId: domain.tenant.id, userId: req.user?.id ?? null }, () => {
       next();

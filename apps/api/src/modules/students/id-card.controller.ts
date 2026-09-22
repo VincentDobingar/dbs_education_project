@@ -11,7 +11,7 @@ export function generateIdCard(req: Request, res: Response, next: NextFunction):
     }
 
     const studentId = req.params.id as string;
-    const pdf = await idCardService.generateIdCardPdf(studentId, req.tenant.name);
+    const pdf = await idCardService.generateIdCardPdf(studentId, req.tenant);
 
     res
       .status(200)

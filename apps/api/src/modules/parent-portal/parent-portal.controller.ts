@@ -58,7 +58,7 @@ export function getChildReportCardPdf(req: Request, res: Response, next: NextFun
     const pdf = await parentPortalService.getChildReportCardPdf(
       req.params.studentId as string,
       reportCardId,
-      tenant.name,
+      tenant,
     );
     res
       .status(200)
@@ -110,7 +110,7 @@ export function getChildReceiptPdf(req: Request, res: Response, next: NextFuncti
     const pdf = await parentPortalService.getChildReceiptPdf(
       req.params.studentId as string,
       receiptId,
-      tenant.name,
+      tenant,
     );
     res
       .status(200)
