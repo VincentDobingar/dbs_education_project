@@ -228,41 +228,43 @@ export function FinancePage(): ReactNode {
         {(expenses.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noExpenses")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("finance.date")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("finance.category")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("finance.description")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("finance.supplier")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(expenses.data ?? []).map((expense) => (
-                <tr key={expense.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{expense.expenseDate.slice(0, 10)}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ??
-                      expense.categoryId}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">{expense.description}</td>
-                  <td className="py-2 pr-4 text-slate-700">{expense.supplierName ?? "—"}</td>
-                  <td className="py-2 pr-4 text-slate-700">{formatAmount(expense.amountCents)}</td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-slate-400 hover:text-red-600"
-                      onClick={() => removeExpenseMutation.mutate(expense.id)}
-                    >
-                      {t("discipline.remove")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("finance.date")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("finance.category")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("finance.description")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("finance.supplier")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(expenses.data ?? []).map((expense) => (
+                  <tr key={expense.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{expense.expenseDate.slice(0, 10)}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ??
+                        expense.categoryId}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">{expense.description}</td>
+                    <td className="py-2 pr-4 text-slate-700">{expense.supplierName ?? "—"}</td>
+                    <td className="py-2 pr-4 text-slate-700">{formatAmount(expense.amountCents)}</td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-slate-400 hover:text-red-600"
+                        onClick={() => removeExpenseMutation.mutate(expense.id)}
+                      >
+                        {t("discipline.remove")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) => {
@@ -324,61 +326,63 @@ export function FinancePage(): ReactNode {
         {(cashSessions.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noCashSessions")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("finance.openedAt")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("finance.openingBalance")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("finance.closingBalance")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(cashSessions.data ?? []).map((cashSession) => (
-                <tr key={cashSession.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{cashSession.openedAt.slice(0, 10)}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {formatAmount(cashSession.openingBalanceCents)}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {cashSession.closingBalanceCents !== null
-                      ? formatAmount(cashSession.closingBalanceCents)
-                      : "—"}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {t(`finance.cashSessionStatus.${cashSession.status}`)}
-                  </td>
-                  <td className="py-2 pr-4">
-                    {cashSession.status === "OPEN" ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          placeholder={t("finance.closingBalance")}
-                          className="input w-28 py-1"
-                          value={closingBalanceBySession[cashSession.id] ?? ""}
-                          onChange={(event) =>
-                            setClosingBalanceBySession((previous) => ({
-                              ...previous,
-                              [cashSession.id]: event.target.value,
-                            }))
-                          }
-                        />
-                        <button
-                          type="button"
-                          className="text-xs text-brand-teal hover:underline"
-                          onClick={() => closeSessionMutation.mutate(cashSession.id)}
-                        >
-                          {t("finance.closeSession")}
-                        </button>
-                      </div>
-                    ) : null}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("finance.openedAt")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("finance.openingBalance")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("finance.closingBalance")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(cashSessions.data ?? []).map((cashSession) => (
+                  <tr key={cashSession.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{cashSession.openedAt.slice(0, 10)}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {formatAmount(cashSession.openingBalanceCents)}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {cashSession.closingBalanceCents !== null
+                        ? formatAmount(cashSession.closingBalanceCents)
+                        : "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`finance.cashSessionStatus.${cashSession.status}`)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {cashSession.status === "OPEN" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder={t("finance.closingBalance")}
+                            className="input w-28 py-1"
+                            value={closingBalanceBySession[cashSession.id] ?? ""}
+                            onChange={(event) =>
+                              setClosingBalanceBySession((previous) => ({
+                                ...previous,
+                                [cashSession.id]: event.target.value,
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-brand-teal hover:underline"
+                            onClick={() => closeSessionMutation.mutate(cashSession.id)}
+                          >
+                            {t("finance.closeSession")}
+                          </button>
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) => {

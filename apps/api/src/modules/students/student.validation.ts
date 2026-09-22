@@ -39,6 +39,13 @@ export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
 
 export const listStudentsQuerySchema = z.object({
   classroomId: z.string().min(1).optional(),
+  // Pagination opt-in (jamais un défaut qui romprait les appelants existants —
+  // roster de classe pour l'appel, note bulletin, discipline, devoirs — qui
+  // attendent tous un tableau complet, jamais tronqué silencieusement). Sans
+  // `page`, le comportement reste inchangé : tout renvoyer. Avec `page`, le
+  // contrôleur bascule vers une réponse paginée `{ data, total }`.
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type ListStudentsQuery = z.infer<typeof listStudentsQuerySchema>;
 

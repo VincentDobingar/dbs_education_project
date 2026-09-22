@@ -95,45 +95,47 @@ export function LibraryPage(): ReactNode {
         {(books.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("library.bookTitle")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("library.author")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("library.copies")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(books.data ?? []).map((book) => (
-                <tr key={book.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{book.title}</td>
-                  <td className="py-2 pr-4 text-slate-700">{book.author}</td>
-                  <td className="py-2 pr-4 text-slate-700">{book.totalCopies}</td>
-                  <td className="py-2 pr-4 text-slate-700">{t(`library.bookStatus.${book.status}`)}</td>
-                  <td className="py-2 pr-4 flex gap-3">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => setLoanBookId(book.id)}
-                    >
-                      {t("library.lend")}
-                    </button>
-                    {book.status === "AVAILABLE" ? (
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("library.bookTitle")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("library.author")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("library.copies")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
+                </tr>
+              </thead>
+              <tbody>
+                {(books.data ?? []).map((book) => (
+                  <tr key={book.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{book.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">{book.author}</td>
+                    <td className="py-2 pr-4 text-slate-700">{book.totalCopies}</td>
+                    <td className="py-2 pr-4 text-slate-700">{t(`library.bookStatus.${book.status}`)}</td>
+                    <td className="py-2 pr-4 flex gap-3">
                       <button
                         type="button"
-                        className="text-xs text-red-600 hover:underline"
-                        onClick={() => archiveBookMutation.mutate(book.id)}
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => setLoanBookId(book.id)}
                       >
-                        {t("admin.common.delete")}
+                        {t("library.lend")}
                       </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      {book.status === "AVAILABLE" ? (
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => archiveBookMutation.mutate(book.id)}
+                        >
+                          {t("admin.common.delete")}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form
@@ -232,45 +234,47 @@ export function LibraryPage(): ReactNode {
         {(loans.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("library.studentId")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("library.dueAt")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(loans.data ?? []).map((loan) => (
-                <tr key={loan.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 font-mono text-xs text-slate-500">{loan.studentId}</td>
-                  <td className="py-2 pr-4 text-slate-700">{loan.dueAt.slice(0, 10)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{t(`library.loanStatus.${loan.status}`)}</td>
-                  <td className="py-2 pr-4 flex gap-3">
-                    {loan.status === "ACTIVE" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="text-xs text-brand-teal hover:underline"
-                          onClick={() => returnLoanMutation.mutate(loan.id)}
-                        >
-                          {t("library.markReturned")}
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs text-red-600 hover:underline"
-                          onClick={() => lostLoanMutation.mutate(loan.id)}
-                        >
-                          {t("library.markLost")}
-                        </button>
-                      </>
-                    ) : null}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("library.studentId")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("library.dueAt")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(loans.data ?? []).map((loan) => (
+                  <tr key={loan.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-xs text-slate-500">{loan.studentId}</td>
+                    <td className="py-2 pr-4 text-slate-700">{loan.dueAt.slice(0, 10)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{t(`library.loanStatus.${loan.status}`)}</td>
+                    <td className="py-2 pr-4 flex gap-3">
+                      {loan.status === "ACTIVE" ? (
+                        <>
+                          <button
+                            type="button"
+                            className="text-xs text-brand-teal hover:underline"
+                            onClick={() => returnLoanMutation.mutate(loan.id)}
+                          >
+                            {t("library.markReturned")}
+                          </button>
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => lostLoanMutation.mutate(loan.id)}
+                          >
+                            {t("library.markLost")}
+                          </button>
+                        </>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

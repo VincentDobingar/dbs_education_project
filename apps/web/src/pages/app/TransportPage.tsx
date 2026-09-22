@@ -147,38 +147,40 @@ export function TransportPage(): ReactNode {
         {(vehicles.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("transport.plateNumber")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("transport.capacity")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(vehicles.data ?? []).map((vehicle) => (
-                <tr key={vehicle.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{vehicle.plateNumber}</td>
-                  <td className="py-2 pr-4 text-slate-700">{vehicle.capacity}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {t(`transport.vehicleStatus.${vehicle.status}`)}
-                  </td>
-                  <td className="py-2 pr-4">
-                    {vehicle.status !== "RETIRED" ? (
-                      <button
-                        type="button"
-                        className="text-xs text-red-600 hover:underline"
-                        onClick={() => retireVehicleMutation.mutate(vehicle.id)}
-                      >
-                        {t("transport.retire")}
-                      </button>
-                    ) : null}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("transport.plateNumber")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("transport.capacity")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(vehicles.data ?? []).map((vehicle) => (
+                  <tr key={vehicle.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{vehicle.plateNumber}</td>
+                    <td className="py-2 pr-4 text-slate-700">{vehicle.capacity}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`transport.vehicleStatus.${vehicle.status}`)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      {vehicle.status !== "RETIRED" ? (
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => retireVehicleMutation.mutate(vehicle.id)}
+                        >
+                          {t("transport.retire")}
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) => {
@@ -222,37 +224,39 @@ export function TransportPage(): ReactNode {
         {(routes.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("transport.routeName")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(routes.data ?? []).map((route) => (
-                <tr key={route.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{route.name}</td>
-                  <td className="py-2 pr-4 flex gap-3">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => setSelectedRouteId(route.id)}
-                    >
-                      {t("admin.common.open")}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => cancelRouteMutation.mutate(route.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("transport.routeName")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(routes.data ?? []).map((route) => (
+                  <tr key={route.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{route.name}</td>
+                    <td className="py-2 pr-4 flex gap-3">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => setSelectedRouteId(route.id)}
+                      >
+                        {t("admin.common.open")}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => cancelRouteMutation.mutate(route.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) => {

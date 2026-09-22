@@ -293,6 +293,45 @@ describe("élèves et inscriptions (§19)", () => {
     expect(unfilteredIds).toContain(unenrolledStudentId);
   });
 
+  it("paginates the full roster only when ?page is passed, leaving the unpaginated shape untouched otherwise", async () => {
+    const { subdomain, ownerToken } = await setUpTenantWithOwner();
+
+    for (let i = 0; i < 3; i += 1) {
+      await request(app)
+        .post("/api/v1/students")
+        .set("Authorization", `Bearer ${ownerToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: `Pagine${i}`, lastName: "Test" });
+    }
+
+    const unpaginated = await request(app)
+      .get("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(unpaginated.status).toBe(200);
+    expect(Array.isArray(unpaginated.body)).toBe(true);
+    expect((unpaginated.body as unknown[]).length).toBeGreaterThanOrEqual(3);
+
+    const firstPage = await request(app)
+      .get("/api/v1/students?page=1&pageSize=2")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(firstPage.status).toBe(200);
+    const firstPageBody = firstPage.body as { data: { id: string }[]; total: number };
+    expect(firstPageBody.data).toHaveLength(2);
+    expect(firstPageBody.total).toBeGreaterThanOrEqual(3);
+
+    const secondPage = await request(app)
+      .get("/api/v1/students?page=2&pageSize=2")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    const secondPageBody = secondPage.body as { data: { id: string }[]; total: number };
+    const firstPageIds = new Set(firstPageBody.data.map((s) => s.id));
+    for (const student of secondPageBody.data) {
+      expect(firstPageIds.has(student.id)).toBe(false);
+    }
+  });
+
   it("rejects an enrollment whose classroom belongs to a different academic year", async () => {
     const { subdomain, ownerToken } = await setUpTenantWithOwner();
     const { campusId, gradeLevelId, classroomId } = await setUpClassroom(subdomain, ownerToken);

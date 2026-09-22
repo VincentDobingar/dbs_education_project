@@ -102,41 +102,43 @@ export function BoardingPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("boarding.rooms")}</h2>
-        <table className="mt-3 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="pb-2 pr-4 font-medium">{t("boarding.roomName")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("transport.capacity")}</th>
-              <th className="pb-2 pr-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {(rooms.data ?? []).map((room) => (
-              <tr key={room.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{room.name}</td>
-                <td className="py-2 pr-4 text-slate-700">{room.capacity}</td>
-                <td className="py-2 pr-4 flex gap-3">
-                  <button
-                    type="button"
-                    className="text-xs text-brand-teal hover:underline"
-                    onClick={() => setSelectedRoomId(room.id)}
-                  >
-                    {t("admin.common.open")}
-                  </button>
-                  {!room.deletedAt ? (
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("boarding.roomName")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("transport.capacity")}</th>
+                <th className="pb-2 pr-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {(rooms.data ?? []).map((room) => (
+                <tr key={room.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{room.name}</td>
+                  <td className="py-2 pr-4 text-slate-700">{room.capacity}</td>
+                  <td className="py-2 pr-4 flex gap-3">
                     <button
                       type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => archiveRoomMutation.mutate(room.id)}
+                      className="text-xs text-brand-teal hover:underline"
+                      onClick={() => setSelectedRoomId(room.id)}
                     >
-                      {t("admin.common.delete")}
+                      {t("admin.common.open")}
                     </button>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {!room.deletedAt ? (
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => archiveRoomMutation.mutate(room.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();

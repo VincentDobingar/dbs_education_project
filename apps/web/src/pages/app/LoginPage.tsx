@@ -93,7 +93,7 @@ export function LoginPage(): ReactNode {
         <div>
           <label className="block text-sm font-medium text-slate-700">
             {t("login.email")}
-            <input type="email" className="input mt-1" {...register("email")} />
+            <input type="email" autoComplete="email" className="input mt-1" {...register("email")} />
           </label>
           {errors.email ? <p className="mt-1 text-sm text-red-600">{errors.email.message}</p> : null}
         </div>
@@ -101,12 +101,17 @@ export function LoginPage(): ReactNode {
         <div>
           <label className="block text-sm font-medium text-slate-700">
             {t("login.password")}
-            <input type="password" className="input mt-1" {...register("password")} />
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="input mt-1"
+              {...register("password")}
+            />
           </label>
           {errors.password ? <p className="mt-1 text-sm text-red-600">{errors.password.message}</p> : null}
         </div>
 
-        <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => void onSubmit()}>
+        <Button type="submit" variant="secondary" disabled={isSubmitting}>
           {isSubmitting ? t("login.submitting") : t("login.submit")}
         </Button>
       </form>

@@ -177,26 +177,28 @@ export function AdminSponsorsPage(): ReactNode {
           {(organizations.data ?? []).length === 0 ? (
             <p className="text-sm text-slate-500">{t("admin.common.empty")}</p>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgName")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgType")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgId")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(organizations.data ?? []).map((org) => (
-                  <tr key={org.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{org.name}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {t(`admin.sponsors.orgTypeValue.${org.type}`)}
-                    </td>
-                    <td className="py-2 pr-4 font-mono text-xs text-slate-500">{org.id}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgName")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgType")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.orgId")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(organizations.data ?? []).map((org) => (
+                    <tr key={org.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{org.name}</td>
+                      <td className="py-2 pr-4 text-slate-700">
+                        {t(`admin.sponsors.orgTypeValue.${org.type}`)}
+                      </td>
+                      <td className="py-2 pr-4 font-mono text-xs text-slate-500">{org.id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <form
@@ -235,24 +237,26 @@ export function AdminSponsorsPage(): ReactNode {
           {(batches.data ?? []).length === 0 ? (
             <p className="text-sm text-slate-500">{t("admin.common.empty")}</p>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.batchId")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.quantity")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.unitPrice")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(batches.data ?? []).map((batch) => (
-                  <tr key={batch.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 font-mono text-xs text-slate-500">{batch.id}</td>
-                    <td className="py-2 pr-4 text-slate-700">{batch.quantity}</td>
-                    <td className="py-2 pr-4 text-slate-700">{(batch.unitPriceCents / 100).toFixed(2)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.batchId")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.quantity")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.unitPrice")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(batches.data ?? []).map((batch) => (
+                    <tr key={batch.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 font-mono text-xs text-slate-500">{batch.id}</td>
+                      <td className="py-2 pr-4 text-slate-700">{batch.quantity}</td>
+                      <td className="py-2 pr-4 text-slate-700">{(batch.unitPriceCents / 100).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <form
@@ -346,45 +350,47 @@ export function AdminSponsorsPage(): ReactNode {
           {(licenses.data ?? []).length === 0 ? (
             <p className="mt-4 text-sm text-slate-500">{t("admin.common.empty")}</p>
           ) : (
-            <table className="mt-4 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.licenseId")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                  <th className="pb-2 pr-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {(licenses.data ?? []).map((license) => (
-                  <tr key={license.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 font-mono text-xs text-slate-500">{license.id}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {t(`admin.sponsors.licenseStatus.${license.status}`)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      {license.status === "AVAILABLE" ? (
-                        <button
-                          type="button"
-                          className="text-xs text-brand-teal hover:underline"
-                          onClick={() => setAssignTargetId(license.id)}
-                        >
-                          {t("admin.sponsors.assign")}
-                        </button>
-                      ) : null}
-                      {license.status === "ASSIGNED" ? (
-                        <button
-                          type="button"
-                          className="text-xs text-red-600 hover:underline"
-                          onClick={() => revokeMutation.mutate({ id: license.id, reason: "" })}
-                        >
-                          {t("admin.sponsors.revoke")}
-                        </button>
-                      ) : null}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="mt-4 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("admin.sponsors.licenseId")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                    <th className="pb-2 pr-4" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(licenses.data ?? []).map((license) => (
+                    <tr key={license.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 font-mono text-xs text-slate-500">{license.id}</td>
+                      <td className="py-2 pr-4 text-slate-700">
+                        {t(`admin.sponsors.licenseStatus.${license.status}`)}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {license.status === "AVAILABLE" ? (
+                          <button
+                            type="button"
+                            className="text-xs text-brand-teal hover:underline"
+                            onClick={() => setAssignTargetId(license.id)}
+                          >
+                            {t("admin.sponsors.assign")}
+                          </button>
+                        ) : null}
+                        {license.status === "ASSIGNED" ? (
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => revokeMutation.mutate({ id: license.id, reason: "" })}
+                          >
+                            {t("admin.sponsors.revoke")}
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {assignTargetId ? (

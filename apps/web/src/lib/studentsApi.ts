@@ -25,6 +25,22 @@ export function listStudents(creds: TenantCredentials, classroomId?: string): Pr
   return apiRequest(`/students${query}`, { ...creds });
 }
 
+export interface PaginatedStudents {
+  data: Student[];
+  total: number;
+}
+
+// Réservé à la liste complète de l'établissement (StudentsPage) — potentiellement
+// des milliers de lignes pour un gros établissement, contrairement aux rosters de
+// classe (listStudents ci-dessus) qui restent volontairement non paginés.
+export function listStudentsPage(
+  creds: TenantCredentials,
+  page: number,
+  pageSize = 50,
+): Promise<PaginatedStudents> {
+  return apiRequest(`/students?page=${page}&pageSize=${pageSize}`, { ...creds });
+}
+
 export function createStudent(input: CreateStudentInput, creds: TenantCredentials): Promise<Student> {
   return apiRequest("/students", { method: "POST", body: input, ...creds });
 }

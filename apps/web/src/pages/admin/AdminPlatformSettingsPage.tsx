@@ -60,34 +60,36 @@ export function AdminPlatformSettingsPage(): ReactNode {
         {(settings.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.platformSettings.key")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.platformSettings.value")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(settings.data ?? []).map((setting) => (
-                <tr key={setting.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{setting.key}</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-slate-500">
-                    {JSON.stringify(setting.value)}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => deleteMutation.mutate(setting.key)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.platformSettings.key")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.platformSettings.value")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(settings.data ?? []).map((setting) => (
+                  <tr key={setting.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{setting.key}</td>
+                    <td className="py-2 pr-4 font-mono text-xs text-slate-500">
+                      {JSON.stringify(setting.value)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => deleteMutation.mutate(setting.key)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

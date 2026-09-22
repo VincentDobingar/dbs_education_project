@@ -1,4 +1,4 @@
-import type { Student } from "@prisma/client";
+import type { Prisma, Student } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
@@ -127,25 +127,69 @@ export async function createStudent(
  * actually needs to take attendance against, not every enrollment that classroom
  * has ever had.
  */
-export async function listStudents(query: ListStudentsQuery = {}): Promise<Omit<Student, "medicalNotes">[]> {
-  return prisma.student.findMany({
-    where: {
-      deletedAt: null,
-      ...(query.classroomId
-        ? {
-            enrollments: {
-              some: {
-                classroomId: query.classroomId,
-                deletedAt: null,
-                status: { in: ["ENROLLED", "RE_ENROLLED"] },
-              },
+function listStudentsWhere(query: Pick<ListStudentsQuery, "classroomId">): Prisma.StudentWhereInput {
+  return {
+    deletedAt: null,
+    ...(query.classroomId
+      ? {
+          enrollments: {
+            some: {
+              classroomId: query.classroomId,
+              deletedAt: null,
+              status: { in: ["ENROLLED", "RE_ENROLLED"] },
             },
-          }
-        : {}),
-    },
+          },
+        }
+      : {}),
+  };
+}
+
+export async function listStudents(
+  query: Pick<ListStudentsQuery, "classroomId"> = {},
+): Promise<Omit<Student, "medicalNotes">[]> {
+  return prisma.student.findMany({
+    where: listStudentsWhere(query),
     orderBy: { lastName: "asc" },
     omit: { medicalNotes: true },
   });
+}
+
+export interface PaginatedStudents {
+  data: Omit<Student, "medicalNotes">[];
+  total: number;
+}
+
+/**
+ * Pagination réelle (pas juste un `take`/`skip` sans compte) pour l'unique
+ * appelant à risque à l'échelle : la liste complète de l'établissement
+ * (`StudentsPage`, sans `classroomId`) peut atteindre plusieurs milliers de
+ * lignes pour un gros établissement — les autres appelants (roster de classe
+ * pour l'appel, la saisie de notes, la discipline, les devoirs) restent sur
+ * `listStudents` ci-dessus, volontairement non paginé (une classe est toujours
+ * petite, jamais un risque de volume).
+ */
+export async function listStudentsPaginated(query: ListStudentsQuery): Promise<PaginatedStudents> {
+  const page = query.page ?? 1;
+  const where = listStudentsWhere(query);
+
+  // `Promise.all`, jamais `prisma.$transaction([...])` : chaque appel sur ce client
+  // (tenant-guard extension, lib/prisma.ts) ouvre déjà sa propre micro-transaction
+  // interne pour poser `app.tenant_id` — l'array-batching de `$transaction` attend
+  // des `PrismaPromise` différables, pas des promesses déjà résolues par cette
+  // extension. Un léger décalage entre `data`/`total` (une ligne insérée entre les
+  // deux appels) est un compromis standard et sans conséquence pour une pagination.
+  const [data, total] = await Promise.all([
+    prisma.student.findMany({
+      where,
+      orderBy: { lastName: "asc" },
+      omit: { medicalNotes: true },
+      take: query.pageSize,
+      skip: (page - 1) * query.pageSize,
+    }),
+    prisma.student.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 export async function getStudent(id: string): Promise<Omit<Student, "medicalNotes">> {

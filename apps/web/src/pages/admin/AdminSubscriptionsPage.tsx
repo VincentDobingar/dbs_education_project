@@ -145,39 +145,41 @@ export function AdminSubscriptionsPage(): ReactNode {
         {(subscriptions.data ?? []).length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-4 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.owner")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.plan")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(subscriptions.data ?? []).map((subscription) => (
-                <tr key={subscription.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{ownerLabel(subscription)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{subscription.plan.nameFr}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {t(`admin.subscriptions.status.${subscription.status}`)}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => {
-                        setSelectedId(subscription.id);
-                        setJustification("");
-                      }}
-                    >
-                      {t("admin.common.open")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-4 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.owner")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.plan")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(subscriptions.data ?? []).map((subscription) => (
+                  <tr key={subscription.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{ownerLabel(subscription)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{subscription.plan.nameFr}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`admin.subscriptions.status.${subscription.status}`)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => {
+                          setSelectedId(subscription.id);
+                          setJustification("");
+                        }}
+                      >
+                        {t("admin.common.open")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

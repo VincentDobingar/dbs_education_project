@@ -67,36 +67,38 @@ export function AdminMessageTemplatesPage(): ReactNode {
         {(templates.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.code")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.channel")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.scope")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(templates.data ?? []).map((template) => (
-                <tr key={template.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{template.code}</td>
-                  <td className="py-2 pr-4 text-slate-700">{template.channel}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {template.tenantId ? template.tenantId : t("admin.messageTemplates.global")}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => deleteMutation.mutate(template.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.code")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.channel")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.messageTemplates.scope")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(templates.data ?? []).map((template) => (
+                  <tr key={template.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{template.code}</td>
+                    <td className="py-2 pr-4 text-slate-700">{template.channel}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {template.tenantId ? template.tenantId : t("admin.messageTemplates.global")}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => deleteMutation.mutate(template.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

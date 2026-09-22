@@ -60,35 +60,37 @@ export function AdminAuditLogsPage(): ReactNode {
         {(logs.data ?? []).length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-4 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.when")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.action")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.entity")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.actor")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.justification")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(logs.data ?? []).map((entry) => (
-                <tr key={entry.id} className="border-b border-slate-100 align-top last:border-0">
-                  <td className="whitespace-nowrap py-2 pr-4 text-slate-700">
-                    {new Date(entry.createdAt).toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">{entry.action}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {entry.entityType} · {entry.entityId}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {entry.actorUserId ?? "—"}
-                    {entry.actorRoleCode ? ` (${entry.actorRoleCode})` : ""}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-500">{entry.justification ?? "—"}</td>
+          <div className="overflow-x-auto">
+            <table className="mt-4 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.when")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.action")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.entity")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.actor")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.auditLogs.justification")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(logs.data ?? []).map((entry) => (
+                  <tr key={entry.id} className="border-b border-slate-100 align-top last:border-0">
+                    <td className="whitespace-nowrap py-2 pr-4 text-slate-700">
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">{entry.action}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {entry.entityType} · {entry.entityId}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {entry.actorUserId ?? "—"}
+                      {entry.actorRoleCode ? ` (${entry.actorRoleCode})` : ""}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-500">{entry.justification ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

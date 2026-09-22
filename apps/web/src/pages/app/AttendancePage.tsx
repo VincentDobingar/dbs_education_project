@@ -80,43 +80,45 @@ function RollCallForm({
 
   return (
     <div className="space-y-3">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-slate-500">
-            <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("attendance.status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(roster.data ?? []).map((student) => {
-            return (
-              <tr key={student.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{student.firstName}</td>
-                <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
-                <td className="py-2 pr-4">
-                  <select
-                    className="input w-32 py-1"
-                    value={statusFor(student.id)}
-                    onChange={(event) =>
-                      setEdits((previous) => ({
-                        ...previous,
-                        [student.id]: event.target.value as AttendanceStatus,
-                      }))
-                    }
-                  >
-                    {STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {t(`attendance.status.${status}`)}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500">
+              <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("attendance.status")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(roster.data ?? []).map((student) => {
+              return (
+                <tr key={student.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{student.firstName}</td>
+                  <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
+                  <td className="py-2 pr-4">
+                    <select
+                      className="input w-32 py-1"
+                      value={statusFor(student.id)}
+                      onChange={(event) =>
+                        setEdits((previous) => ({
+                          ...previous,
+                          [student.id]: event.target.value as AttendanceStatus,
+                        }))
+                      }
+                    >
+                      {STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {t(`attendance.status.${status}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       <Button type="button" variant="secondary" onClick={() => saveMutation.mutate()}>
         {saveMutation.isPending ? t("attendance.saving") : t("attendance.save")}

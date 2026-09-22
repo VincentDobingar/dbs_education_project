@@ -1,7 +1,7 @@
 import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -11,9 +11,11 @@ import {
   createStudent,
   fetchStudentsExportCsv,
   fetchStudentsExportXlsx,
-  listStudents,
+  listStudentsPage,
 } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
+
+const PAGE_SIZE = 50;
 
 const studentSchema = z.object({
   matricule: z.string().min(1),
@@ -26,11 +28,15 @@ export function StudentsPage(): ReactNode {
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
 
+  // Pagination réelle côté serveur (pas juste un tableau complet tronqué côté
+  // client) — un gros établissement peut compter plusieurs milliers d'élèves.
   const students = useQuery({
-    queryKey: ["students", session.subdomain],
-    queryFn: () => listStudents(creds),
+    queryKey: ["students", session.subdomain, page],
+    queryFn: () => listStudentsPage(creds, page, PAGE_SIZE),
   });
+  const totalPages = students.data ? Math.max(1, Math.ceil(students.data.total / PAGE_SIZE)) : 1;
 
   const {
     register,
@@ -114,39 +120,69 @@ export function StudentsPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         {students.isPending ? <p className="text-sm text-slate-500">{t("students.loading")}</p> : null}
-        {students.data && students.data.length === 0 ? (
+        {students.isError ? <p className="text-sm text-red-600">{t("students.error.required")}</p> : null}
+        {students.data && students.data.data.length === 0 ? (
           <p className="text-sm text-slate-500">{t("students.empty")}</p>
         ) : null}
-        {students.data && students.data.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("students.matricule")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.data.map((student) => (
-                  <tr key={student.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{student.matricule}</td>
-                    <td className="py-2 pr-4">
-                      <Link
-                        to={`/eleves/${student.id}`}
-                        className="font-medium text-teal-600 hover:underline"
-                      >
-                        {student.firstName}
-                      </Link>
-                    </td>
-                    <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
-                    <td className="py-2 pr-4 text-slate-700">{student.status}</td>
+        {students.data && students.data.data.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("students.matricule")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {students.data.data.map((student) => (
+                    <tr key={student.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{student.matricule}</td>
+                      <td className="py-2 pr-4">
+                        <Link
+                          to={`/eleves/${student.id}`}
+                          className="font-medium text-teal-600 hover:underline"
+                        >
+                          {student.firstName}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
+                      <td className="py-2 pr-4 text-slate-700">{student.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-500">
+                {t("students.pagination.total", { count: students.data.total })}
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page <= 1}
+                >
+                  {t("students.pagination.previous")}
+                </Button>
+                <p className="text-xs text-slate-500">
+                  {t("students.pagination.pageInfo", { page, totalPages })}
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                >
+                  {t("students.pagination.next")}
+                </Button>
+              </div>
+            </div>
+          </>
         ) : null}
       </section>
     </div>

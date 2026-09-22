@@ -126,38 +126,40 @@ export function AdminReferenceDataPage(): ReactNode {
 
       {tab === "countries" ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.isoCode")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(countries.data ?? []).map((country) => (
-                <tr key={country.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{country.isoCode}</td>
-                  <td className="py-2 pr-4 text-slate-700">{country.nameFr}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {country.isActive ? t("admin.common.active") : t("admin.common.inactive")}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() =>
-                        toggleCountryMutation.mutate({ id: country.id, isActive: !country.isActive })
-                      }
-                    >
-                      {country.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.isoCode")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(countries.data ?? []).map((country) => (
+                  <tr key={country.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{country.isoCode}</td>
+                    <td className="py-2 pr-4 text-slate-700">{country.nameFr}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {country.isActive ? t("admin.common.active") : t("admin.common.inactive")}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() =>
+                          toggleCountryMutation.mutate({ id: country.id, isActive: !country.isActive })
+                        }
+                      >
+                        {country.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <form
             onSubmit={(event) => {
@@ -201,40 +203,42 @@ export function AdminReferenceDataPage(): ReactNode {
 
       {tab === "currencies" ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.isoCode")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.symbol")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(currencies.data ?? []).map((currency) => (
-                <tr key={currency.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{currency.isoCode}</td>
-                  <td className="py-2 pr-4 text-slate-700">{currency.nameFr}</td>
-                  <td className="py-2 pr-4 text-slate-700">{currency.symbol}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {currency.isActive ? t("admin.common.active") : t("admin.common.inactive")}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() =>
-                        toggleCurrencyMutation.mutate({ id: currency.id, isActive: !currency.isActive })
-                      }
-                    >
-                      {currency.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.isoCode")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.symbol")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(currencies.data ?? []).map((currency) => (
+                  <tr key={currency.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{currency.isoCode}</td>
+                    <td className="py-2 pr-4 text-slate-700">{currency.nameFr}</td>
+                    <td className="py-2 pr-4 text-slate-700">{currency.symbol}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {currency.isActive ? t("admin.common.active") : t("admin.common.inactive")}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() =>
+                          toggleCurrencyMutation.mutate({ id: currency.id, isActive: !currency.isActive })
+                        }
+                      >
+                        {currency.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <form
             onSubmit={(event) => {
@@ -278,42 +282,44 @@ export function AdminReferenceDataPage(): ReactNode {
 
       {tab === "paymentProviders" ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.code")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.methodType")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(providers.data ?? []).map((provider) => (
-                <tr key={provider.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{provider.code}</td>
-                  <td className="py-2 pr-4 text-slate-700">{provider.nameFr}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {t(`admin.referenceData.methodTypeValue.${provider.methodType}`)}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {provider.isActive ? t("admin.common.active") : t("admin.common.inactive")}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() =>
-                        toggleProviderMutation.mutate({ id: provider.id, isActive: !provider.isActive })
-                      }
-                    >
-                      {provider.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.code")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.nameFr")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.referenceData.methodType")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(providers.data ?? []).map((provider) => (
+                  <tr key={provider.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{provider.code}</td>
+                    <td className="py-2 pr-4 text-slate-700">{provider.nameFr}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`admin.referenceData.methodTypeValue.${provider.methodType}`)}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {provider.isActive ? t("admin.common.active") : t("admin.common.inactive")}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() =>
+                          toggleProviderMutation.mutate({ id: provider.id, isActive: !provider.isActive })
+                        }
+                      >
+                        {provider.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <form
             onSubmit={(event) => {

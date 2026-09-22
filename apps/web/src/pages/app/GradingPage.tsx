@@ -121,82 +121,84 @@ function GradeEntryForm({
   return (
     <div className="space-y-3">
       {assessment.isPublished ? <p className="text-sm text-amber-600">{t("grading.published")}</p> : null}
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-slate-500">
-            <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("grading.score")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("grading.absent")}</th>
-            <th className="pb-2 pr-4 font-medium">{t("grading.comment")}</th>
-            {assessment.isPublished ? <th className="pb-2 pr-4" /> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {(roster.data ?? []).map((student) => {
-            const entry = entryFor(student.id);
-            const savedGrade = (grades.data ?? []).find((g) => g.studentId === student.id);
-            return (
-              <tr key={student.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{student.firstName}</td>
-                <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
-                <td className="py-2 pr-4 text-slate-700">
-                  {assessment.isPublished ? (
-                    (entry.isAbsent ? "—" : entry.score) || "—"
-                  ) : (
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="input w-20 py-1"
-                      disabled={entry.isAbsent}
-                      value={entry.score}
-                      onChange={(event) => updateEntry(student.id, { score: event.target.value })}
-                    />
-                  )}
-                </td>
-                <td className="py-2 pr-4">
-                  <input
-                    type="checkbox"
-                    disabled={assessment.isPublished}
-                    checked={entry.isAbsent}
-                    onChange={(event) => updateEntry(student.id, { isAbsent: event.target.checked })}
-                  />
-                </td>
-                <td className="py-2 pr-4 text-slate-700">
-                  {assessment.isPublished ? (
-                    entry.comment || "—"
-                  ) : (
-                    <input
-                      className="input w-32 py-1"
-                      value={entry.comment}
-                      onChange={(event) => updateEntry(student.id, { comment: event.target.value })}
-                    />
-                  )}
-                </td>
-                {assessment.isPublished ? (
-                  <td className="py-2 pr-4">
-                    {savedGrade ? (
-                      <button
-                        type="button"
-                        className="text-xs text-slate-400 hover:text-brand-teal"
-                        onClick={() =>
-                          setCorrecting({
-                            gradeId: savedGrade.id,
-                            score: savedGrade.score ?? "0",
-                            reason: "",
-                          })
-                        }
-                      >
-                        {t("grading.correct")}
-                      </button>
-                    ) : null}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-500">
+              <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("grading.score")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("grading.absent")}</th>
+              <th className="pb-2 pr-4 font-medium">{t("grading.comment")}</th>
+              {assessment.isPublished ? <th className="pb-2 pr-4" /> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {(roster.data ?? []).map((student) => {
+              const entry = entryFor(student.id);
+              const savedGrade = (grades.data ?? []).find((g) => g.studentId === student.id);
+              return (
+                <tr key={student.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{student.firstName}</td>
+                  <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
+                  <td className="py-2 pr-4 text-slate-700">
+                    {assessment.isPublished ? (
+                      (entry.isAbsent ? "—" : entry.score) || "—"
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input w-20 py-1"
+                        disabled={entry.isAbsent}
+                        value={entry.score}
+                        onChange={(event) => updateEntry(student.id, { score: event.target.value })}
+                      />
+                    )}
                   </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="py-2 pr-4">
+                    <input
+                      type="checkbox"
+                      disabled={assessment.isPublished}
+                      checked={entry.isAbsent}
+                      onChange={(event) => updateEntry(student.id, { isAbsent: event.target.checked })}
+                    />
+                  </td>
+                  <td className="py-2 pr-4 text-slate-700">
+                    {assessment.isPublished ? (
+                      entry.comment || "—"
+                    ) : (
+                      <input
+                        className="input w-32 py-1"
+                        value={entry.comment}
+                        onChange={(event) => updateEntry(student.id, { comment: event.target.value })}
+                      />
+                    )}
+                  </td>
+                  {assessment.isPublished ? (
+                    <td className="py-2 pr-4">
+                      {savedGrade ? (
+                        <button
+                          type="button"
+                          className="text-xs text-slate-400 hover:text-brand-teal"
+                          onClick={() =>
+                            setCorrecting({
+                              gradeId: savedGrade.id,
+                              score: savedGrade.score ?? "0",
+                              reason: "",
+                            })
+                          }
+                        >
+                          {t("grading.correct")}
+                        </button>
+                      ) : null}
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {!assessment.isPublished ? (
         <>
@@ -354,49 +356,51 @@ export function GradingPage(): ReactNode {
           {(assessments.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("grading.noAssessments")}</p>
           ) : (
-            <table className="mt-3 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("grading.assessmentTitle")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("config.subjects")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("grading.period")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("grading.maxScore")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("grading.status")}</th>
-                  <th className="pb-2 pr-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {(assessments.data ?? []).map((assessment) => (
-                  <tr key={assessment.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{assessment.title}</td>
-                    <td className="py-2 pr-4 text-slate-700">{subjectName(assessment.subjectId)}</td>
-                    <td className="py-2 pr-4 text-slate-700">{periodName(assessment.academicPeriodId)}</td>
-                    <td className="py-2 pr-4 text-slate-700">{assessment.maxScore}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {assessment.isPublished ? t("grading.publishedStatus") : t("grading.draftStatus")}
-                    </td>
-                    <td className="py-2 pr-4 flex gap-3">
-                      <button
-                        type="button"
-                        className="text-xs text-brand-teal hover:underline"
-                        onClick={() => setSelectedAssessmentId(assessment.id)}
-                      >
-                        {t("grading.enterGrades")}
-                      </button>
-                      {!assessment.isPublished ? (
+            <div className="overflow-x-auto">
+              <table className="mt-3 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("grading.assessmentTitle")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("config.subjects")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("grading.period")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("grading.maxScore")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("grading.status")}</th>
+                    <th className="pb-2 pr-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(assessments.data ?? []).map((assessment) => (
+                    <tr key={assessment.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{assessment.title}</td>
+                      <td className="py-2 pr-4 text-slate-700">{subjectName(assessment.subjectId)}</td>
+                      <td className="py-2 pr-4 text-slate-700">{periodName(assessment.academicPeriodId)}</td>
+                      <td className="py-2 pr-4 text-slate-700">{assessment.maxScore}</td>
+                      <td className="py-2 pr-4 text-slate-700">
+                        {assessment.isPublished ? t("grading.publishedStatus") : t("grading.draftStatus")}
+                      </td>
+                      <td className="py-2 pr-4 flex gap-3">
                         <button
                           type="button"
-                          className="text-xs text-slate-400 hover:text-brand-teal"
-                          onClick={() => publishMutation.mutate(assessment.id)}
+                          className="text-xs text-brand-teal hover:underline"
+                          onClick={() => setSelectedAssessmentId(assessment.id)}
                         >
-                          {t("grading.publish")}
+                          {t("grading.enterGrades")}
                         </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {!assessment.isPublished ? (
+                          <button
+                            type="button"
+                            className="text-xs text-slate-400 hover:text-brand-teal"
+                            onClick={() => publishMutation.mutate(assessment.id)}
+                          >
+                            {t("grading.publish")}
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <form

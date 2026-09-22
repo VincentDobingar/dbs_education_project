@@ -64,43 +64,45 @@ export function AdminPromotionCodesPage(): ReactNode {
         {(codes.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.code")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.discount")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.redemptions")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(codes.data ?? []).map((promo) => (
-                <tr key={promo.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{promo.code}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {promo.discountType === "PERCENTAGE" ? `${promo.discountValue}%` : promo.discountValue}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {promo.redemptionCount}
-                    {promo.maxRedemptions ? ` / ${promo.maxRedemptions}` : ""}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {promo.isActive ? t("admin.common.active") : t("admin.common.inactive")}
-                  </td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => toggleMutation.mutate({ id: promo.id, isActive: !promo.isActive })}
-                    >
-                      {promo.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.code")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.discount")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.promotionCodes.redemptions")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(codes.data ?? []).map((promo) => (
+                  <tr key={promo.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{promo.code}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {promo.discountType === "PERCENTAGE" ? `${promo.discountValue}%` : promo.discountValue}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {promo.redemptionCount}
+                      {promo.maxRedemptions ? ` / ${promo.maxRedemptions}` : ""}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {promo.isActive ? t("admin.common.active") : t("admin.common.inactive")}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => toggleMutation.mutate({ id: promo.id, isActive: !promo.isActive })}
+                      >
+                        {promo.isActive ? t("admin.common.deactivate") : t("admin.common.activate")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

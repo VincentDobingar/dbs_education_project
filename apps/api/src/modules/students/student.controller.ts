@@ -31,6 +31,17 @@ export function checkDuplicateStudents(req: Request, res: Response, next: NextFu
 export function listStudents(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const query = listStudentsQuerySchema.parse(req.query);
+
+    // `page` opt-in : préserve le tableau brut historique pour les appelants qui
+    // ne l'envoient jamais (roster de classe pour l'appel/notes/discipline/devoirs,
+    // toujours petit) ; seule la liste complète de l'établissement (StudentsPage,
+    // potentiellement des milliers de lignes) a besoin de la réponse paginée.
+    if (query.page !== undefined) {
+      const paginated = await studentService.listStudentsPaginated(query);
+      res.status(200).json(paginated);
+      return;
+    }
+
     const students = await studentService.listStudents(query);
     res.status(200).json(students);
   })().catch(next);

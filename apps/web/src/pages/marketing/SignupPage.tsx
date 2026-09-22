@@ -1,13 +1,19 @@
 import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
-import { login, onboardTenant, registerAccount, verifyEmail } from "../../lib/api.js";
+import {
+  login,
+  onboardTenant,
+  registerAccount,
+  uploadTenantLogoAtSignup,
+  verifyEmail,
+} from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 
 const COUNTRIES = [
@@ -61,6 +67,23 @@ export function SignupPage(): ReactNode {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ subdomain: string } | null>(null);
 
+  // Choisi ici mais téléversé seulement à la soumission finale (voir onSubmit) :
+  // aucun tenant, ni même de session authentifiée, n'existe encore à cette étape
+  // pour rattacher le fichier à quoi que ce soit — juste un aperçu local.
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(logoFile);
+    setLogoPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [logoFile]);
+
   const {
     register,
     handleSubmit,
@@ -113,6 +136,10 @@ export function SignupPage(): ReactNode {
         // on se reconnecte simplement avec les identifiants déjà fournis.
         accessToken = (await login(formValues.email, formValues.password)).accessToken;
       }
+      // Le compte existe et est authentifié à cet instant — c'est le premier moment
+      // où un téléversement peut être rattaché à quelqu'un plutôt qu'à personne.
+      const logoUrl = logoFile ? (await uploadTenantLogoAtSignup(logoFile, accessToken)).url : null;
+
       const onboarded = await onboardTenant(
         {
           name: formValues.schoolName,
@@ -121,6 +148,7 @@ export function SignupPage(): ReactNode {
           currencyIsoCode: selectedCountry.currency,
           subdomain: formValues.subdomain,
           ...(formValues.city ? { city: formValues.city } : {}),
+          ...(logoUrl ? { logoUrl } : {}),
           ...(formValues.planCode ? { planCode: formValues.planCode, billingPeriod: "MONTHLY" } : {}),
           ...(formValues.planCode && formValues.promoCode ? { promoCode: formValues.promoCode } : {}),
         },
@@ -185,16 +213,21 @@ export function SignupPage(): ReactNode {
         {step === 0 ? (
           <>
             <Field label={t("signup.account.firstName")} error={errors.firstName?.message}>
-              <input type="text" className="input" {...register("firstName")} />
+              <input type="text" autoComplete="given-name" className="input" {...register("firstName")} />
             </Field>
             <Field label={t("signup.account.lastName")} error={errors.lastName?.message}>
-              <input type="text" className="input" {...register("lastName")} />
+              <input type="text" autoComplete="family-name" className="input" {...register("lastName")} />
             </Field>
             <Field label={t("signup.account.email")} error={errors.email?.message}>
-              <input type="email" className="input" {...register("email")} />
+              <input type="email" autoComplete="email" className="input" {...register("email")} />
             </Field>
             <Field label={t("signup.account.password")} error={errors.password?.message}>
-              <input type="password" className="input" {...register("password")} />
+              <input
+                type="password"
+                autoComplete="new-password"
+                className="input"
+                {...register("password")}
+              />
             </Field>
           </>
         ) : null}
@@ -227,6 +260,28 @@ export function SignupPage(): ReactNode {
               <p className="mt-1 text-xs text-slate-500">
                 {t("signup.school.subdomainHint", { subdomain: values.subdomain || "…" })}
               </p>
+            </Field>
+            <Field label={t("signup.school.logo")}>
+              <div className="flex items-center gap-3">
+                {logoPreviewUrl ? (
+                  <img
+                    src={logoPreviewUrl}
+                    alt=""
+                    className="h-12 w-12 rounded-md border border-slate-200 object-contain"
+                  />
+                ) : null}
+                <input
+                  ref={logoFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="hidden"
+                  onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)}
+                />
+                <Button type="button" variant="secondary" onClick={() => logoFileInputRef.current?.click()}>
+                  {logoFile ? t("signup.school.logoChange") : t("signup.school.logoChoose")}
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">{t("signup.school.logoHint")}</p>
             </Field>
           </>
         ) : null}

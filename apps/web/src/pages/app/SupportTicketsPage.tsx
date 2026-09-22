@@ -65,36 +65,40 @@ export function SupportTicketsPage(): ReactNode {
         {(tickets.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("supportTickets.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("supportTickets.subject")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("supportTickets.priority")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(tickets.data ?? []).map((ticket) => (
-                <tr key={ticket.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{ticket.subject}</td>
-                  <td className="py-2 pr-4 text-slate-700">
-                    {t(`supportTickets.priority.${ticket.priority}`)}
-                  </td>
-                  <td className="py-2 pr-4 text-slate-700">{t(`supportTickets.status.${ticket.status}`)}</td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => setSelectedTicketId(ticket.id)}
-                    >
-                      {t("supportTickets.open")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("supportTickets.subject")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("supportTickets.priority")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(tickets.data ?? []).map((ticket) => (
+                  <tr key={ticket.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{ticket.subject}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`supportTickets.priority.${ticket.priority}`)}
+                    </td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {t(`supportTickets.status.${ticket.status}`)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => setSelectedTicketId(ticket.id)}
+                      >
+                        {t("supportTickets.open")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

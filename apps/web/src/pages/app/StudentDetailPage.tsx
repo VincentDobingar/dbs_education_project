@@ -119,47 +119,49 @@ function InvoiceDetail({
       {(payments.data ?? []).length === 0 ? (
         <p className="text-sm text-slate-500">{t("studentDetail.noPayments")}</p>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("studentDetail.paidAt")}</th>
-              <th className="pb-2 pr-4" />
-              <th className="pb-2 pr-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {(payments.data ?? []).map((payment) => (
-              <tr key={payment.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{formatAmount(payment.amountCents)}</td>
-                <td className="py-2 pr-4 text-slate-700">{payment.paidAt.slice(0, 10)}</td>
-                <td className="py-2 pr-4">
-                  {payment.receipt ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("studentDetail.paidAt")}</th>
+                <th className="pb-2 pr-4" />
+                <th className="pb-2 pr-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {(payments.data ?? []).map((payment) => (
+                <tr key={payment.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{formatAmount(payment.amountCents)}</td>
+                  <td className="py-2 pr-4 text-slate-700">{payment.paidAt.slice(0, 10)}</td>
+                  <td className="py-2 pr-4">
+                    {payment.receipt ? (
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline disabled:opacity-50"
+                        disabled={pdfLoadingId === payment.receipt.id}
+                        onClick={() => payment.receipt && void openReceipt(payment.receipt.id)}
+                      >
+                        {pdfLoadingId === payment.receipt.id
+                          ? t("studentDetail.loadingPdf")
+                          : t("studentDetail.viewReceipt")}
+                      </button>
+                    ) : null}
+                  </td>
+                  <td className="py-2 pr-4">
                     <button
                       type="button"
-                      className="text-xs text-brand-teal hover:underline disabled:opacity-50"
-                      disabled={pdfLoadingId === payment.receipt.id}
-                      onClick={() => payment.receipt && void openReceipt(payment.receipt.id)}
+                      className="text-xs text-slate-400 hover:text-red-600"
+                      onClick={() => setRefunding({ paymentId: payment.id, amount: "", reason: "" })}
                     >
-                      {pdfLoadingId === payment.receipt.id
-                        ? t("studentDetail.loadingPdf")
-                        : t("studentDetail.viewReceipt")}
+                      {t("studentDetail.refund")}
                     </button>
-                  ) : null}
-                </td>
-                <td className="py-2 pr-4">
-                  <button
-                    type="button"
-                    className="text-xs text-slate-400 hover:text-red-600"
-                    onClick={() => setRefunding({ paymentId: payment.id, amount: "", reason: "" })}
-                  >
-                    {t("studentDetail.refund")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <form
@@ -415,7 +417,7 @@ export function StudentDetailPage(): ReactNode {
           {student.data.photoUrl ? (
             <img
               src={student.data.photoUrl}
-              alt=""
+              alt={t("students.photoAlt", { name: `${student.data.firstName} ${student.data.lastName}` })}
               className="h-16 w-16 rounded-md border border-slate-200 object-cover"
             />
           ) : null}
@@ -539,67 +541,69 @@ export function StudentDetailPage(): ReactNode {
         {(invoices.data ?? []).length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">{t("studentDetail.noInvoices")}</p>
         ) : (
-          <table className="mt-4 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("studentDetail.invoiceNumber")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("studentDetail.total")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("studentDetail.paid")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(invoices.data ?? []).map((invoice) => (
-                <Fragment key={invoice.id}>
-                  <tr className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{invoice.number}</td>
-                    <td className="py-2 pr-4 text-slate-700">{formatAmount(invoice.totalCents)}</td>
-                    <td className="py-2 pr-4 text-slate-700">{formatAmount(invoice.paidCents)}</td>
-                    <td className="py-2 pr-4 text-slate-700">{t(INVOICE_STATUS_LABELS[invoice.status])}</td>
-                    <td className="py-2 pr-4 flex gap-3">
-                      <button
-                        type="button"
-                        className="text-xs text-brand-teal hover:underline"
-                        onClick={() =>
-                          setSelectedInvoiceId(selectedInvoiceId === invoice.id ? "" : invoice.id)
-                        }
-                      >
-                        {selectedInvoiceId === invoice.id
-                          ? t("studentDetail.hidePayments")
-                          : t("studentDetail.showPayments")}
-                      </button>
-                      {invoice.status === "DRAFT" ? (
+          <div className="overflow-x-auto">
+            <table className="mt-4 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("studentDetail.invoiceNumber")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("studentDetail.total")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("studentDetail.paid")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4" />
+                </tr>
+              </thead>
+              <tbody>
+                {(invoices.data ?? []).map((invoice) => (
+                  <Fragment key={invoice.id}>
+                    <tr className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{invoice.number}</td>
+                      <td className="py-2 pr-4 text-slate-700">{formatAmount(invoice.totalCents)}</td>
+                      <td className="py-2 pr-4 text-slate-700">{formatAmount(invoice.paidCents)}</td>
+                      <td className="py-2 pr-4 text-slate-700">{t(INVOICE_STATUS_LABELS[invoice.status])}</td>
+                      <td className="py-2 pr-4 flex gap-3">
                         <button
                           type="button"
-                          className="text-xs text-slate-400 hover:text-brand-teal"
-                          onClick={() => issueInvoiceMutation.mutate(invoice.id)}
+                          className="text-xs text-brand-teal hover:underline"
+                          onClick={() =>
+                            setSelectedInvoiceId(selectedInvoiceId === invoice.id ? "" : invoice.id)
+                          }
                         >
-                          {t("studentDetail.issue")}
+                          {selectedInvoiceId === invoice.id
+                            ? t("studentDetail.hidePayments")
+                            : t("studentDetail.showPayments")}
                         </button>
-                      ) : null}
-                      {invoice.status !== "CANCELLED" && invoice.paidCents === 0 ? (
-                        <button
-                          type="button"
-                          className="text-xs text-slate-400 hover:text-red-600"
-                          onClick={() => cancelInvoiceMutation.mutate(invoice.id)}
-                        >
-                          {t("studentDetail.cancelInvoice")}
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                  {selectedInvoiceId === invoice.id ? (
-                    <tr>
-                      <td colSpan={5}>
-                        <InvoiceDetail invoiceId={invoice.id} creds={creds} subdomain={session.subdomain} />
+                        {invoice.status === "DRAFT" ? (
+                          <button
+                            type="button"
+                            className="text-xs text-slate-400 hover:text-brand-teal"
+                            onClick={() => issueInvoiceMutation.mutate(invoice.id)}
+                          >
+                            {t("studentDetail.issue")}
+                          </button>
+                        ) : null}
+                        {invoice.status !== "CANCELLED" && invoice.paidCents === 0 ? (
+                          <button
+                            type="button"
+                            className="text-xs text-slate-400 hover:text-red-600"
+                            onClick={() => cancelInvoiceMutation.mutate(invoice.id)}
+                          >
+                            {t("studentDetail.cancelInvoice")}
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
-                  ) : null}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                    {selectedInvoiceId === invoice.id ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <InvoiceDetail invoiceId={invoice.id} creds={creds} subdomain={session.subdomain} />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

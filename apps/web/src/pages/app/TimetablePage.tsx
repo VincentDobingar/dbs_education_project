@@ -177,47 +177,49 @@ export function TimetablePage(): ReactNode {
           {(entries.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("timetable.empty")}</p>
           ) : (
-            <table className="mt-3 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("timetable.day")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("timetable.time")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("timetable.subject")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("timetable.teacher")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("timetable.room")}</th>
-                  <th className="pb-2 pr-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {(entries.data ?? [])
-                  .slice()
-                  .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-                  .map((entry) => (
-                    <tr key={entry.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 text-slate-700">
-                        {t(`timetable.dayOfWeek.${DAY_KEYS[entry.dayOfWeek]}`)}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-700">
-                        {entry.startTime}–{entry.endTime}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-700">{subjectName(entry.subjectId)}</td>
-                      <td className="py-2 pr-4 text-slate-700">{employeeName(entry.teacherEmployeeId)}</td>
-                      <td className="py-2 pr-4 text-slate-700">
-                        {entry.roomId ? roomName(entry.roomId) : (entry.roomLabel ?? "—")}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <button
-                          type="button"
-                          onClick={() => removeEntryMutation.mutate(entry.id)}
-                          className="text-xs text-slate-400 hover:text-red-600"
-                        >
-                          {t("discipline.remove")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="mt-3 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("timetable.day")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("timetable.time")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("timetable.subject")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("timetable.teacher")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("timetable.room")}</th>
+                    <th className="pb-2 pr-4" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {(entries.data ?? [])
+                    .slice()
+                    .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
+                    .map((entry) => (
+                      <tr key={entry.id} className="border-b border-slate-100 last:border-0">
+                        <td className="py-2 pr-4 text-slate-700">
+                          {t(`timetable.dayOfWeek.${DAY_KEYS[entry.dayOfWeek]}`)}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-700">
+                          {entry.startTime}–{entry.endTime}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-700">{subjectName(entry.subjectId)}</td>
+                        <td className="py-2 pr-4 text-slate-700">{employeeName(entry.teacherEmployeeId)}</td>
+                        <td className="py-2 pr-4 text-slate-700">
+                          {entry.roomId ? roomName(entry.roomId) : (entry.roomLabel ?? "—")}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => removeEntryMutation.mutate(entry.id)}
+                            className="text-xs text-slate-400 hover:text-red-600"
+                          >
+                            {t("discipline.remove")}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <form

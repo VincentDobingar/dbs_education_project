@@ -92,16 +92,26 @@ export function PortalLoginPage(): ReactNode {
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.email")}
-              <input type="email" className="input mt-1" {...loginForm.register("email")} />
+              <input
+                type="email"
+                autoComplete="email"
+                className="input mt-1"
+                {...loginForm.register("email")}
+              />
             </label>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.password")}
-              <input type="password" className="input mt-1" {...loginForm.register("password")} />
+              <input
+                type="password"
+                autoComplete="current-password"
+                className="input mt-1"
+                {...loginForm.register("password")}
+              />
             </label>
           </div>
-          <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => void onLogin()}>
+          <Button type="submit" variant="secondary" disabled={isSubmitting}>
             {isSubmitting ? t("login.submitting") : t("login.submit")}
           </Button>
         </form>
@@ -120,16 +130,26 @@ export function PortalLoginPage(): ReactNode {
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.email")}
-              <input type="email" className="input mt-1" {...registerForm.register("email")} />
+              <input
+                type="email"
+                autoComplete="email"
+                className="input mt-1"
+                {...registerForm.register("email")}
+              />
             </label>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.password")}
-              <input type="password" className="input mt-1" {...registerForm.register("password")} />
+              <input
+                type="password"
+                autoComplete="new-password"
+                className="input mt-1"
+                {...registerForm.register("password")}
+              />
             </label>
           </div>
-          <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => void onRegister()}>
+          <Button type="submit" variant="secondary" disabled={isSubmitting}>
             {isSubmitting ? t("login.submitting") : t("portal.register.submit")}
           </Button>
         </form>

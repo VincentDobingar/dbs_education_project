@@ -379,35 +379,37 @@ export function StudentPortalPage(): ReactNode {
         {(reportCards.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("reportCards.none")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("reportCards.average")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("reportCards.rank")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("reportCards.mention")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(reportCards.data ?? []).map((card) => (
-                <tr key={card.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{card.averageScore ?? "—"}</td>
-                  <td className="py-2 pr-4 text-slate-700">{card.classRank ?? "—"}</td>
-                  <td className="py-2 pr-4 text-slate-700">{card.mention ?? "—"}</td>
-                  <td className="py-2 pr-4">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline disabled:opacity-50"
-                      disabled={pdfLoadingId === card.id}
-                      onClick={() => void openReportCardPdf(card.id)}
-                    >
-                      {pdfLoadingId === card.id ? t("reportCards.loadingPdf") : t("reportCards.viewPdf")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("reportCards.average")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("reportCards.rank")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("reportCards.mention")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(reportCards.data ?? []).map((card) => (
+                  <tr key={card.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{card.averageScore ?? "—"}</td>
+                    <td className="py-2 pr-4 text-slate-700">{card.classRank ?? "—"}</td>
+                    <td className="py-2 pr-4 text-slate-700">{card.mention ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline disabled:opacity-50"
+                        disabled={pdfLoadingId === card.id}
+                        onClick={() => void openReportCardPdf(card.id)}
+                      >
+                        {pdfLoadingId === card.id ? t("reportCards.loadingPdf") : t("reportCards.viewPdf")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

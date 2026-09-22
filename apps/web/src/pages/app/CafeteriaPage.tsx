@@ -164,36 +164,38 @@ export function CafeteriaPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("cafeteria.mealPlans")}</h2>
-        <table className="mt-3 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="pb-2 pr-4 font-medium">{t("cafeteria.planName")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("cafeteria.planType")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("cafeteria.price")}</th>
-              <th className="pb-2 pr-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {(mealPlans.data ?? []).map((plan) => (
-              <tr key={plan.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{plan.name}</td>
-                <td className="py-2 pr-4 text-slate-700">{t(`cafeteria.planTypeValue.${plan.type}`)}</td>
-                <td className="py-2 pr-4 text-slate-700">{(plan.priceCents / 100).toFixed(2)}</td>
-                <td className="py-2 pr-4">
-                  {!plan.deletedAt ? (
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => archivePlanMutation.mutate(plan.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  ) : null}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("cafeteria.planName")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("cafeteria.planType")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("cafeteria.price")}</th>
+                <th className="pb-2 pr-4" />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(mealPlans.data ?? []).map((plan) => (
+                <tr key={plan.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 text-slate-700">{plan.name}</td>
+                  <td className="py-2 pr-4 text-slate-700">{t(`cafeteria.planTypeValue.${plan.type}`)}</td>
+                  <td className="py-2 pr-4 text-slate-700">{(plan.priceCents / 100).toFixed(2)}</td>
+                  <td className="py-2 pr-4">
+                    {!plan.deletedAt ? (
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => archivePlanMutation.mutate(plan.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -234,58 +236,60 @@ export function CafeteriaPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("cafeteria.enrollments")}</h2>
-        <table className="mt-3 w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="pb-2 pr-4 font-medium">{t("library.studentId")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-              <th className="pb-2 pr-4 font-medium">{t("cafeteria.paid")}</th>
-              <th className="pb-2 pr-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {(enrollments.data ?? []).map((enrollment) => (
-              <tr key={enrollment.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 pr-4 font-mono text-xs text-slate-500">{enrollment.studentId}</td>
-                <td className="py-2 pr-4 text-slate-700">
-                  {t(`cafeteria.enrollmentStatus.${enrollment.status}`)}
-                </td>
-                <td className="py-2 pr-4 text-slate-700">
-                  {enrollment.paid ? t("admin.common.active") : "—"}
-                </td>
-                <td className="py-2 pr-4 flex gap-3">
-                  {!enrollment.paid ? (
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => markPaidMutation.mutate(enrollment.id)}
-                    >
-                      {t("cafeteria.markPaid")}
-                    </button>
-                  ) : null}
-                  {enrollment.status === "ACTIVE" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="text-xs text-red-600 hover:underline"
-                        onClick={() => cancelEnrollmentMutation.mutate(enrollment.id)}
-                      >
-                        {t("admin.common.delete")}
-                      </button>
+        <div className="overflow-x-auto">
+          <table className="mt-3 w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 pr-4 font-medium">{t("library.studentId")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("cafeteria.paid")}</th>
+                <th className="pb-2 pr-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {(enrollments.data ?? []).map((enrollment) => (
+                <tr key={enrollment.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2 pr-4 font-mono text-xs text-slate-500">{enrollment.studentId}</td>
+                  <td className="py-2 pr-4 text-slate-700">
+                    {t(`cafeteria.enrollmentStatus.${enrollment.status}`)}
+                  </td>
+                  <td className="py-2 pr-4 text-slate-700">
+                    {enrollment.paid ? t("admin.common.active") : "—"}
+                  </td>
+                  <td className="py-2 pr-4 flex gap-3">
+                    {!enrollment.paid ? (
                       <button
                         type="button"
                         className="text-xs text-brand-teal hover:underline"
-                        onClick={() => setSelectedEnrollmentId(enrollment.id)}
+                        onClick={() => markPaidMutation.mutate(enrollment.id)}
                       >
-                        {t("admin.common.open")}
+                        {t("cafeteria.markPaid")}
                       </button>
-                    </>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    ) : null}
+                    {enrollment.status === "ACTIVE" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => cancelEnrollmentMutation.mutate(enrollment.id)}
+                        >
+                          {t("admin.common.delete")}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-brand-teal hover:underline"
+                          onClick={() => setSelectedEnrollmentId(enrollment.id)}
+                        >
+                          {t("admin.common.open")}
+                        </button>
+                      </>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();

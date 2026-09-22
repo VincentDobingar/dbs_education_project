@@ -93,43 +93,45 @@ export function HomeworkPage(): ReactNode {
         {(homework.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("homework.empty")}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("grading.assessmentTitle")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("attendance.classroom")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.subjects")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("homework.dueAt")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(homework.data ?? []).map((hw) => (
-                <tr key={hw.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{hw.title}</td>
-                  <td className="py-2 pr-4 text-slate-700">{classroomName(hw.classroomId)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{subjectName(hw.subjectId)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{hw.dueAt.slice(0, 10)}</td>
-                  <td className="py-2 pr-4 flex gap-3">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => setSelectedHomeworkId(hw.id)}
-                    >
-                      {t("homework.viewSubmissions")}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs text-slate-400 hover:text-red-600"
-                      onClick={() => cancelMutation.mutate(hw.id)}
-                    >
-                      {t("discipline.remove")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("grading.assessmentTitle")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("attendance.classroom")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.subjects")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("homework.dueAt")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(homework.data ?? []).map((hw) => (
+                  <tr key={hw.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{hw.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">{classroomName(hw.classroomId)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{subjectName(hw.subjectId)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{hw.dueAt.slice(0, 10)}</td>
+                    <td className="py-2 pr-4 flex gap-3">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => setSelectedHomeworkId(hw.id)}
+                      >
+                        {t("homework.viewSubmissions")}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-slate-400 hover:text-red-600"
+                        onClick={() => cancelMutation.mutate(hw.id)}
+                      >
+                        {t("discipline.remove")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <form

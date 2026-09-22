@@ -122,41 +122,43 @@ export function ElearningPage(): ReactNode {
         {(courses.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="pb-2 pr-4 font-medium">{t("elearning.courseTitle")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("config.col.name")}</th>
-                <th className="pb-2 pr-4 font-medium">{t("timetable.subject")}</th>
-                <th className="pb-2 pr-4" />
-              </tr>
-            </thead>
-            <tbody>
-              {(courses.data ?? []).map((course) => (
-                <tr key={course.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 pr-4 text-slate-700">{course.title}</td>
-                  <td className="py-2 pr-4 text-slate-700">{classroomName(course.classroomId)}</td>
-                  <td className="py-2 pr-4 text-slate-700">{subjectName(course.subjectId)}</td>
-                  <td className="py-2 pr-4 flex gap-3">
-                    <button
-                      type="button"
-                      className="text-xs text-brand-teal hover:underline"
-                      onClick={() => setSelectedCourseId(course.id)}
-                    >
-                      {t("admin.common.open")}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs text-red-600 hover:underline"
-                      onClick={() => cancelCourseMutation.mutate(course.id)}
-                    >
-                      {t("admin.common.delete")}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-3 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500">
+                  <th className="pb-2 pr-4 font-medium">{t("elearning.courseTitle")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("config.col.name")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("timetable.subject")}</th>
+                  <th className="pb-2 pr-4" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(courses.data ?? []).map((course) => (
+                  <tr key={course.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4 text-slate-700">{course.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">{classroomName(course.classroomId)}</td>
+                    <td className="py-2 pr-4 text-slate-700">{subjectName(course.subjectId)}</td>
+                    <td className="py-2 pr-4 flex gap-3">
+                      <button
+                        type="button"
+                        className="text-xs text-brand-teal hover:underline"
+                        onClick={() => setSelectedCourseId(course.id)}
+                      >
+                        {t("admin.common.open")}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:underline"
+                        onClick={() => cancelCourseMutation.mutate(course.id)}
+                      >
+                        {t("admin.common.delete")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form
           onSubmit={(event) => {
