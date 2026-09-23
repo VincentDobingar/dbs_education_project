@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import { imageUpload } from "../../lib/upload-middleware.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { logoUploadRateLimiter } from "../../middleware/rateLimit.js";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
@@ -137,9 +138,15 @@ schoolConfigRouter.put(
 // financiers générés en PDF (lib/pdf-letterhead.ts).
 schoolConfigRouter.get("/tenant-logo", tenantLogoController.getTenantLogo);
 schoolConfigRouter.put("/tenant-logo", manageSettings, tenantLogoController.setTenantLogo);
+// logoUploadRateLimiter (même limite que POST /tenants/logo-upload, §14) : sans
+// elle, seul apiRateLimiter générique (600 req/15 min par IP) borne cet endpoint,
+// qui écrit ~3 Mo par appel (MAX_IMAGE_BYTES) sur le disque partagé sans job de
+// purge — un SCHOOL_ADMIN pourrait y boucler et remplir le disque de toute
+// l'instance, pas seulement son propre tenant.
 schoolConfigRouter.post(
   "/tenant-logo/upload",
   manageSettings,
+  logoUploadRateLimiter,
   imageUpload.single("logo"),
   tenantLogoController.uploadTenantLogo,
 );
