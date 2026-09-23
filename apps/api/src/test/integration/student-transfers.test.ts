@@ -19,6 +19,7 @@ describe("transferts inter-établissements (§10, §19)", () => {
   const tenantIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.auditLog.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.studentTransfer.deleteMany({
       where: { OR: [{ fromTenantId: { in: tenantIds } }, { toTenantId: { in: tenantIds } }] },
     });
@@ -215,6 +216,17 @@ describe("transferts inter-établissements (§10, §19)", () => {
       .set("Authorization", `Bearer ${source.ownerToken}`)
       .set("X-Tenant-Slug", source.subdomain);
     expect((sourceAfter.body as { status: string }).status).toBe("TRANSFERRED");
+
+    // Passe d'audit sécurité n°26 : ce scénario n'a délibérément aucune relation
+    // parent-élève (contrairement au test suivant) — c'était précisément le cas où
+    // completeTransfer ne laissait auparavant aucune trace d'audit pour toute
+    // l'opération, l'unique appel de recordAuditLog étant conditionné à l'existence
+    // d'une relation à révoquer.
+    const transferAuditEntry = await testAdminPrisma.auditLog.findFirst({
+      where: { action: "student_transfer.complete", entityId: studentId },
+    });
+    expect(transferAuditEntry).not.toBeNull();
+    expect(transferAuditEntry?.afterData).toMatchObject({ status: "TRANSFERRED", transferId });
   });
 
   // §10 : completing a transfer used to only mark the source Student TRANSFERRED —

@@ -224,6 +224,24 @@ export async function completeTransfer(
       data: { status: "TRANSFERRED_OUT", withdrawnAt: new Date() },
     });
 
+    // Action principale de completeTransfer — inconditionnelle, contrairement à
+    // l'entrée d'audit de révocation de relation parent plus bas (qui ne s'écrit
+    // que si l'élève avait une relation active) : sans celle-ci, un élève sans
+    // parent lié au moment du transfert ne laissait aucune trace d'audit pour
+    // tout le reste de l'opération (statut TRANSFERRED, clôture d'inscription,
+    // suppression du lien portail juste après).
+    await recordAuditLog({
+      tenantId: transfer.fromTenantId,
+      actorUserId: actor.actorUserId,
+      ...(actor.actorRoleCode ? { actorRoleCode: actor.actorRoleCode } : {}),
+      action: "student_transfer.complete",
+      entityType: "Student",
+      entityId: sourceStudent.id,
+      beforeData: { status: sourceStudent.status },
+      afterData: { status: "TRANSFERRED", toTenantId: transfer.toTenantId, transferId: transfer.id },
+      justification: "Transfert de l'élève vers un autre établissement",
+    });
+
     // ParentStudentRelationship/StudentUserLink carry no RLS (bootstrap tables, see
     // docs/architecture.md) and `tx` here is the raw, non-tenant-guarded client — so
     // tenantId is filtered explicitly rather than relied on implicitly, same as the
