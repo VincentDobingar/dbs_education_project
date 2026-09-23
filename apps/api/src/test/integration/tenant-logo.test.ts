@@ -150,4 +150,20 @@ describe("logo de l'établissement", () => {
     expect(response.status).toBe(400);
     expect((response.body as { code: string }).code).toBe("LOGO_FILE_REQUIRED");
   });
+
+  // Passe d'audit sécurité n°25 : le filtre multer ne regarde que le Content-Type
+  // déclaré par le client (spoofable), pas les octets réels — cette requête passe
+  // ce filtre (déclare "image/png") mais n'en a pas les magic bytes.
+  it("rejects an upload whose bytes don't match its declared Content-Type (magic bytes)", async () => {
+    const { subdomain, ownerToken } = await setUpTenant();
+
+    const response = await request(app)
+      .post("/api/v1/school-config/tenant-logo/upload")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .attach("logo", Buffer.from("not actually a png"), { filename: "logo.png", contentType: "image/png" });
+
+    expect(response.status).toBe(400);
+    expect((response.body as { code: string }).code).toBe("UNSUPPORTED_IMAGE_TYPE");
+  });
 });

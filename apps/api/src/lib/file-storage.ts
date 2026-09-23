@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { env } from "../env.js";
 
+import { AppError } from "./errors.js";
 import { ALLOWED_CONTENT_TYPES } from "./safe-image-fetch.js";
 
 const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
@@ -11,9 +12,24 @@ const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
   "image/png": "png",
 };
 
-export class UnsupportedImageTypeError extends Error {
+// Signature réelle des octets (magic bytes), pas seulement le Content-Type déclaré
+// par l'appelant (spoofable — multer se contente de relayer le header HTTP du
+// client). Un PNG commence toujours par ces 8 octets fixes ; un JPEG par ces 3
+// octets (marqueur SOI suivi du premier segment).
+const MAGIC_BYTES_BY_CONTENT_TYPE: Record<string, readonly number[]> = {
+  "image/jpeg": [0xff, 0xd8, 0xff],
+  "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+};
+
+function matchesDeclaredType(buffer: Buffer, contentType: string): boolean {
+  const signature = MAGIC_BYTES_BY_CONTENT_TYPE[contentType];
+  if (!signature || buffer.length < signature.length) return false;
+  return signature.every((byte, index) => buffer[index] === byte);
+}
+
+export class UnsupportedImageTypeError extends AppError {
   constructor(contentType: string) {
-    super(`Unsupported image content type: ${contentType}`);
+    super(400, "UNSUPPORTED_IMAGE_TYPE", `Unsupported or mismatched image content type: ${contentType}`);
   }
 }
 
@@ -31,7 +47,7 @@ export async function saveUploadedImage(
   subdirectory: string,
 ): Promise<string> {
   const extension = ALLOWED_CONTENT_TYPES.has(contentType) ? EXTENSION_BY_CONTENT_TYPE[contentType] : null;
-  if (!extension) {
+  if (!extension || !matchesDeclaredType(buffer, contentType)) {
     throw new UnsupportedImageTypeError(contentType);
   }
 
