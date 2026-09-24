@@ -102,6 +102,7 @@ export function BoardingPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("boarding.rooms")}</h2>
+        {rooms.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <div className="overflow-x-auto">
           <table className="mt-3 w-full text-left text-sm">
             <thead>
@@ -169,6 +170,7 @@ export function BoardingPage(): ReactNode {
       {selectedRoomId ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("boarding.beds")}</h2>
+          {beds.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
           <ul className="mt-3 space-y-2 text-sm">
             {(beds.data ?? []).map((bed) => (
               <li key={bed.id} className="border-b border-slate-100 pb-2">

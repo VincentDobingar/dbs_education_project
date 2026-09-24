@@ -173,6 +173,7 @@ export function UsersPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         {users.isPending ? <p className="text-sm text-slate-500">{t("students.loading")}</p> : null}
+        {users.isError ? <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {users.data && users.data.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

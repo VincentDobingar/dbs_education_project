@@ -114,6 +114,9 @@ function GradeEntryForm({
   if (roster.isPending || grades.isPending) {
     return <p className="text-sm text-slate-500">{t("students.loading")}</p>;
   }
+  if (roster.isError || grades.isError) {
+    return <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p>;
+  }
   if ((roster.data ?? []).length === 0) {
     return <p className="text-sm text-slate-500">{t("attendance.emptyRoster")}</p>;
   }
@@ -331,6 +334,9 @@ export function GradingPage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {classrooms.isError ? (
+          <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <label className="block text-xs font-medium text-slate-600">{t("attendance.classroom")}</label>
         <select
           className="input mt-1 w-56"
@@ -353,6 +359,9 @@ export function GradingPage(): ReactNode {
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("grading.assessments")}</h2>
 
+          {assessments.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           {(assessments.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("grading.noAssessments")}</p>
           ) : (

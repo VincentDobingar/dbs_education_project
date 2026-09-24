@@ -141,6 +141,9 @@ export function TimetablePage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {classrooms.isError ? (
+          <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <label className="block text-xs font-medium text-slate-600">{t("attendance.classroom")}</label>
         <select
           className="input mt-1 w-56"
@@ -174,6 +177,7 @@ export function TimetablePage(): ReactNode {
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("timetable.entries")}</h2>
 
+          {entries.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
           {(entries.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("timetable.empty")}</p>
           ) : (

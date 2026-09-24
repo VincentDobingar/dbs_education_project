@@ -235,6 +235,7 @@ export function EmployeeDetailPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("employeeDetail.contracts")}</h2>
+        {contracts.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <ul className="mt-3 space-y-1 text-sm">
           {(contracts.data ?? []).map((contract) => (
             <li key={contract.id} className="flex justify-between border-b border-slate-100 pb-1">
@@ -287,6 +288,9 @@ export function EmployeeDetailPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("employeeDetail.leaveRequests")}</h2>
+        {leaveRequests.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <ul className="mt-3 space-y-2 text-sm">
           {(leaveRequests.data ?? []).map((leave) => (
             <li key={leave.id} className="border-b border-slate-100 pb-2">
@@ -356,6 +360,9 @@ export function EmployeeDetailPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("employeeDetail.evaluations")}</h2>
+        {evaluations.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <ul className="mt-3 space-y-1 text-sm">
           {(evaluations.data ?? []).map((evaluation) => (
             <li key={evaluation.id} className="border-b border-slate-100 pb-1">
@@ -409,6 +416,7 @@ export function EmployeeDetailPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("employeeDetail.documents")}</h2>
+        {documents.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <ul className="mt-3 space-y-1 text-sm">
           {(documents.data ?? []).map((document_) => (
             <li

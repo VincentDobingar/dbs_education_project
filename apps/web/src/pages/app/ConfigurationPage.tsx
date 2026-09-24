@@ -54,39 +54,47 @@ function Table({
   columns,
   rows,
   empty,
+  isError,
+  errorMessage,
 }: {
   columns: string[];
   rows: (string | number)[][];
   empty: string;
+  isError?: boolean;
+  errorMessage?: string;
 }): ReactNode {
-  if (rows.length === 0) {
-    return <p className="text-sm text-slate-500">{empty}</p>;
-  }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-slate-500">
-            {columns.map((col) => (
-              <th key={col} className="pb-2 pr-4 font-medium">
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index} className="border-b border-slate-100 last:border-0">
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className="py-2 pr-4 text-slate-700">
-                  {cell}
-                </td>
+    <>
+      {isError ? <p className="mb-2 text-sm text-red-600">{errorMessage}</p> : null}
+      {rows.length === 0 ? (
+        <p className="text-sm text-slate-500">{empty}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                {columns.map((col) => (
+                  <th key={col} className="pb-2 pr-4 font-medium">
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index} className="border-b border-slate-100 last:border-0">
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} className="py-2 pr-4 text-slate-700">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -446,6 +454,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.name"), t("config.col.startDate"), t("config.col.endDate")]}
           rows={(years.data ?? []).map((y) => [y.name, y.startDate.slice(0, 10), y.endDate.slice(0, 10)])}
           empty={t("config.empty")}
+          isError={years.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -471,6 +481,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.name"), t("config.col.code")]}
           rows={(campuses.data ?? []).map((c) => [c.name, c.code])}
           empty={t("config.empty")}
+          isError={campuses.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -495,6 +507,7 @@ export function ConfigurationPage(): ReactNode {
       </Section>
 
       <Section title={t("config.rooms")}>
+        {rooms.isError ? <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(rooms.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("config.empty")}</p>
         ) : (
@@ -560,6 +573,9 @@ export function ConfigurationPage(): ReactNode {
       </Section>
 
       <Section title={t("config.calendarEvents")}>
+        {calendarEvents.isError ? (
+          <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(calendarEvents.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("config.empty")}</p>
         ) : (
@@ -635,6 +651,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.code"), t("config.col.nameFr"), t("config.col.order")]}
           rows={(cycles.data ?? []).map((c) => [c.code, c.nameFr, c.order])}
           empty={t("config.empty")}
+          isError={cycles.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -674,6 +692,8 @@ export function ConfigurationPage(): ReactNode {
             cycles.data?.find((c) => c.id === g.cycleId)?.nameFr ?? g.cycleId,
           ])}
           empty={t("config.empty")}
+          isError={gradeLevels.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -721,6 +741,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.name"), t("config.col.capacity")]}
           rows={(classrooms.data ?? []).map((c) => [c.name, c.capacity ?? "—"])}
           empty={t("config.empty")}
+          isError={classrooms.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -774,6 +796,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.code"), t("config.col.nameFr")]}
           rows={(subjects.data ?? []).map((s) => [s.code, s.nameFr])}
           empty={t("config.empty")}
+          isError={subjects.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -836,6 +860,8 @@ export function ConfigurationPage(): ReactNode {
                   p.endDate.slice(0, 10),
                 ])}
               empty={t("config.empty")}
+              isError={periods.isError}
+              errorMessage={t("list.error.loadFailed")}
             />
             <form
               onSubmit={(event) =>
@@ -876,6 +902,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.code"), t("config.col.nameFr")]}
           rows={(assessmentTypes.data ?? []).map((a) => [a.code, a.nameFr])}
           empty={t("config.empty")}
+          isError={assessmentTypes.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -911,6 +939,8 @@ export function ConfigurationPage(): ReactNode {
           columns={[t("config.col.code"), t("config.col.nameFr")]}
           rows={(feeCategories.data ?? []).map((c) => [c.code, c.nameFr])}
           empty={t("config.empty")}
+          isError={feeCategories.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>
@@ -954,6 +984,8 @@ export function ConfigurationPage(): ReactNode {
             fs.isMandatory ? t("config.yes") : t("config.no"),
           ])}
           empty={t("config.empty")}
+          isError={feeStructures.isError}
+          errorMessage={t("list.error.loadFailed")}
         />
         <form
           onSubmit={(event) =>

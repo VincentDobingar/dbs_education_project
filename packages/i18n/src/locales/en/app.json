@@ -1,4 +1,5 @@
 {
+  "list.error.loadFailed": "Unable to load this data right now. Please try again later.",
   "login.title": "Log in to your school",
   "login.subtitle": "Use the responsible account's credentials created at signup.",
   "login.subdomain": "School identifier",

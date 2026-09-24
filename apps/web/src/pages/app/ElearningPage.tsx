@@ -119,6 +119,7 @@ export function ElearningPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("elearning.courses")}</h2>
+        {courses.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(courses.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
@@ -210,6 +211,9 @@ export function ElearningPage(): ReactNode {
       {selectedCourseId ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("elearning.resources")}</h2>
+          {resources.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           <ul className="mt-3 space-y-1 text-sm">
             {(resources.data ?? []).map((resource) => (
               <li

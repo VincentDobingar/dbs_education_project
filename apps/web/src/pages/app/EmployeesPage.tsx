@@ -116,6 +116,7 @@ export function EmployeesPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         {employees.isPending ? <p className="text-sm text-slate-500">{t("students.loading")}</p> : null}
+        {employees.isError ? <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {employees.data && employees.data.length === 0 ? (
           <p className="text-sm text-slate-500">{t("employees.empty")}</p>
         ) : null}

@@ -181,6 +181,9 @@ export function FinancePage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("finance.expenseCategories")}</h2>
+        {expenseCategories.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(expenseCategories.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("config.empty")}</p>
         ) : (
@@ -225,6 +228,7 @@ export function FinancePage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("finance.expenses")}</h2>
+        {expenses.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(expenses.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noExpenses")}</p>
         ) : (
@@ -323,6 +327,9 @@ export function FinancePage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("finance.cashSessions")}</h2>
+        {cashSessions.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(cashSessions.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noCashSessions")}</p>
         ) : (
@@ -442,6 +449,9 @@ export function FinancePage(): ReactNode {
 
         <div className="mt-5">
           <h3 className="text-sm font-semibold text-slate-900">{t("finance.revenueReport")}</h3>
+          {revenueReport.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           {revenueReport.data ? (
             <div className="mt-2 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
               <div>
@@ -510,6 +520,9 @@ export function FinancePage(): ReactNode {
 
         <div className="mt-5">
           <h3 className="text-sm font-semibold text-slate-900">{t("finance.expenseReport")}</h3>
+          {expenseReport.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           {expenseReport.data ? (
             <p className="mt-2 text-sm">
               <span className="text-slate-500">{t("finance.totalExpenses")}: </span>

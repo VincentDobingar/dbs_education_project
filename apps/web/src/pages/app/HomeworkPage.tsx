@@ -90,6 +90,7 @@ export function HomeworkPage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {homework.isError ? <p className="mb-3 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(homework.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("homework.empty")}</p>
         ) : (
@@ -176,6 +177,9 @@ export function HomeworkPage(): ReactNode {
           <h2 className="text-lg font-semibold text-slate-900">
             {t("homework.submissionsFor", { title: selectedHomework.title })}
           </h2>
+          {submissions.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           {(submissions.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("homework.noSubmissions")}</p>
           ) : (

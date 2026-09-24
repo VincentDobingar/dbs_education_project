@@ -76,6 +76,9 @@ export function AnnouncementsPage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {announcements.isError ? (
+          <p className="mb-3 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(announcements.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("announcements.empty")}</p>
         ) : (

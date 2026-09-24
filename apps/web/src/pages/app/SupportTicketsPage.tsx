@@ -62,6 +62,7 @@ export function SupportTicketsPage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {tickets.isError ? <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(tickets.data ?? []).length === 0 ? (
           <p className="text-sm text-slate-500">{t("supportTickets.empty")}</p>
         ) : (
@@ -131,6 +132,7 @@ export function SupportTicketsPage(): ReactNode {
         </form>
       </section>
 
+      {selectedTicket.isError ? <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
       {selectedTicket.data ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{selectedTicket.data.subject}</h2>

@@ -83,6 +83,9 @@ export function ReportCardsPage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {classrooms.isError ? (
+          <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600">{t("attendance.classroom")}</label>
@@ -131,6 +134,9 @@ export function ReportCardsPage(): ReactNode {
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("reportCards.results")}</h2>
 
+          {reportCards.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           {(reportCards.data ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">{t("reportCards.none")}</p>
           ) : (

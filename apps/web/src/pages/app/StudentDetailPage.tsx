@@ -116,6 +116,7 @@ function InvoiceDetail({
   return (
     <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
       <h3 className="text-sm font-semibold text-slate-900">{t("studentDetail.payments")}</h3>
+      {payments.isError ? <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
       {(payments.data ?? []).length === 0 ? (
         <p className="text-sm text-slate-500">{t("studentDetail.noPayments")}</p>
       ) : (
@@ -406,6 +407,9 @@ export function StudentDetailPage(): ReactNode {
   if (student.isPending) {
     return <p className="mx-auto max-w-3xl px-6 py-10 text-sm text-slate-500">{t("students.loading")}</p>;
   }
+  if (student.isError) {
+    return <p className="mx-auto max-w-3xl px-6 py-10 text-sm text-red-600">{t("list.error.loadFailed")}</p>;
+  }
   if (!student.data) {
     return <p className="mx-auto max-w-3xl px-6 py-10 text-sm text-red-600">{t("studentDetail.notFound")}</p>;
   }
@@ -468,6 +472,9 @@ export function StudentDetailPage(): ReactNode {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.enrollments")}</h2>
 
+        {enrollments.isError || classrooms.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {enrollments.data && enrollments.data.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm text-slate-700">
             {enrollments.data.map((enrollment) => {
@@ -515,6 +522,9 @@ export function StudentDetailPage(): ReactNode {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.billing")}</h2>
 
+        {situation.isError || invoices.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {situation.data ? (
           <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div>
@@ -679,6 +689,9 @@ export function StudentDetailPage(): ReactNode {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.family")}</h2>
 
+        {relationships.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(relationships.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("studentDetail.noRelationships")}</p>
         ) : (
@@ -733,6 +746,9 @@ export function StudentDetailPage(): ReactNode {
         ) : null}
 
         <h3 className="mt-4 text-sm font-semibold text-slate-900">{t("studentDetail.invitations")}</h3>
+        {invitations.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         {(invitations.data ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">{t("studentDetail.noInvitations")}</p>
         ) : (

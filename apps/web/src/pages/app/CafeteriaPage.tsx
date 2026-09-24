@@ -121,6 +121,7 @@ export function CafeteriaPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("cafeteria.menus")}</h2>
+        {menus.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <ul className="mt-3 space-y-1 text-sm">
           {(menus.data ?? []).map((menu) => (
             <li key={menu.id} className="flex items-center justify-between border-b border-slate-100 pb-1">
@@ -164,6 +165,7 @@ export function CafeteriaPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("cafeteria.mealPlans")}</h2>
+        {mealPlans.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <div className="overflow-x-auto">
           <table className="mt-3 w-full text-left text-sm">
             <thead>
@@ -236,6 +238,9 @@ export function CafeteriaPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("cafeteria.enrollments")}</h2>
+        {enrollments.isError ? (
+          <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="mt-3 w-full text-left text-sm">
             <thead>

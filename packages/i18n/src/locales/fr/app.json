@@ -1,4 +1,5 @@
 {
+  "list.error.loadFailed": "Impossible de charger ces données pour le moment. Réessayez plus tard.",
   "login.title": "Connexion à votre établissement",
   "login.subtitle": "Utilisez les identifiants du responsable créés à l'inscription.",
   "login.subdomain": "Identifiant de l'établissement",

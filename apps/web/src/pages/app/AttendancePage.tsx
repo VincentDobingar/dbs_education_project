@@ -74,6 +74,10 @@ function RollCallForm({
     return <p className="text-sm text-slate-500">{t("students.loading")}</p>;
   }
 
+  if (roster.isError || existing.isError) {
+    return <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p>;
+  }
+
   if ((roster.data ?? []).length === 0) {
     return <p className="text-sm text-slate-500">{t("attendance.emptyRoster")}</p>;
   }
@@ -150,6 +154,9 @@ export function AttendancePage(): ReactNode {
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {classrooms.isError ? (
+          <p className="mb-3 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+        ) : null}
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600">{t("attendance.classroom")}</label>

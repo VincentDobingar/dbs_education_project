@@ -144,6 +144,7 @@ export function TransportPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("transport.vehicles")}</h2>
+        {vehicles.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(vehicles.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
@@ -221,6 +222,7 @@ export function TransportPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("transport.routes")}</h2>
+        {routes.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {(routes.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("admin.common.empty")}</p>
         ) : (
@@ -292,6 +294,7 @@ export function TransportPage(): ReactNode {
       {selectedRouteId ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("transport.stops")}</h2>
+          {stops.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
           <ul className="mt-3 space-y-1 text-sm">
             {(stops.data ?? []).map((stop) => (
               <li key={stop.id} className="flex items-center justify-between border-b border-slate-100 pb-1">
@@ -333,6 +336,9 @@ export function TransportPage(): ReactNode {
           </form>
 
           <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("transport.assignedStudents")}</h2>
+          {routeStudents.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           <ul className="mt-3 space-y-1 text-sm">
             {(routeStudents.data ?? []).map((assignment) => (
               <li
@@ -369,6 +375,9 @@ export function TransportPage(): ReactNode {
           </form>
 
           <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("transport.attendanceToday")}</h2>
+          {attendance.isError ? (
+            <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
+          ) : null}
           <ul className="mt-3 space-y-1 text-sm">
             {(routeStudents.data ?? []).map((assignment) => {
               const today_ = (attendance.data ?? []).find((a) => a.studentId === assignment.studentId);

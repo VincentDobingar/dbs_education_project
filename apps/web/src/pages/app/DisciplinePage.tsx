@@ -96,6 +96,7 @@ export function DisciplinePage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("discipline.report")}</h2>
+        {students.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         <form
           onSubmit={(event) => void handleSubmit((values) => createMutation.mutate(values))(event)}
           className="mt-4 space-y-3"
@@ -159,6 +160,7 @@ export function DisciplinePage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         {incidents.isPending ? <p className="text-sm text-slate-500">{t("students.loading")}</p> : null}
+        {incidents.isError ? <p className="text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
         {incidents.data && incidents.data.length === 0 ? (
           <p className="text-sm text-slate-500">{t("discipline.empty")}</p>
         ) : null}
