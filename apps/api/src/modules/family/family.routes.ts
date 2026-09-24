@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
+import { familyInvitationRateLimiter } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
@@ -23,6 +24,7 @@ familyRouter.post(
   enforceTenantScope,
   requireTenantMembership,
   writeStudents,
+  familyInvitationRateLimiter,
   activationController.createInvitation,
 );
 familyRouter.get(

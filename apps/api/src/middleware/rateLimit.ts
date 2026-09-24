@@ -91,3 +91,18 @@ export const logoUploadRateLimiter = buildRateLimiter({
   limit: 10,
   keyGenerator: (req) => req.user?.id ?? "anonymous",
 });
+
+/**
+ * Passe d'audit sécurité n°27 : POST /family/invitations envoie un SMS/email réel
+ * (coût fournisseur) vers un `invitedPhone`/`invitedEmail` fourni librement par le
+ * client, jamais vérifié comme appartenant à un parent existant — sans cette limite,
+ * seul l'apiRateLimiter générique (600 req/15 min par IP) bornait un membre du
+ * personnel qui voudrait s'en servir comme relais de spam gratuit (facturé à
+ * l'établissement) vers des tiers non consentants. Keyé par utilisateur comme
+ * `logoUploadRateLimiter` : la route exige déjà `requireAuth`.
+ */
+export const familyInvitationRateLimiter = buildRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  keyGenerator: (req) => req.user?.id ?? "anonymous",
+});
