@@ -106,3 +106,20 @@ export const familyInvitationRateLimiter = buildRateLimiter({
   limit: 30,
   keyGenerator: (req) => req.user?.id ?? "anonymous",
 });
+
+/**
+ * Passe d'audit sécurité n°27 : resendEmailVerification/resendPhoneVerification sont
+ * appelées avant authentification (seul un `email` dans le corps), donc keyées par
+ * IP via l'authRateLimiter global ne suffit pas — un attaquant qui s'inscrit avec le
+ * numéro/email d'un tiers peut ensuite marteler cette route en petites salves depuis
+ * des IP différentes tant que le compte reste non vérifié. Keyée par l'email ciblé
+ * (normalisé), donc indépendante de l'IP appelante et de la rotation d'IP.
+ */
+export const resendVerificationRateLimiter = buildRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  keyGenerator: (req) => {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    return typeof email === "string" ? email.trim().toLowerCase() : "unknown";
+  },
+});

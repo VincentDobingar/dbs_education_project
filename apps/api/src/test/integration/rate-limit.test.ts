@@ -57,4 +57,32 @@ describe("limitation de débit (§34)", () => {
     const userBFirst = await request(app).get("/protected").set("x-test-user-id", "user-b");
     expect(userBFirst.status).toBe(200);
   });
+
+  /**
+   * `resendVerificationRateLimiter` (rateLimit.ts, passe d'audit n°27) keys by the
+   * targeted email from the request body, not by caller IP — proven here the same
+   * way as the keyGenerator test above: the targeted email stays limited even
+   * across what would be different callers, since the body, not the connection,
+   * carries the identity that matters.
+   */
+  it("resend-verification limiter keys by the targeted email in the body, not by caller identity", async () => {
+    const limiter = buildRateLimiter({
+      windowMs: 60_000,
+      limit: 1,
+      skip: () => false,
+      keyGenerator: (req) => {
+        const email = (req.body as { email?: unknown } | undefined)?.email;
+        return typeof email === "string" ? email.trim().toLowerCase() : "unknown";
+      },
+    });
+    const app = buildTestApp(limiter);
+
+    const first = await request(app).get("/protected").send({ email: "Target@Example.test" });
+    expect(first.status).toBe(200);
+    const second = await request(app).get("/protected").send({ email: "target@example.test" });
+    expect(second.status).toBe(429);
+
+    const differentTarget = await request(app).get("/protected").send({ email: "other@example.test" });
+    expect(differentTarget.status).toBe(200);
+  });
 });

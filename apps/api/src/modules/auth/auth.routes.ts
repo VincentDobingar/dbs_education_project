@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { resendVerificationRateLimiter } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 
 import * as authController from "./auth.controller.js";
@@ -13,8 +14,19 @@ authRouter.post("/refresh", authController.refresh);
 authRouter.post("/logout", authController.logout);
 authRouter.post("/verify-email", authController.verifyEmail);
 authRouter.post("/verify-phone", authController.verifyPhone);
-authRouter.post("/resend-email-verification", authController.resendEmailVerification);
-authRouter.post("/resend-phone-verification", authController.resendPhoneVerification);
+// resendVerificationRateLimiter, en plus de l'authRateLimiter global (par IP,
+// app.ts) : keyée par l'email ciblé, pas par l'appelant — voir rateLimit.ts (§34,
+// passe d'audit n°27).
+authRouter.post(
+  "/resend-email-verification",
+  resendVerificationRateLimiter,
+  authController.resendEmailVerification,
+);
+authRouter.post(
+  "/resend-phone-verification",
+  resendVerificationRateLimiter,
+  authController.resendPhoneVerification,
+);
 
 // §15/§34 : appareils connectés / révocation de session — jamais par refresh token
 // (l'appelant peut vouloir couper l'accès d'un appareil qu'il n'a plus en main).
