@@ -7,27 +7,121 @@ import { NavLink, Navigate, Outlet } from "react-router-dom";
 import { getTenantLogo } from "../lib/schoolConfigApi.js";
 import { clearSession, loadSession } from "../lib/session.js";
 
-const NAV_LINKS = [
+/**
+ * `roles` reflète les rôles qui détiennent la permission de *lecture* gardant la
+ * route GET consultée par cette page (voir `requirePermission(...)` dans le module
+ * apps/api correspondant et `ROLE_PERMISSIONS` dans prisma/seed/data/roles-permissions.ts) —
+ * un lien omettant `roles` correspond à une route sans permission dédiée (accessible
+ * à tout membre authentifié du tenant : tableau de bord, emplois du temps, support).
+ * Avant ce filtre, tout le personnel voyait tous les liens, y compris vers des
+ * modules où la moindre action renvoyait 403 (audit design/sécurité 2026-09-22).
+ */
+interface NavLinkDef {
+  to: string;
+  key: string;
+  roles?: readonly string[];
+}
+
+const NAV_LINKS: readonly NavLinkDef[] = [
   { to: "/tableau-de-bord", key: "layout.nav.dashboard" },
-  { to: "/eleves", key: "layout.nav.students" },
-  { to: "/utilisateurs", key: "layout.nav.users" },
-  { to: "/personnel", key: "layout.nav.employees" },
+  {
+    to: "/eleves",
+    key: "layout.nav.students",
+    roles: [
+      "SCHOOL_OWNER",
+      "SCHOOL_ADMIN",
+      "DIRECTOR",
+      "ACADEMIC_DIRECTOR",
+      "SECRETARY",
+      "TEACHER",
+      "TENANT_AUDITOR",
+    ],
+  },
+  { to: "/utilisateurs", key: "layout.nav.users", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN"] },
+  { to: "/personnel", key: "layout.nav.employees", roles: ["SCHOOL_OWNER", "HR_MANAGER"] },
   { to: "/emplois-du-temps", key: "layout.nav.timetable" },
-  { to: "/presences", key: "layout.nav.attendance" },
-  { to: "/discipline", key: "layout.nav.discipline" },
-  { to: "/notes", key: "layout.nav.grading" },
-  { to: "/bulletins", key: "layout.nav.reportCards" },
-  { to: "/finances", key: "layout.nav.finance" },
-  { to: "/devoirs", key: "layout.nav.homework" },
-  { to: "/annonces", key: "layout.nav.announcements" },
+  {
+    to: "/presences",
+    key: "layout.nav.attendance",
+    roles: [
+      "SCHOOL_OWNER",
+      "SCHOOL_ADMIN",
+      "DIRECTOR",
+      "ACADEMIC_DIRECTOR",
+      "TEACHER",
+      "SUPERVISOR",
+      "TENANT_AUDITOR",
+    ],
+  },
+  {
+    to: "/discipline",
+    key: "layout.nav.discipline",
+    roles: [
+      "SCHOOL_OWNER",
+      "SCHOOL_ADMIN",
+      "DIRECTOR",
+      "ACADEMIC_DIRECTOR",
+      "TEACHER",
+      "SUPERVISOR",
+      "TENANT_AUDITOR",
+    ],
+  },
+  {
+    to: "/notes",
+    key: "layout.nav.grading",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/bulletins",
+    key: "layout.nav.reportCards",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/finances",
+    key: "layout.nav.finance",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACCOUNTANT", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/devoirs",
+    key: "layout.nav.homework",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
+  },
+  { to: "/annonces", key: "layout.nav.announcements", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR"] },
   { to: "/support", key: "layout.nav.support" },
-  { to: "/bibliotheque", key: "layout.nav.library" },
-  { to: "/transport", key: "layout.nav.transport" },
-  { to: "/cantine", key: "layout.nav.cafeteria" },
-  { to: "/internat", key: "layout.nav.boarding" },
-  { to: "/e-learning", key: "layout.nav.elearning" },
-  { to: "/configuration", key: "layout.nav.configuration" },
-] as const;
+  {
+    to: "/bibliotheque",
+    key: "layout.nav.library",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "LIBRARIAN", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/transport",
+    key: "layout.nav.transport",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "TRANSPORT_MANAGER", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/cantine",
+    key: "layout.nav.cafeteria",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "CAFETERIA_MANAGER", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/internat",
+    key: "layout.nav.boarding",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "BOARDING_MANAGER", "TENANT_AUDITOR"],
+  },
+  {
+    to: "/e-learning",
+    key: "layout.nav.elearning",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
+  },
+  { to: "/configuration", key: "layout.nav.configuration", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN"] },
+];
+
+function isNavLinkVisible(roles: readonly string[] | undefined, userRoleCodes: readonly string[]): boolean {
+  if (!roles) {
+    return true;
+  }
+  return userRoleCodes.some((code) => roles.includes(code));
+}
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return `text-sm font-medium transition-colors ${isActive ? "text-brand-teal" : "text-white/70 hover:text-white"}`;
@@ -90,7 +184,7 @@ export function AppLayout(): ReactNode {
 
         <nav className="border-t border-white/10">
           <div className="mx-auto flex max-w-7xl items-center gap-x-7 overflow-x-auto whitespace-nowrap px-6 py-2.5">
-            {NAV_LINKS.map((link) => (
+            {NAV_LINKS.filter((link) => isNavLinkVisible(link.roles, session.roleCodes)).map((link) => (
               <NavLink key={link.to} to={link.to} className={navLinkClassName}>
                 {t(link.key)}
               </NavLink>
