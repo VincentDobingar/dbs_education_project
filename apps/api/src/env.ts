@@ -34,6 +34,12 @@ const apiEnvSchema = baseEnvSchema.extend({
   // dans un PDF (HTTPS uniquement, IP privées refusées, voir cette lib).
   PUBLIC_API_URL: z.string().url().default("http://localhost:4000"),
   UPLOAD_DIR: z.string().min(1).default("storage"),
+
+  // Nombre de reverse proxies de confiance devant l'API (1 = Traefik/Coolify).
+  // Sans cela `req.ip` vaut l'IP du proxy : le rate limiting (§34) placerait tous
+  // les utilisateurs dans le même compteur et `ipAddress` des journaux d'audit
+  // serait faux. 0 (défaut) = aucun proxy, comportement inchangé en dev/test.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

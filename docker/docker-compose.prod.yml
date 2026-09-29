@@ -1,0 +1,135 @@
+# Production (Coolify ou `docker compose` sur un VPS). Contexte de build = racine du dépôt.
+# Variables à renseigner : voir docker/.env.production.example (dans Coolify : onglet
+# « Environment Variables » de la ressource ; jamais de .env commité).
+#
+# Domaines (Coolify, onglet de chaque service) :
+#   web -> https://app.exemple.com   (port 80)
+#   api -> https://api.exemple.com   (port 4000)
+# postgres, redis, worker et migrate ne sont jamais exposés.
+
+name: edumanage-africa-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edumanage
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      POSTGRES_DB: edumanage
+      # Lu par init-db/01-create-app-role.sh (première initialisation du volume seulement).
+      APP_ROLE_PASSWORD: ${APP_ROLE_PASSWORD:?APP_ROLE_PASSWORD requis}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edumanage -d edumanage"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD requis}"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  # Applique les migrations Prisma avec le compte propriétaire (DDL), puis s'arrête.
+  # L'API et le worker ne démarrent qu'après son succès. Ne jamais donner cette
+  # URL à l'API : le rôle propriétaire contourne le Row-Level Security.
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: api
+    restart: "no"
+    user: node
+    working_dir: /repo
+    environment:
+      DATABASE_URL: postgresql://edumanage:${POSTGRES_PASSWORD}@postgres:5432/edumanage
+    command: ["node_modules/.bin/prisma", "migrate", "deploy", "--schema=prisma/schema"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      # Rôle sans BYPASSRLS (créé par init-db) — jamais le compte propriétaire.
+      DATABASE_URL: postgresql://edumanage_app:${APP_ROLE_PASSWORD}@postgres:5432/edumanage
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CORS_ORIGIN: ${WEB_URL:?WEB_URL requis (ex. https://app.exemple.com)}
+      PUBLIC_API_URL: ${API_URL:?API_URL requis (ex. https://api.exemple.com)}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET requis}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET requis}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?MFA_ENCRYPTION_KEY requis}
+      UPLOAD_DIR: /data/uploads
+      # Un reverse proxy (Traefik de Coolify) devant l'API : sans cela, req.ip = IP du
+      # proxy et le rate limiting comme les journaux d'audit sont faux.
+      TRUST_PROXY_HOPS: "1"
+      # Canaux optionnels (§28) : à décommenter ET renseigner en entier. Ne jamais
+      # les passer vides — SMTP_PORT="" ou SMTP_FROM_ADDRESS="" font échouer le boot.
+      # SMTP_SECURE : toute valeur non vide vaut `true` ; l'omettre pour STARTTLS (587).
+      # SMTP_HOST: ${SMTP_HOST}
+      # SMTP_PORT: ${SMTP_PORT}
+      # SMTP_USER: ${SMTP_USER}
+      # SMTP_PASSWORD: ${SMTP_PASSWORD}
+      # SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS}
+      # TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      # TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      # TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER}
+    volumes:
+      - uploads:/data/uploads
+    expose:
+      - "4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://edumanage_app:${APP_ROLE_PASSWORD}@postgres:5432/edumanage
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: web
+      args:
+        VITE_API_URL: ${API_URL:?API_URL requis}/api/v1
+    restart: unless-stopped
+    expose:
+      - "80"
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:

@@ -38,6 +38,8 @@ import { healthRouter } from "./routes/health.js";
 export function createApp(): express.Express {
   const app = express();
 
+  if (env.TRUST_PROXY_HOPS > 0) app.set("trust proxy", env.TRUST_PROXY_HOPS);
+
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(pinoHttp({ logger }));

@@ -1,0 +1,21 @@
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/coverage
+
+.git
+.husky
+.vscode
+.idea
+
+# Secrets et données locales — jamais dans une image
+**/.env
+**/.env.*
+!**/.env.example
+apps/api/storage
+
+# Non nécessaire à la construction
+docs
+*.docx
+*.log

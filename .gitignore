@@ -36,3 +36,6 @@ docker/volumes/
 
 # Uploads (local dev storage)
 apps/api/storage/
+
+# Variables de production (Docker/Coolify) — seul le .example est versionné
+docker/.env.production
