@@ -1,44 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AdminLayout } from "./layouts/AdminLayout.js";
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
 import { PortalLayout } from "./layouts/PortalLayout.js";
-import { AdminAuditLogsPage } from "./pages/admin/AdminAuditLogsPage.js";
-import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage.js";
-import { AdminLoginPage } from "./pages/admin/AdminLoginPage.js";
-import { AdminMessageTemplatesPage } from "./pages/admin/AdminMessageTemplatesPage.js";
-import { AdminPlatformSettingsPage } from "./pages/admin/AdminPlatformSettingsPage.js";
-import { AdminPromotionCodesPage } from "./pages/admin/AdminPromotionCodesPage.js";
-import { AdminReferenceDataPage } from "./pages/admin/AdminReferenceDataPage.js";
-import { AdminSponsorsPage } from "./pages/admin/AdminSponsorsPage.js";
-import { AdminSubscriptionsPage } from "./pages/admin/AdminSubscriptionsPage.js";
-import { AdminSupportTicketsPage } from "./pages/admin/AdminSupportTicketsPage.js";
-import { AdminTenantsPage } from "./pages/admin/AdminTenantsPage.js";
-import { AnnouncementsPage } from "./pages/app/AnnouncementsPage.js";
-import { AttendancePage } from "./pages/app/AttendancePage.js";
-import { BoardingPage } from "./pages/app/BoardingPage.js";
-import { CafeteriaPage } from "./pages/app/CafeteriaPage.js";
-import { ConfigurationPage } from "./pages/app/ConfigurationPage.js";
-import { DashboardPage } from "./pages/app/DashboardPage.js";
-import { DisciplinePage } from "./pages/app/DisciplinePage.js";
-import { ElearningPage } from "./pages/app/ElearningPage.js";
-import { EmployeeDetailPage } from "./pages/app/EmployeeDetailPage.js";
-import { EmployeesPage } from "./pages/app/EmployeesPage.js";
-import { FinancePage } from "./pages/app/FinancePage.js";
-import { GradingPage } from "./pages/app/GradingPage.js";
-import { HomeworkPage } from "./pages/app/HomeworkPage.js";
-import { LibraryPage } from "./pages/app/LibraryPage.js";
+import { lazyImport } from "./lib/lazyImport.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
-import { ReportCardsPage } from "./pages/app/ReportCardsPage.js";
-import { StudentDetailPage } from "./pages/app/StudentDetailPage.js";
-import { StudentsPage } from "./pages/app/StudentsPage.js";
-import { SupportTicketsPage } from "./pages/app/SupportTicketsPage.js";
-import { TimetablePage } from "./pages/app/TimetablePage.js";
-import { TransportPage } from "./pages/app/TransportPage.js";
-import { UsersPage } from "./pages/app/UsersPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
 import { HomePage } from "./pages/marketing/HomePage.js";
 import { PricingPage } from "./pages/marketing/PricingPage.js";
@@ -46,76 +16,155 @@ import { PrivacyPage } from "./pages/marketing/PrivacyPage.js";
 import { RefundPolicyPage } from "./pages/marketing/RefundPolicyPage.js";
 import { SignupPage } from "./pages/marketing/SignupPage.js";
 import { TermsPage } from "./pages/marketing/TermsPage.js";
-import { ParentChildPage } from "./pages/portal/ParentChildPage.js";
-import { ParentDashboardPage } from "./pages/portal/ParentDashboardPage.js";
-import { PortalLoginPage } from "./pages/portal/PortalLoginPage.js";
-import { PortalRedeemPage } from "./pages/portal/PortalRedeemPage.js";
-import { StudentPortalPage } from "./pages/portal/StudentPortalPage.js";
+
+// Chargées à la demande (React.lazy) : un visiteur du site marketing (ci-dessus,
+// bundle initial) ne doit pas télécharger tout l'espace établissement/portail/admin
+// qu'il ne verra jamais — c'était jusqu'ici un seul bundle pour l'ensemble du site.
+const AdminAuditLogsPage = lazyImport(
+  () => import("./pages/admin/AdminAuditLogsPage.js"),
+  "AdminAuditLogsPage",
+);
+const AdminDashboardPage = lazyImport(
+  () => import("./pages/admin/AdminDashboardPage.js"),
+  "AdminDashboardPage",
+);
+const AdminLoginPage = lazyImport(() => import("./pages/admin/AdminLoginPage.js"), "AdminLoginPage");
+const AdminMessageTemplatesPage = lazyImport(
+  () => import("./pages/admin/AdminMessageTemplatesPage.js"),
+  "AdminMessageTemplatesPage",
+);
+const AdminPlatformSettingsPage = lazyImport(
+  () => import("./pages/admin/AdminPlatformSettingsPage.js"),
+  "AdminPlatformSettingsPage",
+);
+const AdminPromotionCodesPage = lazyImport(
+  () => import("./pages/admin/AdminPromotionCodesPage.js"),
+  "AdminPromotionCodesPage",
+);
+const AdminReferenceDataPage = lazyImport(
+  () => import("./pages/admin/AdminReferenceDataPage.js"),
+  "AdminReferenceDataPage",
+);
+const AdminSponsorsPage = lazyImport(() => import("./pages/admin/AdminSponsorsPage.js"), "AdminSponsorsPage");
+const AdminSubscriptionsPage = lazyImport(
+  () => import("./pages/admin/AdminSubscriptionsPage.js"),
+  "AdminSubscriptionsPage",
+);
+const AdminSupportTicketsPage = lazyImport(
+  () => import("./pages/admin/AdminSupportTicketsPage.js"),
+  "AdminSupportTicketsPage",
+);
+const AdminTenantsPage = lazyImport(() => import("./pages/admin/AdminTenantsPage.js"), "AdminTenantsPage");
+const AnnouncementsPage = lazyImport(() => import("./pages/app/AnnouncementsPage.js"), "AnnouncementsPage");
+const AttendancePage = lazyImport(() => import("./pages/app/AttendancePage.js"), "AttendancePage");
+const BoardingPage = lazyImport(() => import("./pages/app/BoardingPage.js"), "BoardingPage");
+const CafeteriaPage = lazyImport(() => import("./pages/app/CafeteriaPage.js"), "CafeteriaPage");
+const ConfigurationPage = lazyImport(() => import("./pages/app/ConfigurationPage.js"), "ConfigurationPage");
+const DashboardPage = lazyImport(() => import("./pages/app/DashboardPage.js"), "DashboardPage");
+const DisciplinePage = lazyImport(() => import("./pages/app/DisciplinePage.js"), "DisciplinePage");
+const ElearningPage = lazyImport(() => import("./pages/app/ElearningPage.js"), "ElearningPage");
+const EmployeeDetailPage = lazyImport(
+  () => import("./pages/app/EmployeeDetailPage.js"),
+  "EmployeeDetailPage",
+);
+const EmployeesPage = lazyImport(() => import("./pages/app/EmployeesPage.js"), "EmployeesPage");
+const FinancePage = lazyImport(() => import("./pages/app/FinancePage.js"), "FinancePage");
+const GradingPage = lazyImport(() => import("./pages/app/GradingPage.js"), "GradingPage");
+const HomeworkPage = lazyImport(() => import("./pages/app/HomeworkPage.js"), "HomeworkPage");
+const LibraryPage = lazyImport(() => import("./pages/app/LibraryPage.js"), "LibraryPage");
+const ReportCardsPage = lazyImport(() => import("./pages/app/ReportCardsPage.js"), "ReportCardsPage");
+const StudentDetailPage = lazyImport(() => import("./pages/app/StudentDetailPage.js"), "StudentDetailPage");
+const StudentsPage = lazyImport(() => import("./pages/app/StudentsPage.js"), "StudentsPage");
+const SupportTicketsPage = lazyImport(
+  () => import("./pages/app/SupportTicketsPage.js"),
+  "SupportTicketsPage",
+);
+const TimetablePage = lazyImport(() => import("./pages/app/TimetablePage.js"), "TimetablePage");
+const TransportPage = lazyImport(() => import("./pages/app/TransportPage.js"), "TransportPage");
+const UsersPage = lazyImport(() => import("./pages/app/UsersPage.js"), "UsersPage");
+const ParentChildPage = lazyImport(() => import("./pages/portal/ParentChildPage.js"), "ParentChildPage");
+const ParentDashboardPage = lazyImport(
+  () => import("./pages/portal/ParentDashboardPage.js"),
+  "ParentDashboardPage",
+);
+const PortalLoginPage = lazyImport(() => import("./pages/portal/PortalLoginPage.js"), "PortalLoginPage");
+const PortalRedeemPage = lazyImport(() => import("./pages/portal/PortalRedeemPage.js"), "PortalRedeemPage");
+const StudentPortalPage = lazyImport(
+  () => import("./pages/portal/StudentPortalPage.js"),
+  "StudentPortalPage",
+);
 
 const queryClient = new QueryClient();
+
+function RouteFallback(): ReactNode {
+  const { t } = useTranslation();
+  return <p className="px-6 py-10 text-sm text-slate-500">{t("state.loading")}</p>;
+}
 
 export function App(): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route element={<MarketingLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/tarifs" element={<PricingPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/inscription" element={<SignupPage />} />
-            <Route path="/connexion" element={<LoginPage />} />
-            <Route path="/conditions-generales" element={<TermsPage />} />
-            <Route path="/confidentialite" element={<PrivacyPage />} />
-            <Route path="/remboursement" element={<RefundPolicyPage />} />
-          </Route>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route element={<MarketingLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/tarifs" element={<PricingPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/inscription" element={<SignupPage />} />
+              <Route path="/connexion" element={<LoginPage />} />
+              <Route path="/conditions-generales" element={<TermsPage />} />
+              <Route path="/confidentialite" element={<PrivacyPage />} />
+              <Route path="/remboursement" element={<RefundPolicyPage />} />
+            </Route>
 
-          <Route element={<AppLayout />}>
-            <Route path="/tableau-de-bord" element={<DashboardPage />} />
-            <Route path="/configuration" element={<ConfigurationPage />} />
-            <Route path="/eleves" element={<StudentsPage />} />
-            <Route path="/eleves/:id" element={<StudentDetailPage />} />
-            <Route path="/utilisateurs" element={<UsersPage />} />
-            <Route path="/personnel" element={<EmployeesPage />} />
-            <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
-            <Route path="/discipline" element={<DisciplinePage />} />
-            <Route path="/presences" element={<AttendancePage />} />
-            <Route path="/emplois-du-temps" element={<TimetablePage />} />
-            <Route path="/notes" element={<GradingPage />} />
-            <Route path="/bulletins" element={<ReportCardsPage />} />
-            <Route path="/finances" element={<FinancePage />} />
-            <Route path="/devoirs" element={<HomeworkPage />} />
-            <Route path="/annonces" element={<AnnouncementsPage />} />
-            <Route path="/support" element={<SupportTicketsPage />} />
-            <Route path="/bibliotheque" element={<LibraryPage />} />
-            <Route path="/transport" element={<TransportPage />} />
-            <Route path="/cantine" element={<CafeteriaPage />} />
-            <Route path="/internat" element={<BoardingPage />} />
-            <Route path="/e-learning" element={<ElearningPage />} />
-          </Route>
+            <Route element={<AppLayout />}>
+              <Route path="/tableau-de-bord" element={<DashboardPage />} />
+              <Route path="/configuration" element={<ConfigurationPage />} />
+              <Route path="/eleves" element={<StudentsPage />} />
+              <Route path="/eleves/:id" element={<StudentDetailPage />} />
+              <Route path="/utilisateurs" element={<UsersPage />} />
+              <Route path="/personnel" element={<EmployeesPage />} />
+              <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
+              <Route path="/discipline" element={<DisciplinePage />} />
+              <Route path="/presences" element={<AttendancePage />} />
+              <Route path="/emplois-du-temps" element={<TimetablePage />} />
+              <Route path="/notes" element={<GradingPage />} />
+              <Route path="/bulletins" element={<ReportCardsPage />} />
+              <Route path="/finances" element={<FinancePage />} />
+              <Route path="/devoirs" element={<HomeworkPage />} />
+              <Route path="/annonces" element={<AnnouncementsPage />} />
+              <Route path="/support" element={<SupportTicketsPage />} />
+              <Route path="/bibliotheque" element={<LibraryPage />} />
+              <Route path="/transport" element={<TransportPage />} />
+              <Route path="/cantine" element={<CafeteriaPage />} />
+              <Route path="/internat" element={<BoardingPage />} />
+              <Route path="/e-learning" element={<ElearningPage />} />
+            </Route>
 
-          <Route element={<PortalLayout />}>
-            <Route path="/portail/parent" element={<ParentDashboardPage />} />
-            <Route path="/portail/parent/enfants/:studentId" element={<ParentChildPage />} />
-            <Route path="/portail/eleve" element={<StudentPortalPage />} />
-            <Route path="/portail/activation" element={<PortalRedeemPage />} />
-          </Route>
-          <Route path="/portail/connexion" element={<PortalLoginPage />} />
+            <Route element={<PortalLayout />}>
+              <Route path="/portail/parent" element={<ParentDashboardPage />} />
+              <Route path="/portail/parent/enfants/:studentId" element={<ParentChildPage />} />
+              <Route path="/portail/eleve" element={<StudentPortalPage />} />
+              <Route path="/portail/activation" element={<PortalRedeemPage />} />
+            </Route>
+            <Route path="/portail/connexion" element={<PortalLoginPage />} />
 
-          <Route path="/admin/connexion" element={<AdminLoginPage />} />
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
-            <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
-            <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
-            <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />
-            <Route path="/admin/codes-promo" element={<AdminPromotionCodesPage />} />
-            <Route path="/admin/support" element={<AdminSupportTicketsPage />} />
-            <Route path="/admin/modeles-messages" element={<AdminMessageTemplatesPage />} />
-            <Route path="/admin/sponsors" element={<AdminSponsorsPage />} />
-            <Route path="/admin/parametres" element={<AdminPlatformSettingsPage />} />
-          </Route>
-        </Routes>
+            <Route path="/admin/connexion" element={<AdminLoginPage />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
+              <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
+              <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
+              <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />
+              <Route path="/admin/codes-promo" element={<AdminPromotionCodesPage />} />
+              <Route path="/admin/support" element={<AdminSupportTicketsPage />} />
+              <Route path="/admin/modeles-messages" element={<AdminMessageTemplatesPage />} />
+              <Route path="/admin/sponsors" element={<AdminSponsorsPage />} />
+              <Route path="/admin/parametres" element={<AdminPlatformSettingsPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
   );
