@@ -18,7 +18,7 @@ import {
   getRevenueReport,
   listCashSessions,
   listExpenseCategories,
-  listExpenses,
+  listExpensesPage,
   openCashSession,
   removeExpense,
 } from "../../lib/financeApi.js";
@@ -38,6 +38,8 @@ function firstOfMonthIso(): string {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
 }
 
+const EXPENSES_PAGE_SIZE = 50;
+
 export function FinancePage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
@@ -54,10 +56,16 @@ export function FinancePage(): ReactNode {
     queryKey: ["expense-categories", session.subdomain],
     queryFn: () => listExpenseCategories(creds),
   });
+  // Pagination réelle côté serveur — les dépenses s'accumulent sans fin, comme les
+  // élèves sur StudentsPage.
+  const [expensesPage, setExpensesPage] = useState(1);
   const expenses = useQuery({
-    queryKey: ["expenses", session.subdomain],
-    queryFn: () => listExpenses(creds),
+    queryKey: ["expenses", session.subdomain, expensesPage],
+    queryFn: () => listExpensesPage(creds, expensesPage, EXPENSES_PAGE_SIZE),
   });
+  const expensesTotalPages = expenses.data
+    ? Math.max(1, Math.ceil(expenses.data.total / EXPENSES_PAGE_SIZE))
+    : 1;
 
   const [expenseCategoryCode, setExpenseCategoryCode] = useState("");
   const [expenseCategoryNameFr, setExpenseCategoryNameFr] = useState("");
@@ -229,46 +237,74 @@ export function FinancePage(): ReactNode {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("finance.expenses")}</h2>
         {expenses.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
-        {(expenses.data ?? []).length === 0 ? (
+        {(expenses.data?.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noExpenses")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="mt-3 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("finance.date")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("finance.category")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("finance.description")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("finance.supplier")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
-                  <th className="pb-2 pr-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {(expenses.data ?? []).map((expense) => (
-                  <tr key={expense.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{expense.expenseDate.slice(0, 10)}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ??
-                        expense.categoryId}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-700">{expense.description}</td>
-                    <td className="py-2 pr-4 text-slate-700">{expense.supplierName ?? "—"}</td>
-                    <td className="py-2 pr-4 text-slate-700">{formatAmount(expense.amountCents)}</td>
-                    <td className="py-2 pr-4">
-                      <button
-                        type="button"
-                        className="text-xs text-slate-400 hover:text-red-600"
-                        onClick={() => removeExpenseMutation.mutate(expense.id)}
-                      >
-                        {t("discipline.remove")}
-                      </button>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="mt-3 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="pb-2 pr-4 font-medium">{t("finance.date")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("finance.category")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("finance.description")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("finance.supplier")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
+                    <th className="pb-2 pr-4" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(expenses.data?.data ?? []).map((expense) => (
+                    <tr key={expense.id} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-4 text-slate-700">{expense.expenseDate.slice(0, 10)}</td>
+                      <td className="py-2 pr-4 text-slate-700">
+                        {expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ??
+                          expense.categoryId}
+                      </td>
+                      <td className="py-2 pr-4 text-slate-700">{expense.description}</td>
+                      <td className="py-2 pr-4 text-slate-700">{expense.supplierName ?? "—"}</td>
+                      <td className="py-2 pr-4 text-slate-700">{formatAmount(expense.amountCents)}</td>
+                      <td className="py-2 pr-4">
+                        <button
+                          type="button"
+                          className="text-xs text-slate-400 hover:text-red-600"
+                          onClick={() => removeExpenseMutation.mutate(expense.id)}
+                        >
+                          {t("discipline.remove")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-500">
+                {t("finance.pagination.total", { count: expenses.data?.total ?? 0 })}
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setExpensesPage((current) => Math.max(1, current - 1))}
+                  disabled={expensesPage <= 1}
+                >
+                  {t("list.pagination.previous")}
+                </Button>
+                <p className="text-xs text-slate-500">
+                  {t("list.pagination.pageInfo", { page: expensesPage, totalPages: expensesTotalPages })}
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setExpensesPage((current) => Math.min(expensesTotalPages, current + 1))}
+                  disabled={expensesPage >= expensesTotalPages}
+                >
+                  {t("list.pagination.next")}
+                </Button>
+              </div>
+            </div>
+          </>
         )}
         <form
           onSubmit={(event) => {

@@ -19,6 +19,13 @@ export function createExpense(req: Request, res: Response, next: NextFunction): 
 export function listExpenses(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const query = listExpensesQuerySchema.parse(req.query);
+
+    if (query.page !== undefined) {
+      const paginated = await expenseService.listExpensesPaginated(query);
+      res.status(200).json(paginated);
+      return;
+    }
+
     const expenses = await expenseService.listExpenses(query);
     res.status(200).json(expenses);
   })().catch(next);

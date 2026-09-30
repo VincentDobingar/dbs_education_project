@@ -32,22 +32,53 @@ export async function createExpense(input: CreateExpenseInput, actingUserId: str
   });
 }
 
+function listExpensesWhere(query: Pick<ListExpensesQuery, "categoryId" | "startDate" | "endDate">) {
+  return {
+    deletedAt: null,
+    ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+    ...(query.startDate || query.endDate
+      ? {
+          expenseDate: {
+            ...(query.startDate ? { gte: query.startDate } : {}),
+            ...(query.endDate ? { lte: query.endDate } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 export async function listExpenses(query: ListExpensesQuery): Promise<Expense[]> {
   return prisma.expense.findMany({
-    where: {
-      deletedAt: null,
-      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
-      ...(query.startDate || query.endDate
-        ? {
-            expenseDate: {
-              ...(query.startDate ? { gte: query.startDate } : {}),
-              ...(query.endDate ? { lte: query.endDate } : {}),
-            },
-          }
-        : {}),
-    },
+    where: listExpensesWhere(query),
     orderBy: { expenseDate: "desc" },
   });
+}
+
+export interface PaginatedExpenses {
+  data: Expense[];
+  total: number;
+}
+
+/**
+ * Pagination réelle (comme listStudentsPaginated) — les dépenses s'accumulent sans
+ * fin (une par transaction), contrairement aux listes bornées par nature (roster de
+ * classe, factures d'un élève) qui restent volontairement non paginées ailleurs.
+ */
+export async function listExpensesPaginated(query: ListExpensesQuery): Promise<PaginatedExpenses> {
+  const page = query.page ?? 1;
+  const where = listExpensesWhere(query);
+
+  const [data, total] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      orderBy: { expenseDate: "desc" },
+      take: query.pageSize,
+      skip: (page - 1) * query.pageSize,
+    }),
+    prisma.expense.count({ where }),
+  ]);
+
+  return { data, total };
 }
 
 async function requireExpense(id: string): Promise<Expense> {

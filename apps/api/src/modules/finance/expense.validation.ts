@@ -22,5 +22,9 @@ export const listExpensesQuerySchema = z.object({
   categoryId: z.string().min(1).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
+  // Pagination opt-in (comme listStudentsQuerySchema) — sans `page`, comportement
+  // inchangé (tout renvoyer) ; avec `page`, le contrôleur bascule vers `{ data, total }`.
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type ListExpensesQuery = z.infer<typeof listExpensesQuerySchema>;

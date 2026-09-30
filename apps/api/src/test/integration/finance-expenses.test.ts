@@ -167,6 +167,51 @@ describe("dépenses et caisse (§23)", () => {
     expect(removeAgain.status).toBe(404);
   });
 
+  it("paginates expenses only when ?page is passed, leaving the unpaginated shape untouched otherwise", async () => {
+    const { subdomain, agentToken } = await setUpTenant();
+
+    const category = await request(app)
+      .post("/api/v1/finance/expense-categories")
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ code: `PAGIN-${uniqueSuffix()}`, nameFr: "Pagination", nameEn: "Pagination" });
+    const categoryId = (category.body as { id: string }).id;
+
+    for (let i = 0; i < 3; i += 1) {
+      await request(app)
+        .post("/api/v1/finance/expenses")
+        .set("Authorization", `Bearer ${agentToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ categoryId, description: `Dépense ${i}`, amountCents: 1_000, expenseDate: "2026-02-01" });
+    }
+
+    const unpaginated = await request(app)
+      .get(`/api/v1/finance/expenses?categoryId=${categoryId}`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(unpaginated.status).toBe(200);
+    expect(Array.isArray(unpaginated.body)).toBe(true);
+    expect((unpaginated.body as unknown[]).length).toBe(3);
+
+    const firstPage = await request(app)
+      .get(`/api/v1/finance/expenses?categoryId=${categoryId}&page=1&pageSize=2`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(firstPage.status).toBe(200);
+    const firstPageBody = firstPage.body as { data: { id: string }[]; total: number };
+    expect(firstPageBody.data).toHaveLength(2);
+    expect(firstPageBody.total).toBe(3);
+
+    const secondPage = await request(app)
+      .get(`/api/v1/finance/expenses?categoryId=${categoryId}&page=2&pageSize=2`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    const secondPageBody = secondPage.body as { data: { id: string }[]; total: number };
+    expect(secondPageBody.data).toHaveLength(1);
+    const firstPageIds = new Set(firstPageBody.data.map((e) => e.id));
+    expect(firstPageIds.has(secondPageBody.data[0]?.id)).toBe(false);
+  });
+
   it("opens and closes a cash session, guarding the employee requirement and single-open rule", async () => {
     const { subdomain, agentToken, noEmployeeToken } = await setUpTenant();
 

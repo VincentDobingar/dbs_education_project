@@ -260,6 +260,21 @@ export function listExpenses(
   return apiRequest(`/finance/expenses${suffix}`, { ...creds });
 }
 
+export interface PaginatedExpenses {
+  data: Expense[];
+  total: number;
+}
+
+// Les dépenses s'accumulent sans fin (une par transaction) — pagination réelle
+// côté serveur, comme listStudentsPage pour les élèves.
+export function listExpensesPage(
+  creds: TenantCredentials,
+  page: number,
+  pageSize = 50,
+): Promise<PaginatedExpenses> {
+  return apiRequest(`/finance/expenses?page=${page}&pageSize=${pageSize}`, { ...creds });
+}
+
 export function createExpense(input: CreateExpenseInput, creds: TenantCredentials): Promise<Expense> {
   return apiRequest("/finance/expenses", { method: "POST", body: input, ...creds });
 }

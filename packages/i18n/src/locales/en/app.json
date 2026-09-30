@@ -1,5 +1,8 @@
 {
   "list.error.loadFailed": "Unable to load this data right now. Please try again later.",
+  "list.pagination.previous": "Previous",
+  "list.pagination.next": "Next",
+  "list.pagination.pageInfo": "Page {{page}} of {{totalPages}}",
   "login.title": "Log in to your school",
   "login.subtitle": "Use the responsible account's credentials created at signup.",
   "login.subdomain": "School identifier",
@@ -306,6 +309,7 @@
   "finance.expenseCategories": "Expense categories",
   "finance.expenses": "Expenses",
   "finance.noExpenses": "No expenses recorded yet.",
+  "finance.pagination.total": "{{count}} expense(s) total",
   "finance.date": "Date",
   "finance.category": "Category",
   "finance.description": "Description",

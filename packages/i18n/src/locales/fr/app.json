@@ -1,5 +1,8 @@
 {
   "list.error.loadFailed": "Impossible de charger ces données pour le moment. Réessayez plus tard.",
+  "list.pagination.previous": "Précédent",
+  "list.pagination.next": "Suivant",
+  "list.pagination.pageInfo": "Page {{page}} sur {{totalPages}}",
   "login.title": "Connexion à votre établissement",
   "login.subtitle": "Utilisez les identifiants du responsable créés à l'inscription.",
   "login.subdomain": "Identifiant de l'établissement",
@@ -306,6 +309,7 @@
   "finance.expenseCategories": "Catégories de dépenses",
   "finance.expenses": "Dépenses",
   "finance.noExpenses": "Aucune dépense enregistrée pour l'instant.",
+  "finance.pagination.total": "{{count}} dépense(s) au total",
   "finance.date": "Date",
   "finance.category": "Catégorie",
   "finance.description": "Description",
