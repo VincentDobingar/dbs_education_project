@@ -3,6 +3,7 @@
   "action.save": "Save",
   "action.cancel": "Cancel",
   "action.confirm": "Confirm",
+  "action.close": "Close",
   "state.loading": "Loading...",
   "state.empty": "No data available"
 }

@@ -1,4 +1,4 @@
-import { Button } from "@edumanage/ui";
+import { Button, Field, Table, Toast, type TableColumn } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -12,6 +12,7 @@ import {
   fetchStudentsExportCsv,
   fetchStudentsExportXlsx,
   listStudentsPage,
+  type Student,
 } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
@@ -45,13 +46,34 @@ export function StudentsPage(): ReactNode {
     formState: { errors },
   } = useForm<z.infer<typeof studentSchema>>({ resolver: zodResolver(studentSchema) });
 
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+
   const createMutation = useMutation({
     mutationFn: (input: z.infer<typeof studentSchema>) => createStudent(input, creds),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["students", session.subdomain] });
       reset();
+      setToast({ message: t("students.created"), variant: "success" });
+    },
+    onError: () => {
+      setToast({ message: t("students.createError"), variant: "error" });
     },
   });
+
+  const columns: TableColumn<Student>[] = [
+    { key: "matricule", header: t("students.matricule"), render: (student) => student.matricule },
+    {
+      key: "firstName",
+      header: t("students.firstName"),
+      render: (student) => (
+        <Link to={`/eleves/${student.id}`} className="font-medium text-teal-600 hover:underline">
+          {student.firstName}
+        </Link>
+      ),
+    },
+    { key: "lastName", header: t("students.lastName"), render: (student) => student.lastName },
+    { key: "status", header: t("students.status"), render: (student) => student.status },
+  ];
 
   async function downloadExport(fetcher: () => Promise<Blob>, filename: string): Promise<void> {
     const blob = await fetcher();
@@ -94,18 +116,15 @@ export function StudentsPage(): ReactNode {
           className="mt-4 flex flex-wrap items-end gap-3"
           noValidate
         >
-          <div>
-            <label className="block text-xs font-medium text-slate-600">{t("students.matricule")}</label>
-            <input className="input mt-1 w-32" {...register("matricule")} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600">{t("students.firstName")}</label>
-            <input className="input mt-1 w-40" {...register("firstName")} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600">{t("students.lastName")}</label>
-            <input className="input mt-1 w-40" {...register("lastName")} />
-          </div>
+          <Field label={t("students.matricule")}>
+            <input className="input w-32" {...register("matricule")} />
+          </Field>
+          <Field label={t("students.firstName")}>
+            <input className="input w-40" {...register("firstName")} />
+          </Field>
+          <Field label={t("students.lastName")}>
+            <input className="input w-40" {...register("lastName")} />
+          </Field>
           <Button type="submit" variant="secondary">
             {t("students.add")}
           </Button>
@@ -126,35 +145,7 @@ export function StudentsPage(): ReactNode {
         ) : null}
         {students.data && students.data.data.length > 0 ? (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="pb-2 pr-4 font-medium">{t("students.matricule")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("students.firstName")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("students.lastName")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.data.data.map((student) => (
-                    <tr key={student.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 text-slate-700">{student.matricule}</td>
-                      <td className="py-2 pr-4">
-                        <Link
-                          to={`/eleves/${student.id}`}
-                          className="font-medium text-teal-600 hover:underline"
-                        >
-                          {student.firstName}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-4 text-slate-700">{student.lastName}</td>
-                      <td className="py-2 pr-4 text-slate-700">{student.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table columns={columns} rows={students.data.data} rowKey={(student) => student.id} />
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
@@ -185,6 +176,15 @@ export function StudentsPage(): ReactNode {
           </>
         ) : null}
       </section>
+
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+          dismissLabel={t("action.close", { ns: "common" })}
+        />
+      ) : null}
     </div>
   );
 }

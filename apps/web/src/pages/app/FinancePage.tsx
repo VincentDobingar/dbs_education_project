@@ -1,4 +1,4 @@
-import { Button } from "@edumanage/ui";
+import { Button, Field, Table, Toast, type TableColumn } from "@edumanage/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -21,6 +21,8 @@ import {
   listExpensesPage,
   openCashSession,
   removeExpense,
+  type CashSession,
+  type Expense,
 } from "../../lib/financeApi.js";
 import { listCampuses } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
@@ -89,6 +91,8 @@ export function FinancePage(): ReactNode {
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDate, setExpenseDate] = useState(todayIso());
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(null);
+
   const createExpenseMutation = useMutation({
     mutationFn: () =>
       createExpense(
@@ -107,6 +111,10 @@ export function FinancePage(): ReactNode {
       setExpenseSupplier("");
       setExpenseDescription("");
       setExpenseAmount("");
+      setToast({ message: t("finance.expenseCreated"), variant: "success" });
+    },
+    onError: () => {
+      setToast({ message: t("finance.expenseCreateError"), variant: "error" });
     },
   });
 
@@ -114,6 +122,10 @@ export function FinancePage(): ReactNode {
     mutationFn: (id: string) => removeExpense(id, creds),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["expenses", session.subdomain] });
+      setToast({ message: t("finance.expenseRemoved"), variant: "success" });
+    },
+    onError: () => {
+      setToast({ message: t("finance.expenseRemoveError"), variant: "error" });
     },
   });
 
@@ -146,6 +158,85 @@ export function FinancePage(): ReactNode {
       void queryClient.invalidateQueries({ queryKey: ["cash-sessions", session.subdomain] });
     },
   });
+
+  const expenseColumns: TableColumn<Expense>[] = [
+    { key: "date", header: t("finance.date"), render: (expense) => expense.expenseDate.slice(0, 10) },
+    {
+      key: "category",
+      header: t("finance.category"),
+      render: (expense) =>
+        expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ?? expense.categoryId,
+    },
+    { key: "description", header: t("finance.description"), render: (expense) => expense.description },
+    { key: "supplier", header: t("finance.supplier"), render: (expense) => expense.supplierName ?? "—" },
+    {
+      key: "amount",
+      header: t("studentDetail.amount"),
+      render: (expense) => formatAmount(expense.amountCents),
+    },
+    {
+      key: "actions",
+      header: null,
+      render: (expense) => (
+        <button
+          type="button"
+          className="text-xs text-slate-400 hover:text-red-600"
+          onClick={() => removeExpenseMutation.mutate(expense.id)}
+        >
+          {t("discipline.remove")}
+        </button>
+      ),
+    },
+  ];
+
+  const cashSessionColumns: TableColumn<CashSession>[] = [
+    { key: "openedAt", header: t("finance.openedAt"), render: (session) => session.openedAt.slice(0, 10) },
+    {
+      key: "openingBalance",
+      header: t("finance.openingBalance"),
+      render: (session) => formatAmount(session.openingBalanceCents),
+    },
+    {
+      key: "closingBalance",
+      header: t("finance.closingBalance"),
+      render: (session) =>
+        session.closingBalanceCents !== null ? formatAmount(session.closingBalanceCents) : "—",
+    },
+    {
+      key: "status",
+      header: t("students.status"),
+      render: (session) => t(`finance.cashSessionStatus.${session.status}`),
+    },
+    {
+      key: "actions",
+      header: null,
+      render: (session) =>
+        session.status === "OPEN" ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              step="0.01"
+              placeholder={t("finance.closingBalance")}
+              className="input w-28 py-1"
+              value={closingBalanceBySession[session.id] ?? ""}
+              onChange={(event) =>
+                setClosingBalanceBySession((previous) => ({
+                  ...previous,
+                  [session.id]: event.target.value,
+                }))
+              }
+            />
+            <button
+              type="button"
+              className="text-xs text-brand-teal hover:underline"
+              onClick={() => closeSessionMutation.mutate(session.id)}
+            >
+              {t("finance.closeSession")}
+            </button>
+          </div>
+        ) : null,
+    },
+  ];
 
   // Reports
   const [reportStart, setReportStart] = useState(firstOfMonthIso());
@@ -241,42 +332,12 @@ export function FinancePage(): ReactNode {
           <p className="mt-3 text-sm text-slate-500">{t("finance.noExpenses")}</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="mt-3 w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="pb-2 pr-4 font-medium">{t("finance.date")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("finance.category")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("finance.description")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("finance.supplier")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("studentDetail.amount")}</th>
-                    <th className="pb-2 pr-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(expenses.data?.data ?? []).map((expense) => (
-                    <tr key={expense.id} className="border-b border-slate-100 last:border-0">
-                      <td className="py-2 pr-4 text-slate-700">{expense.expenseDate.slice(0, 10)}</td>
-                      <td className="py-2 pr-4 text-slate-700">
-                        {expenseCategories.data?.find((c) => c.id === expense.categoryId)?.nameFr ??
-                          expense.categoryId}
-                      </td>
-                      <td className="py-2 pr-4 text-slate-700">{expense.description}</td>
-                      <td className="py-2 pr-4 text-slate-700">{expense.supplierName ?? "—"}</td>
-                      <td className="py-2 pr-4 text-slate-700">{formatAmount(expense.amountCents)}</td>
-                      <td className="py-2 pr-4">
-                        <button
-                          type="button"
-                          className="text-xs text-slate-400 hover:text-red-600"
-                          onClick={() => removeExpenseMutation.mutate(expense.id)}
-                        >
-                          {t("discipline.remove")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-3">
+              <Table
+                columns={expenseColumns}
+                rows={expenses.data?.data ?? []}
+                rowKey={(expense) => expense.id}
+              />
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-500">
@@ -369,62 +430,12 @@ export function FinancePage(): ReactNode {
         {(cashSessions.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("finance.noCashSessions")}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="mt-3 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="pb-2 pr-4 font-medium">{t("finance.openedAt")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("finance.openingBalance")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("finance.closingBalance")}</th>
-                  <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
-                  <th className="pb-2 pr-4" />
-                </tr>
-              </thead>
-              <tbody>
-                {(cashSessions.data ?? []).map((cashSession) => (
-                  <tr key={cashSession.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{cashSession.openedAt.slice(0, 10)}</td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {formatAmount(cashSession.openingBalanceCents)}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {cashSession.closingBalanceCents !== null
-                        ? formatAmount(cashSession.closingBalanceCents)
-                        : "—"}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-700">
-                      {t(`finance.cashSessionStatus.${cashSession.status}`)}
-                    </td>
-                    <td className="py-2 pr-4">
-                      {cashSession.status === "OPEN" ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder={t("finance.closingBalance")}
-                            className="input w-28 py-1"
-                            value={closingBalanceBySession[cashSession.id] ?? ""}
-                            onChange={(event) =>
-                              setClosingBalanceBySession((previous) => ({
-                                ...previous,
-                                [cashSession.id]: event.target.value,
-                              }))
-                            }
-                          />
-                          <button
-                            type="button"
-                            className="text-xs text-brand-teal hover:underline"
-                            onClick={() => closeSessionMutation.mutate(cashSession.id)}
-                          >
-                            {t("finance.closeSession")}
-                          </button>
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-3">
+            <Table
+              columns={cashSessionColumns}
+              rows={cashSessions.data ?? []}
+              rowKey={(cashSession) => cashSession.id}
+            />
           </div>
         )}
         <form
@@ -463,24 +474,22 @@ export function FinancePage(): ReactNode {
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("finance.reports")}</h2>
         <div className="mt-3 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600">{t("finance.startDate")}</label>
+          <Field label={t("finance.startDate")}>
             <input
               type="date"
-              className="input mt-1 w-40"
+              className="input w-40"
               value={reportStart}
               onChange={(event) => setReportStart(event.target.value)}
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600">{t("finance.endDate")}</label>
+          </Field>
+          <Field label={t("finance.endDate")}>
             <input
               type="date"
-              className="input mt-1 w-40"
+              className="input w-40"
               value={reportEnd}
               onChange={(event) => setReportEnd(event.target.value)}
             />
-          </div>
+          </Field>
         </div>
 
         <div className="mt-5">
@@ -613,6 +622,15 @@ export function FinancePage(): ReactNode {
           </div>
         </div>
       </section>
+
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+          dismissLabel={t("action.close", { ns: "common" })}
+        />
+      ) : null}
     </div>
   );
 }
