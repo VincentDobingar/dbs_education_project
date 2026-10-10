@@ -209,7 +209,7 @@ describe("dépenses et caisse (§23)", () => {
     const secondPageBody = secondPage.body as { data: { id: string }[]; total: number };
     expect(secondPageBody.data).toHaveLength(1);
     const firstPageIds = new Set(firstPageBody.data.map((e) => e.id));
-    expect(firstPageIds.has(secondPageBody.data[0]?.id)).toBe(false);
+    expect(firstPageIds.has(secondPageBody.data[0]!.id)).toBe(false);
   });
 
   it("opens and closes a cash session, guarding the employee requirement and single-open rule", async () => {

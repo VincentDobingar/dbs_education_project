@@ -1,4 +1,4 @@
-import { apiRequest, ApiError, type TenantCredentials } from "./apiClient.js";
+import { apiRequest, ApiError, API_URL, type TenantCredentials } from "./apiClient.js";
 
 export interface AssessmentType {
   id: string;
@@ -148,9 +148,6 @@ export function listReportCards(
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest(`/grading/report-cards${suffix}`, { ...creds });
 }
-
-const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
 
 // Not JSON, so it can't go through apiRequest — a raw fetch reusing the same
 // auth/tenant headers, returning the PDF bytes for the caller to open/download.

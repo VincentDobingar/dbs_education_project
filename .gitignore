@@ -8,6 +8,9 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# Vercel
+.vercel/
+
 # Env
 .env
 .env.local

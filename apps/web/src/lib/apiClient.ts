@@ -2,7 +2,7 @@ import { clearAdminSession, loadAdminSession, saveAdminSession } from "./adminSe
 import { clearPortalSession, loadPortalSession, savePortalSession } from "./portalSession.js";
 import { clearSession, loadSession, saveSession } from "./session.js";
 
-const API_URL: string =
+export const API_URL: string =
   (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:4000/api/v1";
 
 export class ApiError extends Error {

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import rateLimit, { type Store } from "express-rate-limit";
-import { RedisStore } from "rate-limit-redis";
+import { RedisStore, type RedisReply } from "rate-limit-redis";
 
 import { env } from "../env.js";
 import { getRedisClient } from "../lib/redis.js";
@@ -37,7 +37,8 @@ function buildStore(): Store | undefined {
   if (env.NODE_ENV === "test") return undefined;
 
   return new RedisStore({
-    sendCommand: (...args: string[]) => getRedisClient().call(...args),
+    sendCommand: (command: string, ...args: string[]) =>
+      getRedisClient().call(command, ...args) as Promise<RedisReply>,
     prefix: "rl:",
   });
 }
@@ -51,6 +52,7 @@ export function buildRateLimiter(options: {
   skip?: () => boolean;
   keyGenerator?: (req: Request) => string;
 }): ReturnType<typeof rateLimit> {
+  const store = buildStore();
   return rateLimit({
     windowMs: options.windowMs,
     limit: options.limit,
@@ -58,7 +60,7 @@ export function buildRateLimiter(options: {
     legacyHeaders: false,
     skip: options.skip ?? skipInTest,
     handler: rateLimitedResponse,
-    store: buildStore(),
+    ...(store ? { store } : {}),
     ...(options.keyGenerator ? { keyGenerator: options.keyGenerator } : {}),
   });
 }
