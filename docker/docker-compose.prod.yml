@@ -129,7 +129,31 @@ services:
     expose:
       - "80"
 
+  # pg_dump périodique (voir docker/backup/backup.sh pour la commande de restauration).
+  # Rôle propriétaire requis (edumanage), jamais edumanage_app : RLS masquerait les
+  # données tenant-scopées à un dump pris sans contexte tenant posé.
+  backup:
+    build:
+      context: ./backup
+    restart: unless-stopped
+    # Charge aussi les variables RCLONE_CONFIG_* optionnelles (hors-site, voir
+    # .env.production.example) sans qu'il faille les lister une par une ici — leur
+    # nom dépend du type de destination (s3, b2, ...) choisi par l'opérateur.
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
   uploads:
+  backups:
