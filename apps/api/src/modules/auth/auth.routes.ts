@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { resendVerificationRateLimiter } from "../../middleware/rateLimit.js";
-import { requireAuth } from "../../middleware/requireAuth.js";
+import { requireAuth, requireAuthOrMfaEnrollment } from "../../middleware/requireAuth.js";
 
 import * as authController from "./auth.controller.js";
 import * as mfaController from "./mfa.controller.js";
@@ -38,6 +38,9 @@ authRouter.post("/sessions/:id/revoke", requireAuth, authController.revokeSessio
 authRouter.get("/me", requireAuth, authController.getCurrentUser);
 
 authRouter.post("/mfa/verify", authController.verifyMfaChallenge);
-authRouter.post("/mfa/setup", requireAuth, mfaController.setupMfa);
-authRouter.post("/mfa/enable", requireAuth, mfaController.enableMfa);
+// requireAuthOrMfaEnrollment (pas requireAuth) : un rôle sensible sans MFA encore
+// actif n'a qu'un jeton d'enrôlement restreint (login() ne lui délivre pas de
+// session) — voir auth.service.ts et requireAuth.ts.
+authRouter.post("/mfa/setup", requireAuthOrMfaEnrollment, mfaController.setupMfa);
+authRouter.post("/mfa/enable", requireAuthOrMfaEnrollment, mfaController.enableMfa);
 authRouter.post("/mfa/disable", requireAuth, mfaController.disableMfa);

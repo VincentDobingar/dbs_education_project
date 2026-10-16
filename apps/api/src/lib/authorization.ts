@@ -1,5 +1,50 @@
 import { prisma } from "./prisma.js";
 
+/**
+ * Role codes whose holder can move money, grant/revoke access, or manage billing —
+ * the tenant-scope roles mirror the "governance permission" set from the pass-22
+ * privilege-escalation fix (tenant.settings.manage, finance.write, hr.manage,
+ * hr.salary.manage, subscriptions.manage); every platform-scope role is included
+ * unconditionally since platform access is inherently high-value regardless of
+ * which permissions a given platform role currently holds. Login enforces
+ * mandatory MFA enrollment for anyone holding one of these (see auth.service.ts).
+ */
+export const SENSITIVE_ROLE_CODES: readonly string[] = [
+  "SUPER_ADMIN",
+  "PLATFORM_ADMIN",
+  "SUPPORT_AGENT",
+  "BILLING_MANAGER",
+  "COMMERCIAL_MANAGER",
+  "PLATFORM_AUDITOR",
+  "SCHOOL_OWNER",
+  "SCHOOL_ADMIN",
+  "ACCOUNTANT",
+  "HR_MANAGER",
+];
+
+/**
+ * All active role codes a user holds, across every tenant and platform scope —
+ * used only to decide whether mandatory MFA enrollment applies at login, before
+ * any tenant context exists. Safe to query unscoped: UserRole carries no RLS
+ * (see tenant-scoped-models.ts).
+ */
+export async function getAllActiveRoleCodes(userId: string): Promise<string[]> {
+  const userRoles = await prisma.userRole.findMany({
+    where: {
+      userId,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    },
+    select: { role: { select: { code: true } } },
+  });
+
+  return userRoles.map((userRole) => userRole.role.code);
+}
+
+export async function userHasSensitiveRole(userId: string): Promise<boolean> {
+  const codes = await getAllActiveRoleCodes(userId);
+  return codes.some((code) => SENSITIVE_ROLE_CODES.includes(code));
+}
+
 /** Active (non-expired) role codes a user holds in a given scope. tenantId=null => platform scope. */
 async function activeRoleCodes(userId: string, tenantId: string | null): Promise<string[]> {
   const userRoles = await prisma.userRole.findMany({

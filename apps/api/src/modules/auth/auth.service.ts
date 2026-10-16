@@ -8,11 +8,16 @@ import {
   hashPhoneVerificationCode,
   PHONE_VERIFICATION_TTL_MS,
 } from "../../lib/account-verification.js";
-import { getPlatformRoleCodes } from "../../lib/authorization.js";
+import { getPlatformRoleCodes, userHasSensitiveRole } from "../../lib/authorization.js";
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { decrypt } from "../../lib/encryption.js";
 import { AppError } from "../../lib/errors.js";
-import { signAccessToken, signMfaChallengeToken, verifyMfaChallengeToken } from "../../lib/jwt.js";
+import {
+  signAccessToken,
+  signMfaChallengeToken,
+  signMfaEnrollmentToken,
+  verifyMfaChallengeToken,
+} from "../../lib/jwt.js";
 import { verifyTotpCode } from "../../lib/mfa.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
@@ -44,7 +49,20 @@ export interface MfaChallenge {
   challengeToken: string;
 }
 
-export type LoginResult = AuthTokens | MfaChallenge;
+/**
+ * MFA obligatoire pour rôles sensibles : renvoyé à la place d'une session quand le
+ * mot de passe est correct mais que le compte détient un rôle sensible
+ * (authorization.ts, SENSITIVE_ROLE_CODES) sans avoir encore activé le MFA.
+ * `enrollmentToken` ne permet rien d'autre que /mfa/setup puis /mfa/enable — une
+ * fois le MFA activé, l'utilisateur doit se reconnecter pour obtenir le défi MFA
+ * normal (mfaRequired) puis une vraie session.
+ */
+export interface MfaEnrollmentRequired {
+  mfaEnrollmentRequired: true;
+  enrollmentToken: string;
+}
+
+export type LoginResult = AuthTokens | MfaChallenge | MfaEnrollmentRequired;
 
 interface SessionMeta {
   userAgent?: string;
@@ -289,6 +307,10 @@ export async function login(email: string, password: string, meta: SessionMeta):
   // tant que verifyMfaChallenge n'a pas validé un code TOTP ou de secours.
   if (user.mfaEnabled) {
     return { mfaRequired: true, challengeToken: signMfaChallengeToken(user.id) };
+  }
+
+  if (await userHasSensitiveRole(user.id)) {
+    return { mfaEnrollmentRequired: true, enrollmentToken: signMfaEnrollmentToken(user.id) };
   }
 
   return createSession(user.id, meta);

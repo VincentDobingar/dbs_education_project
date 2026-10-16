@@ -2,10 +2,9 @@ import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
+import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole } from "../fixtures.js";
-
-const PASSWORD = "Sup3r-Secret-Passw0rd!";
 
 interface CurrentUserResponse {
   id: string;
@@ -14,9 +13,13 @@ interface CurrentUserResponse {
   platformRoleCodes: string[];
 }
 
-async function login(app: ReturnType<typeof createApp>, email: string): Promise<string> {
-  const response = await request(app).post("/api/v1/auth/login").send({ email, password: PASSWORD });
-  return (response.body as { accessToken: string }).accessToken;
+// Jeton synthétisé directement (comme tenant-users.test.ts) plutôt qu'un vrai
+// POST /auth/login : ce fichier teste /auth/me, pas le login — passer par le vrai
+// endpoint casserait sur SUPER_ADMIN/SCHOOL_OWNER depuis que login() exige un
+// enrôlement MFA pour les rôles sensibles (authorization.ts, SENSITIVE_ROLE_CODES)
+// avant de délivrer une session.
+function login(_app: ReturnType<typeof createApp>, userId: string): string {
+  return signAccessToken({ sub: userId });
 }
 
 // L'accès access token ne porte que `sub` (§34) — sans cette route, le frontend
@@ -47,7 +50,7 @@ describe("identité courante (GET /auth/me)", () => {
   it("returns an empty tenant list for a user with no establishment yet", async () => {
     const user = await createUser("me-no-tenant");
     createdUserIds.push(user.id);
-    const accessToken = await login(app, user.email);
+    const accessToken = login(app, user.id);
 
     const response = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${accessToken}`);
 
@@ -67,7 +70,7 @@ describe("identité courante (GET /auth/me)", () => {
     createdUserIds.push(user.id);
     await grantRole(user.id, "SUPER_ADMIN", null);
 
-    const accessToken = await login(app, user.email);
+    const accessToken = login(app, user.id);
     const response = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${accessToken}`);
 
     expect(response.status).toBe(200);
@@ -84,7 +87,7 @@ describe("identité courante (GET /auth/me)", () => {
     await addMembership(user.id, tenant.id);
     await grantRole(user.id, "SCHOOL_OWNER", tenant.id);
 
-    const accessToken = await login(app, user.email);
+    const accessToken = login(app, user.id);
     const response = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${accessToken}`);
 
     expect(response.status).toBe(200);
@@ -106,7 +109,7 @@ describe("identité courante (GET /auth/me)", () => {
     await grantRole(user.id, "SCHOOL_OWNER", first.tenant.id);
     await grantRole(user.id, "DIRECTOR", second.tenant.id);
 
-    const accessToken = await login(app, user.email);
+    const accessToken = login(app, user.id);
     const response = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${accessToken}`);
 
     expect(response.status).toBe(200);
