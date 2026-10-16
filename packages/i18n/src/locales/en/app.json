@@ -1,5 +1,9 @@
 {
   "list.error.loadFailed": "Unable to load this data right now. Please try again later.",
+  "pwa.offlineReady": "The app is ready to work offline.",
+  "pwa.updateAvailable": "A new version is available.",
+  "pwa.update.reload": "Update",
+  "pwa.offlineBanner": "You're offline — some of the data shown may be from your last visit.",
   "list.pagination.previous": "Previous",
   "list.pagination.next": "Next",
   "list.pagination.pageInfo": "Page {{page}} of {{totalPages}}",

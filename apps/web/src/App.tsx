@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
+import { PwaStatus } from "./components/PwaStatus.js";
 import { AdminLayout } from "./layouts/AdminLayout.js";
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
@@ -104,6 +105,7 @@ function RouteFallback(): ReactNode {
 export function App(): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
+      <PwaStatus />
       <BrowserRouter>
         <Suspense fallback={<RouteFallback />}>
           <Routes>

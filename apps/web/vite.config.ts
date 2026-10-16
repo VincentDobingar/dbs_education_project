@@ -18,6 +18,30 @@ export default defineConfig({
         start_url: "/",
         icons: [{ src: "/favicon-512.png", sizes: "512x512", type: "image/png" }],
       },
+      workbox: {
+        // SPA sous BrowserRouter : un lien profond (/portail/parent, /portail/eleve,
+        // ...) rechargé hors-ligne doit retomber sur l'app shell, jamais un 404 du SW.
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          // Lecture hors-ligne des portails parent/élève (zones à couverture réseau
+          // intermittente) : uniquement les GET, jamais /auth/* ni une mutation —
+          // NetworkFirst retourne le cache seulement si le réseau échoue/est lent,
+          // donc les données restent fraîches dès que la connexion revient.
+          {
+            urlPattern: ({ url, request }) =>
+              request.method === "GET" &&
+              (url.pathname.includes("/parent-portal/") || url.pathname.includes("/student-portal/")),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "portal-api-cache",
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
+      },
     }),
   ],
   server: {
