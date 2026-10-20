@@ -294,6 +294,9 @@ export async function createCatalogItem(
     throw new AppError(409, "CATALOG_CODE_TAKEN", `Catalog code already in use: ${input.code}`);
   }
   await requireCatalogParent(input.kind, input.parentCode);
+  if (input.kind === "HOLIDAY" && (!input.countryIsoCode || !input.month || !input.day)) {
+    throw new AppError(422, "CATALOG_HOLIDAY_DATE_REQUIRED", "A holiday needs a country, a month and a day");
+  }
 
   const item = await prisma.catalogItem.create({
     data: {
@@ -303,6 +306,13 @@ export async function createCatalogItem(
       nameEn: input.nameEn,
       order: input.order,
       ...(input.parentCode ? { parentCode: input.parentCode } : {}),
+      ...(input.kind === "HOLIDAY"
+        ? {
+            countryIsoCode: input.countryIsoCode?.toUpperCase() ?? null,
+            month: input.month ?? null,
+            day: input.day ?? null,
+          }
+        : {}),
     },
   });
 
@@ -333,6 +343,9 @@ export async function updateCatalogItem(
       ...(input.nameEn !== undefined ? { nameEn: input.nameEn } : {}),
       ...(input.order !== undefined ? { order: input.order } : {}),
       ...(input.parentCode !== undefined ? { parentCode: input.parentCode } : {}),
+      ...(input.countryIsoCode !== undefined ? { countryIsoCode: input.countryIsoCode.toUpperCase() } : {}),
+      ...(input.month !== undefined ? { month: input.month } : {}),
+      ...(input.day !== undefined ? { day: input.day } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     },
   });

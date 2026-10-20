@@ -814,7 +814,15 @@ export function deletePlatformSetting(key: string, creds: AdminCredentials): Pro
 // §17 : catalogue de référence global (listes de choix de Configuration)
 // ---------------------------------------------------------------------------
 
-export type CatalogKind = "EDUCATION_CYCLE" | "GRADE_LEVEL" | "SUBJECT" | "ASSESSMENT_TYPE" | "FEE_CATEGORY";
+export type CatalogKind =
+  | "EDUCATION_CYCLE"
+  | "GRADE_LEVEL"
+  | "SUBJECT"
+  | "ASSESSMENT_TYPE"
+  | "FEE_CATEGORY"
+  | "CAMPUS"
+  | "ROOM"
+  | "HOLIDAY";
 
 export interface PlatformCatalogItem {
   id: string;
@@ -824,6 +832,9 @@ export interface PlatformCatalogItem {
   nameEn: string;
   order: number;
   parentCode: string | null;
+  countryIsoCode: string | null;
+  month: number | null;
+  day: number | null;
   isActive: boolean;
 }
 
@@ -842,6 +853,9 @@ export function createPlatformCatalogItem(
     nameEn: string;
     order: number;
     parentCode?: string;
+    countryIsoCode?: string;
+    month?: number;
+    day?: number;
   },
   creds: AdminCredentials,
 ): Promise<PlatformCatalogItem> {
@@ -850,7 +864,16 @@ export function createPlatformCatalogItem(
 
 export function updatePlatformCatalogItem(
   id: string,
-  input: Partial<{ nameFr: string; nameEn: string; order: number; parentCode: string; isActive: boolean }>,
+  input: Partial<{
+    nameFr: string;
+    nameEn: string;
+    order: number;
+    parentCode: string;
+    countryIsoCode: string;
+    month: number;
+    day: number;
+    isActive: boolean;
+  }>,
   creds: AdminCredentials,
 ): Promise<PlatformCatalogItem> {
   return apiRequest(`/platform/catalog-items/${id}`, { method: "PATCH", body: input, ...creds });

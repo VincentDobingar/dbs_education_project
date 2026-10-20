@@ -9,6 +9,12 @@ import { z } from "zod";
 
 import { CatalogPicker, ManualEntry } from "../../components/CatalogPicker.js";
 import {
+  AcademicYearAssistant,
+  ClassroomAssistant,
+  RoomSeriesAssistant,
+  SchoolYearMilestonesAssistant,
+} from "../../components/ConfigAssistants.js";
+import {
   createFeeCategory,
   createFeeStructure,
   listFeeCategories,
@@ -177,6 +183,13 @@ export function ConfigurationPage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
+  // Listes de choix / assistants (§17) : options propres à certaines sections.
+  const [roomCatalogCampusId, setRoomCatalogCampusId] = useState("");
+  const [roomCatalogCapacity, setRoomCatalogCapacity] = useState("");
+  const [holidayYearId, setHolidayYearId] = useState("");
+  function invalidate(...keys: string[]): void {
+    for (const key of keys) void queryClient.invalidateQueries({ queryKey: [key, session.subdomain] });
+  }
   const queryClient = useQueryClient();
 
   const tenantLogo = useQuery({
@@ -402,6 +415,9 @@ export function ConfigurationPage(): ReactNode {
     },
   });
 
+  // Année du calendrier : celle choisie, sinon l'année en cours.
+  const effectiveHolidayYearId = holidayYearId || (years.data ?? []).find((year) => year.isCurrent)?.id || "";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <div>
@@ -458,23 +474,30 @@ export function ConfigurationPage(): ReactNode {
           isError={years.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void yearForm.handleSubmit((values) => createYearMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.yearName")}
-            className="input w-40"
-            {...yearForm.register("name")}
-          />
-          <input type="date" className="input w-40" {...yearForm.register("startDate")} />
-          <input type="date" className="input w-40" {...yearForm.register("endDate")} />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <AcademicYearAssistant
+          creds={creds}
+          years={years.data ?? []}
+          onCreated={() => invalidate("academic-years")}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void yearForm.handleSubmit((values) => createYearMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.yearName")}
+              className="input w-40"
+              {...yearForm.register("name")}
+            />
+            <input type="date" className="input w-40" {...yearForm.register("startDate")} />
+            <input type="date" className="input w-40" {...yearForm.register("endDate")} />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.campuses")}>
@@ -485,26 +508,34 @@ export function ConfigurationPage(): ReactNode {
           isError={campuses.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void campusForm.handleSubmit((values) => createCampusMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.campusName")}
-            className="input w-48"
-            {...campusForm.register("name")}
-          />
-          <input
-            placeholder={t("config.form.campusCode")}
-            className="input w-32"
-            {...campusForm.register("code")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="CAMPUS"
+          existingCodes={(campuses.data ?? []).map((campus) => campus.code)}
+          creds={creds}
+          onImported={() => invalidate("campuses")}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void campusForm.handleSubmit((values) => createCampusMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.campusName")}
+              className="input w-48"
+              {...campusForm.register("name")}
+            />
+            <input
+              placeholder={t("config.form.campusCode")}
+              className="input w-32"
+              {...campusForm.register("code")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.rooms")}>
@@ -541,36 +572,76 @@ export function ConfigurationPage(): ReactNode {
             </table>
           </div>
         )}
-        <form
-          onSubmit={(event) =>
-            void roomForm.handleSubmit((values) => createRoomMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
+        <CatalogPicker
+          kind="ROOM"
+          isExisting={(item) => (rooms.data ?? []).some((room) => room.name === item.nameFr)}
+          describe={() => null}
+          importOptions={{
+            ...(roomCatalogCampusId ? { campusId: roomCatalogCampusId } : {}),
+            ...(Number(roomCatalogCapacity) > 0 ? { capacity: Number(roomCatalogCapacity) } : {}),
+          }}
+          creds={creds}
+          onImported={() => invalidate("rooms")}
         >
-          <input
-            placeholder={t("config.form.roomName")}
-            className="input w-48"
-            {...roomForm.register("name")}
-          />
-          <select className="input w-40" {...roomForm.register("campusId")}>
-            <option value="">{t("config.form.selectCampus")}</option>
-            {(campuses.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+          <select
+            className="input w-44"
+            value={roomCatalogCampusId}
+            onChange={(event) => setRoomCatalogCampusId(event.target.value)}
+          >
+            <option value="">{t("assistant.anyCampus")}</option>
+            {(campuses.data ?? []).map((campus) => (
+              <option key={campus.id} value={campus.id}>
+                {campus.name}
               </option>
             ))}
           </select>
           <input
             type="number"
             min={1}
-            placeholder={t("config.form.capacity")}
+            placeholder={t("assistant.capacity")}
             className="input w-28"
-            {...roomForm.register("capacity")}
+            value={roomCatalogCapacity}
+            onChange={(event) => setRoomCatalogCapacity(event.target.value)}
           />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        </CatalogPicker>
+        <RoomSeriesAssistant
+          creds={creds}
+          campuses={campuses.data ?? []}
+          rooms={rooms.data ?? []}
+          onCreated={() => invalidate("rooms")}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void roomForm.handleSubmit((values) => createRoomMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.roomName")}
+              className="input w-48"
+              {...roomForm.register("name")}
+            />
+            <select className="input w-40" {...roomForm.register("campusId")}>
+              <option value="">{t("config.form.selectCampus")}</option>
+              {(campuses.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={1}
+              placeholder={t("config.form.capacity")}
+              className="input w-28"
+              {...roomForm.register("capacity")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.calendarEvents")}>
@@ -613,38 +684,78 @@ export function ConfigurationPage(): ReactNode {
             </table>
           </div>
         )}
-        <form
-          onSubmit={(event) =>
-            void calendarEventForm.handleSubmit((values) => createCalendarEventMutation.mutate(values))(event)
+        <CatalogPicker
+          kind="HOLIDAY"
+          isExisting={(item) =>
+            (calendarEvents.data ?? []).some(
+              (event) => event.title === item.nameFr && event.academicYearId === effectiveHolidayYearId,
+            )
           }
-          className="flex flex-wrap items-end gap-3"
+          describe={(item) =>
+            item.day && item.month
+              ? `${String(item.day).padStart(2, "0")}/${String(item.month).padStart(2, "0")}`
+              : null
+          }
+          importOptions={effectiveHolidayYearId ? { academicYearId: effectiveHolidayYearId } : {}}
+          disabledReason={effectiveHolidayYearId ? null : t("assistant.calendar.needYear")}
+          creds={creds}
+          onImported={() => invalidate("calendar-events")}
         >
-          <input
-            placeholder={t("config.form.eventTitle")}
-            className="input w-48"
-            {...calendarEventForm.register("title")}
-          />
-          <select className="input w-40" {...calendarEventForm.register("type")}>
-            {CALENDAR_EVENT_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`config.eventType.${type}`)}
-              </option>
-            ))}
-          </select>
-          <input type="date" className="input w-40" {...calendarEventForm.register("startDate")} />
-          <input type="date" className="input w-40" {...calendarEventForm.register("endDate")} />
-          <select className="input w-40" {...calendarEventForm.register("academicYearId")}>
+          <select
+            className="input w-40"
+            value={effectiveHolidayYearId}
+            onChange={(event) => setHolidayYearId(event.target.value)}
+          >
             <option value="">{t("config.form.selectYear")}</option>
-            {(years.data ?? []).map((y) => (
-              <option key={y.id} value={y.id}>
-                {y.name}
+            {(years.data ?? []).map((year) => (
+              <option key={year.id} value={year.id}>
+                {year.name}
               </option>
             ))}
           </select>
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        </CatalogPicker>
+        <SchoolYearMilestonesAssistant
+          creds={creds}
+          year={(years.data ?? []).find((year) => year.id === effectiveHolidayYearId)}
+          events={calendarEvents.data ?? []}
+          onCreated={() => invalidate("calendar-events")}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void calendarEventForm.handleSubmit((values) => createCalendarEventMutation.mutate(values))(
+                event,
+              )
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.eventTitle")}
+              className="input w-48"
+              {...calendarEventForm.register("title")}
+            />
+            <select className="input w-40" {...calendarEventForm.register("type")}>
+              {CALENDAR_EVENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(`config.eventType.${type}`)}
+                </option>
+              ))}
+            </select>
+            <input type="date" className="input w-40" {...calendarEventForm.register("startDate")} />
+            <input type="date" className="input w-40" {...calendarEventForm.register("endDate")} />
+            <select className="input w-40" {...calendarEventForm.register("academicYearId")}>
+              <option value="">{t("config.form.selectYear")}</option>
+              {(years.data ?? []).map((y) => (
+                <option key={y.id} value={y.id}>
+                  {y.name}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.cycles")}>
@@ -770,51 +881,61 @@ export function ConfigurationPage(): ReactNode {
           isError={classrooms.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void classroomForm.handleSubmit((values) => createClassroomMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.classroomName")}
-            className="input w-40"
-            {...classroomForm.register("name")}
-          />
-          <select className="input w-40" {...classroomForm.register("academicYearId")}>
-            <option value="">{t("config.form.selectYear")}</option>
-            {(years.data ?? []).map((y) => (
-              <option key={y.id} value={y.id}>
-                {y.name}
-              </option>
-            ))}
-          </select>
-          <select className="input w-40" {...classroomForm.register("campusId")}>
-            <option value="">{t("config.form.selectCampus")}</option>
-            {(campuses.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select className="input w-40" {...classroomForm.register("gradeLevelId")}>
-            <option value="">{t("config.form.selectGradeLevel")}</option>
-            {(gradeLevels.data ?? []).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nameFr}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            placeholder={t("config.form.capacity")}
-            className="input w-28"
-            {...classroomForm.register("capacity")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <ClassroomAssistant
+          creds={creds}
+          years={years.data ?? []}
+          campuses={campuses.data ?? []}
+          gradeLevels={gradeLevels.data ?? []}
+          classrooms={classrooms.data ?? []}
+          onCreated={() => invalidate("classrooms")}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void classroomForm.handleSubmit((values) => createClassroomMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.classroomName")}
+              className="input w-40"
+              {...classroomForm.register("name")}
+            />
+            <select className="input w-40" {...classroomForm.register("academicYearId")}>
+              <option value="">{t("config.form.selectYear")}</option>
+              {(years.data ?? []).map((y) => (
+                <option key={y.id} value={y.id}>
+                  {y.name}
+                </option>
+              ))}
+            </select>
+            <select className="input w-40" {...classroomForm.register("campusId")}>
+              <option value="">{t("config.form.selectCampus")}</option>
+              {(campuses.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select className="input w-40" {...classroomForm.register("gradeLevelId")}>
+              <option value="">{t("config.form.selectGradeLevel")}</option>
+              {(gradeLevels.data ?? []).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nameFr}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              placeholder={t("config.form.capacity")}
+              className="input w-28"
+              {...classroomForm.register("capacity")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.subjects")}>

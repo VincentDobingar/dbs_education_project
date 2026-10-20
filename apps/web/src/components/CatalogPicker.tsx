@@ -10,12 +10,22 @@ import {
   listCatalogItems,
   type CatalogItem,
   type CatalogKind,
+  type ImportCatalogOptions,
 } from "../lib/schoolConfigApi.js";
 
 interface CatalogPickerProps {
   kind: CatalogKind;
   /** Codes déjà présents dans l'établissement — masqués de la liste de choix. */
-  existingCodes: readonly string[];
+  existingCodes?: readonly string[];
+  /** Variante de `existingCodes` quand l'établissement ne stocke pas le code (salles, calendrier). */
+  isExisting?: (item: CatalogItem) => boolean;
+  /** Libellé secondaire d'un élément (par défaut son code). */
+  describe?: (item: CatalogItem) => string | null;
+  importOptions?: ImportCatalogOptions;
+  /** Empêche l'ajout tant qu'un prérequis manque (ex. année scolaire à choisir). */
+  disabledReason?: string | null;
+  /** Champs complémentaires affichés avant le bouton d'ajout (campus, capacité…). */
+  children?: ReactNode;
   creds: TenantCredentials;
   onImported: () => void;
 }
@@ -29,7 +39,17 @@ function localizedName(item: CatalogItem, language: string): string {
  * coche ce qui le concerne et l'ajoute en un clic (copie côté API) ; la saisie
  * libre reste disponible à côté pour ce qui n'y figure pas.
  */
-export function CatalogPicker({ kind, existingCodes, creds, onImported }: CatalogPickerProps): ReactNode {
+export function CatalogPicker({
+  kind,
+  existingCodes = [],
+  isExisting,
+  describe = (item) => item.code,
+  importOptions,
+  disabledReason,
+  children,
+  creds,
+  onImported,
+}: CatalogPickerProps): ReactNode {
   const { t, i18n } = useTranslation("app");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [feedback, setFeedback] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -48,11 +68,17 @@ export function CatalogPicker({ kind, existingCodes, creds, onImported }: Catalo
   });
 
   const importMutation = useMutation({
-    mutationFn: () => importCatalogItems(kind, [...selected], creds),
+    mutationFn: () => importCatalogItems(kind, [...selected], creds, importOptions),
     onMutate: () => setFeedback(null),
     onSuccess: (result) => {
       setSelected(new Set());
-      setFeedback({ tone: "success", text: t("catalog.imported", { count: result.created.length }) });
+      setFeedback({
+        tone: "success",
+        text:
+          result.skipped.length > 0
+            ? `${t("catalog.imported", { count: result.created.length })} ${t("catalog.skipped", { count: result.skipped.length })}`
+            : t("catalog.imported", { count: result.created.length }),
+      });
       onImported();
     },
     onError: (error) =>
@@ -69,7 +95,7 @@ export function CatalogPicker({ kind, existingCodes, creds, onImported }: Catalo
   if (catalog.isError) return null;
 
   const existing = new Set(existingCodes);
-  const available = catalog.data.filter((item) => !existing.has(item.code));
+  const available = catalog.data.filter((item) => !(isExisting ? isExisting(item) : existing.has(item.code)));
 
   if (available.length === 0) {
     return catalog.data.length > 0 ? <p className="text-sm text-slate-500">{t("catalog.allAdded")}</p> : null;
@@ -152,7 +178,7 @@ export function CatalogPicker({ kind, existingCodes, creds, onImported }: Catalo
                       onChange={() => toggle(item.code)}
                     />
                     {localizedName(item, i18n.language)}
-                    <span className="text-xs text-slate-400">{item.code}</span>
+                    {describe(item) ? <span className="text-xs text-slate-400">{describe(item)}</span> : null}
                   </label>
                 );
               })}
@@ -162,14 +188,16 @@ export function CatalogPicker({ kind, existingCodes, creds, onImported }: Catalo
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
+        {children}
         <Button
           type="button"
           variant="secondary"
-          disabled={selected.size === 0 || importMutation.isPending}
+          disabled={selected.size === 0 || importMutation.isPending || Boolean(disabledReason)}
           onClick={() => importMutation.mutate()}
         >
           {t("catalog.addSelection", { count: selected.size })}
         </Button>
+        {disabledReason ? <span className="text-sm text-amber-700">{disabledReason}</span> : null}
         {feedback ? (
           <span className={`text-sm ${feedback.tone === "success" ? "text-emerald-700" : "text-red-600"}`}>
             {feedback.text}

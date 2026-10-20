@@ -34,6 +34,7 @@ const manageSettings = requirePermission("tenant.settings.manage");
 // §17 : catalogue de référence global — listes de choix de Configuration. La
 // permission d'import dépend du type d'élément (vérifiée dans le contrôleur).
 schoolConfigRouter.get("/catalog", catalogController.listCatalogItems);
+schoolConfigRouter.get("/catalog/context", catalogController.getCatalogContext);
 schoolConfigRouter.post("/catalog/import", catalogController.importCatalogItems);
 
 schoolConfigRouter.post("/campuses", manageSettings, campusController.createCampus);

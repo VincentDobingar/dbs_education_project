@@ -126,9 +126,7 @@ async function summarizeTenants(): Promise<StatsOverview["tenants"]> {
   return { total, active, byStatus };
 }
 
-async function summarizeSubscriptions(
-  windowDays: number,
-): Promise<{
+async function summarizeSubscriptions(windowDays: number): Promise<{
   summary: StatsOverview["subscriptions"];
   conversionRate: number | null;
   churnRate: number | null;

@@ -202,6 +202,9 @@ async function seedCatalogItems(): Promise<void> {
         nameEn: item.nameEn,
         order: item.order,
         ...(item.parentCode ? { parentCode: item.parentCode } : {}),
+        ...(item.countryIsoCode ? { countryIsoCode: item.countryIsoCode } : {}),
+        ...(item.month !== undefined ? { month: item.month } : {}),
+        ...(item.day !== undefined ? { day: item.day } : {}),
       },
     });
   }

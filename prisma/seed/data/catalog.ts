@@ -8,12 +8,23 @@
 // et la progression (passage en classe supérieure) restent sans ambiguïté.
 
 type CatalogSeed = {
-  kind: "EDUCATION_CYCLE" | "GRADE_LEVEL" | "SUBJECT" | "ASSESSMENT_TYPE" | "FEE_CATEGORY";
+  kind:
+    | "EDUCATION_CYCLE"
+    | "GRADE_LEVEL"
+    | "SUBJECT"
+    | "ASSESSMENT_TYPE"
+    | "FEE_CATEGORY"
+    | "CAMPUS"
+    | "ROOM"
+    | "HOLIDAY";
   code: string;
   nameFr: string;
   nameEn: string;
   order: number;
   parentCode?: string;
+  countryIsoCode?: string;
+  month?: number;
+  day?: number;
 };
 
 const cycles: CatalogSeed[] = [
@@ -140,10 +151,149 @@ const feeCategories = simple("FEE_CATEGORY", [
   ["BIBLIO", "Bibliothèque", "Library"],
 ]);
 
+const campuses = simple("CAMPUS", [
+  ["PRINCIPAL", "Campus principal", "Main campus"],
+  ["ANNEXE", "Annexe", "Annex"],
+  ["MATERNELLE", "Site maternelle", "Pre-school site"],
+  ["PRIMAIRE", "Site primaire", "Primary site"],
+  ["COLLEGE", "Site collège", "Lower secondary site"],
+  ["LYCEE", "Site lycée", "Upper secondary site"],
+]);
+
+// Salles spécialisées — les salles de classe numérotées se génèrent à part
+// (« Salle 1 » à « Salle N ») depuis Configuration.
+const rooms = simple("ROOM", [
+  ["LABO_SCIENCES", "Laboratoire de sciences", "Science laboratory"],
+  ["SALLE_INFO", "Salle informatique", "Computer room"],
+  ["BIBLIOTHEQUE", "Bibliothèque", "Library"],
+  ["SALLE_PROFS", "Salle des professeurs", "Staff room"],
+  ["SALLE_POLY", "Salle polyvalente", "Multipurpose hall"],
+  ["GYMNASE", "Gymnase / salle de sport", "Gymnasium"],
+  ["REFECTOIRE", "Réfectoire", "Dining hall"],
+  ["INFIRMERIE", "Infirmerie", "Infirmary"],
+  ["SALLE_MUSIQUE", "Salle de musique", "Music room"],
+  ["ATELIER", "Atelier", "Workshop"],
+  ["SALLE_REUNION", "Salle de réunion", "Meeting room"],
+  ["SALLE_EXAMEN", "Salle d'examen", "Examination hall"],
+]);
+
+// Jours fériés à DATE FIXE uniquement : les fêtes mobiles (Pâques, Ascension,
+// Pentecôte, Aïd el-Fitr, Aïd el-Adha, Maouloud…) changent chaque année et restent
+// saisies par l'établissement. À vérifier/compléter depuis la super-administration
+// si un pays modifie son calendrier officiel.
+const holidaysByCountry: Record<string, readonly (readonly [string, string, string, number, number])[]> = {
+  TD: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["FEMME", "Journée internationale de la femme", "International Women's Day", 3, 8],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["AFRIQUE", "Journée de l'Afrique", "Africa Day", 5, 25],
+    ["INDEPENDANCE", "Fête de l'indépendance", "Independence Day", 8, 11],
+    ["TOUSSAINT", "Toussaint", "All Saints' Day", 11, 1],
+    ["REPUBLIQUE", "Proclamation de la République", "Republic Day", 11, 28],
+    ["LIBERTE", "Journée de la liberté et de la démocratie", "Freedom and Democracy Day", 12, 1],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  CM: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["JEUNESSE", "Fête de la jeunesse", "Youth Day", 2, 11],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["NATIONALE", "Fête nationale", "National Day", 5, 20],
+    ["ASSOMPTION", "Assomption", "Assumption Day", 8, 15],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  GA: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["FEMME", "Journée des droits de la femme", "Women's Rights Day", 4, 17],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["ASSOMPTION", "Assomption", "Assumption Day", 8, 15],
+    ["INDEPENDANCE_1", "Fête de l'indépendance", "Independence Day", 8, 16],
+    ["INDEPENDANCE_2", "Fête de l'indépendance (2e jour)", "Independence Day (day 2)", 8, 17],
+    ["TOUSSAINT", "Toussaint", "All Saints' Day", 11, 1],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  CG: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["RECONCILIATION", "Fête de la réconciliation", "Reconciliation Day", 6, 10],
+    ["NATIONALE", "Fête nationale", "National Day", 8, 15],
+    ["TOUSSAINT", "Toussaint", "All Saints' Day", 11, 1],
+    ["REPUBLIQUE", "Proclamation de la République", "Republic Day", 11, 28],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  CI: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["INDEPENDANCE", "Fête de l'indépendance", "Independence Day", 8, 7],
+    ["ASSOMPTION", "Assomption", "Assumption Day", 8, 15],
+    ["TOUSSAINT", "Toussaint", "All Saints' Day", 11, 1],
+    ["PAIX", "Journée nationale de la paix", "National Peace Day", 11, 15],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  SN: [
+    ["NOUVEL_AN", "Jour de l'an", "New Year's Day", 1, 1],
+    ["INDEPENDANCE", "Fête de l'indépendance", "Independence Day", 4, 4],
+    ["TRAVAIL", "Fête du travail", "Labour Day", 5, 1],
+    ["ASSOMPTION", "Assomption", "Assumption Day", 8, 15],
+    ["TOUSSAINT", "Toussaint", "All Saints' Day", 11, 1],
+    ["NOEL", "Noël", "Christmas Day", 12, 25],
+  ],
+  KE: [
+    ["NEW_YEAR", "Jour de l'an", "New Year's Day", 1, 1],
+    ["LABOUR", "Fête du travail", "Labour Day", 5, 1],
+    ["MADARAKA", "Madaraka Day", "Madaraka Day", 6, 1],
+    ["MAZINGIRA", "Mazingira Day", "Mazingira Day", 10, 10],
+    ["MASHUJAA", "Mashujaa Day", "Mashujaa Day", 10, 20],
+    ["JAMHURI", "Jamhuri Day", "Jamhuri Day", 12, 12],
+    ["CHRISTMAS", "Noël", "Christmas Day", 12, 25],
+    ["BOXING", "Boxing Day", "Boxing Day", 12, 26],
+  ],
+  TZ: [
+    ["NEW_YEAR", "Jour de l'an", "New Year's Day", 1, 1],
+    ["ZANZIBAR", "Révolution de Zanzibar", "Zanzibar Revolution Day", 1, 12],
+    ["KARUME", "Karume Day", "Karume Day", 4, 7],
+    ["UNION", "Fête de l'Union", "Union Day", 4, 26],
+    ["LABOUR", "Fête du travail", "Labour Day", 5, 1],
+    ["SABA_SABA", "Saba Saba", "Saba Saba Day", 7, 7],
+    ["NANE_NANE", "Nane Nane", "Nane Nane Day", 8, 8],
+    ["NYERERE", "Nyerere Day", "Nyerere Day", 10, 14],
+    ["INDEPENDENCE", "Fête de l'indépendance", "Independence Day", 12, 9],
+    ["CHRISTMAS", "Noël", "Christmas Day", 12, 25],
+    ["BOXING", "Boxing Day", "Boxing Day", 12, 26],
+  ],
+  UG: [
+    ["NEW_YEAR", "Jour de l'an", "New Year's Day", 1, 1],
+    ["LIBERATION", "Journée de la libération", "Liberation Day", 1, 26],
+    ["JANANI_LUWUM", "Janani Luwum Day", "Janani Luwum Day", 2, 16],
+    ["WOMEN", "Journée internationale de la femme", "International Women's Day", 3, 8],
+    ["LABOUR", "Fête du travail", "Labour Day", 5, 1],
+    ["MARTYRS", "Journée des martyrs", "Martyrs' Day", 6, 3],
+    ["HEROES", "Journée des héros", "Heroes' Day", 6, 9],
+    ["INDEPENDENCE", "Fête de l'indépendance", "Independence Day", 10, 9],
+    ["CHRISTMAS", "Noël", "Christmas Day", 12, 25],
+    ["BOXING", "Boxing Day", "Boxing Day", 12, 26],
+  ],
+};
+
+const holidays: CatalogSeed[] = Object.entries(holidaysByCountry).flatMap(([countryIsoCode, entries]) =>
+  entries.map(([code, nameFr, nameEn, month, day], index) => ({
+    kind: "HOLIDAY" as const,
+    code: `${countryIsoCode}_${code}`,
+    nameFr,
+    nameEn,
+    order: index + 1,
+    countryIsoCode,
+    month,
+    day,
+  })),
+);
+
 export const CATALOG_ITEMS: readonly CatalogSeed[] = [
   ...cycles,
   ...gradeLevels,
   ...subjects,
   ...assessmentTypes,
   ...feeCategories,
+  ...campuses,
+  ...rooms,
+  ...holidays,
 ];

@@ -13,9 +13,41 @@ import {
   type PlatformCatalogItem,
 } from "../../lib/platformAdminApi.js";
 
-const KINDS: CatalogKind[] = ["EDUCATION_CYCLE", "GRADE_LEVEL", "SUBJECT", "ASSESSMENT_TYPE", "FEE_CATEGORY"];
+const KINDS: CatalogKind[] = [
+  "EDUCATION_CYCLE",
+  "GRADE_LEVEL",
+  "SUBJECT",
+  "ASSESSMENT_TYPE",
+  "FEE_CATEGORY",
+  "CAMPUS",
+  "ROOM",
+  "HOLIDAY",
+];
 
-const EMPTY_FORM = { code: "", nameFr: "", nameEn: "", order: "", parentCode: "" };
+const EMPTY_FORM = {
+  code: "",
+  nameFr: "",
+  nameEn: "",
+  order: "",
+  parentCode: "",
+  countryIsoCode: "",
+  date: "",
+};
+
+/** "25/12" ↔ { day: 25, month: 12 } pour les jours fériés. */
+function parseDayMonth(value: string): { day: number; month: number } | null {
+  const match = /^(\d{1,2})\/(\d{1,2})$/.exec(value.trim());
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  return day >= 1 && day <= 31 && month >= 1 && month <= 12 ? { day, month } : null;
+}
+
+function formatDayMonth(item: PlatformCatalogItem): string {
+  return item.day && item.month
+    ? `${String(item.day).padStart(2, "0")}/${String(item.month).padStart(2, "0")}`
+    : "—";
+}
 
 function errorText(error: unknown): string | null {
   return error instanceof Error ? error.message : null;
@@ -39,6 +71,7 @@ function EditableRow({
     nameEn: item.nameEn,
     order: String(item.order),
     parentCode: item.parentCode ?? "",
+    date: item.kind === "HOLIDAY" ? formatDayMonth(item) : "",
   });
 
   const save = useMutation({
@@ -50,6 +83,7 @@ function EditableRow({
           nameEn: draft.nameEn,
           order: Number(draft.order) || 0,
           ...(item.kind === "GRADE_LEVEL" && draft.parentCode ? { parentCode: draft.parentCode } : {}),
+          ...(item.kind === "HOLIDAY" ? (parseDayMonth(draft.date) ?? {}) : {}),
         },
         creds,
       ),
@@ -99,6 +133,19 @@ function EditableRow({
               </select>
             </td>
           ) : null}
+          {item.kind === "HOLIDAY" ? (
+            <>
+              <td className="py-2 pr-3 text-slate-600">{item.countryIsoCode}</td>
+              <td className="py-2 pr-3">
+                <input
+                  className="input w-24"
+                  placeholder="jj/mm"
+                  value={draft.date}
+                  onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+                />
+              </td>
+            </>
+          ) : null}
           <td className="py-2 pr-3">
             <input
               type="number"
@@ -131,6 +178,12 @@ function EditableRow({
           <td className="py-2 pr-3 text-slate-800">{item.nameFr}</td>
           <td className="py-2 pr-3 text-slate-600">{item.nameEn}</td>
           {item.kind === "GRADE_LEVEL" ? <td className="py-2 pr-3 text-slate-600">{cycleName}</td> : null}
+          {item.kind === "HOLIDAY" ? (
+            <>
+              <td className="py-2 pr-3 text-slate-600">{item.countryIsoCode}</td>
+              <td className="py-2 pr-3 text-slate-600">{formatDayMonth(item)}</td>
+            </>
+          ) : null}
           <td className="py-2 pr-3 text-slate-600">{item.order}</td>
           <td className="space-x-3 whitespace-nowrap py-2 pr-3">
             <button
@@ -189,6 +242,12 @@ export function AdminCatalogSection({ creds }: { creds: AdminCredentials }): Rea
           nameEn: form.nameEn.trim(),
           order: Number(form.order) || 0,
           ...(kind === "GRADE_LEVEL" && form.parentCode ? { parentCode: form.parentCode } : {}),
+          ...(kind === "HOLIDAY"
+            ? {
+                countryIsoCode: form.countryIsoCode.trim().toUpperCase(),
+                ...(parseDayMonth(form.date) ?? {}),
+              }
+            : {}),
         },
         creds,
       ),
@@ -239,6 +298,12 @@ export function AdminCatalogSection({ creds }: { creds: AdminCredentials }): Rea
               {kind === "GRADE_LEVEL" ? (
                 <th className="pb-2 pr-3 font-medium">{t("admin.catalog.col.cycle")}</th>
               ) : null}
+              {kind === "HOLIDAY" ? (
+                <>
+                  <th className="pb-2 pr-3 font-medium">{t("admin.catalog.col.country")}</th>
+                  <th className="pb-2 pr-3 font-medium">{t("admin.catalog.col.date")}</th>
+                </>
+              ) : null}
               <th className="pb-2 pr-3 font-medium">{t("admin.catalog.col.order")}</th>
               <th className="pb-2 pr-3" />
             </tr>
@@ -284,6 +349,23 @@ export function AdminCatalogSection({ creds }: { creds: AdminCredentials }): Rea
             ))}
           </select>
         ) : null}
+        {kind === "HOLIDAY" ? (
+          <>
+            <input
+              className="input w-24"
+              placeholder={t("admin.catalog.col.country")}
+              maxLength={2}
+              value={form.countryIsoCode}
+              onChange={(event) => setForm({ ...form, countryIsoCode: event.target.value })}
+            />
+            <input
+              className="input w-24"
+              placeholder="jj/mm"
+              value={form.date}
+              onChange={(event) => setForm({ ...form, date: event.target.value })}
+            />
+          </>
+        ) : null}
         <input
           type="number"
           className="input w-24"
@@ -299,7 +381,8 @@ export function AdminCatalogSection({ creds }: { creds: AdminCredentials }): Rea
             !form.code.trim() ||
             !form.nameFr.trim() ||
             !form.nameEn.trim() ||
-            (kind === "GRADE_LEVEL" && !form.parentCode)
+            (kind === "GRADE_LEVEL" && !form.parentCode) ||
+            (kind === "HOLIDAY" && (form.countryIsoCode.trim().length !== 2 || !parseDayMonth(form.date)))
           }
         >
           {t("admin.common.create")}

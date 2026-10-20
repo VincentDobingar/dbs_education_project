@@ -6,6 +6,12 @@ import { AppError } from "../../lib/errors.js";
 import * as catalogService from "./catalog.service.js";
 import { importCatalogItemsSchema, listCatalogQuerySchema } from "./catalog.validation.js";
 
+export function getCatalogContext(_req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    res.status(200).json({ countryIsoCode: await catalogService.getTenantCountryIsoCode() });
+  })().catch(next);
+}
+
 export function listCatalogItems(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const query = listCatalogQuerySchema.parse(req.query);

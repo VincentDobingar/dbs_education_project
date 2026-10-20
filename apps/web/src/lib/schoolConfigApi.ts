@@ -278,7 +278,15 @@ export function uploadTenantLogo(file: File, creds: TenantCredentials): Promise<
 }
 
 // §17 : catalogue de référence global — listes de choix de Configuration.
-export type CatalogKind = "EDUCATION_CYCLE" | "GRADE_LEVEL" | "SUBJECT" | "ASSESSMENT_TYPE" | "FEE_CATEGORY";
+export type CatalogKind =
+  | "EDUCATION_CYCLE"
+  | "GRADE_LEVEL"
+  | "SUBJECT"
+  | "ASSESSMENT_TYPE"
+  | "FEE_CATEGORY"
+  | "CAMPUS"
+  | "ROOM"
+  | "HOLIDAY";
 
 export interface CatalogItem {
   id: string;
@@ -288,17 +296,41 @@ export interface CatalogItem {
   nameEn: string;
   order: number;
   parentCode: string | null;
+  countryIsoCode: string | null;
+  month: number | null;
+  day: number | null;
   isActive: boolean;
+}
+
+export function getCatalogContext(creds: TenantCredentials): Promise<{ countryIsoCode: string | null }> {
+  return apiRequest("/school-config/catalog/context", { ...creds });
 }
 
 export function listCatalogItems(kind: CatalogKind, creds: TenantCredentials): Promise<CatalogItem[]> {
   return apiRequest(`/school-config/catalog?kind=${kind}`, { ...creds });
 }
 
+export interface ImportCatalogOptions {
+  /** ROOM : campus et capacité appliqués aux salles importées. */
+  campusId?: string;
+  capacity?: number;
+  /** HOLIDAY : année scolaire dans laquelle placer les jours fériés (obligatoire). */
+  academicYearId?: string;
+}
+
 export function importCatalogItems(
   kind: CatalogKind,
   codes: string[],
   creds: TenantCredentials,
+  options: ImportCatalogOptions = {},
 ): Promise<{ created: string[]; skipped: string[] }> {
-  return apiRequest("/school-config/catalog/import", { method: "POST", body: { kind, codes }, ...creds });
+  return apiRequest("/school-config/catalog/import", {
+    method: "POST",
+    body: { kind, codes, ...options },
+    ...creds,
+  });
+}
+
+export function setCurrentAcademicYear(id: string, creds: TenantCredentials): Promise<AcademicYear> {
+  return apiRequest(`/school-config/academic-years/${id}/set-current`, { method: "POST", ...creds });
 }

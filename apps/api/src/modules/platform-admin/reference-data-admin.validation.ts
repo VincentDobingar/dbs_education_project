@@ -78,7 +78,17 @@ const CATALOG_KINDS = [
   "SUBJECT",
   "ASSESSMENT_TYPE",
   "FEE_CATEGORY",
+  "CAMPUS",
+  "ROOM",
+  "HOLIDAY",
 ] as const;
+
+// HOLIDAY : pays + date fixe (mois/jour).
+const holidayFields = {
+  countryIsoCode: z.string().length(2).optional(),
+  month: z.number().int().min(1).max(12).optional(),
+  day: z.number().int().min(1).max(31).optional(),
+};
 
 export const listCatalogItemsQuerySchema = z.object({
   kind: z.enum(CATALOG_KINDS).optional(),
@@ -95,6 +105,7 @@ export const createCatalogItemSchema = z.object({
   nameEn: z.string().min(1),
   order: z.number().int().min(0).default(0),
   parentCode: z.string().min(1).optional(),
+  ...holidayFields,
   justification: z.string().min(1).optional(),
 });
 export type CreateCatalogItemInput = z.infer<typeof createCatalogItemSchema>;
@@ -104,6 +115,7 @@ export const updateCatalogItemSchema = z.object({
   nameEn: z.string().min(1).optional(),
   order: z.number().int().min(0).optional(),
   parentCode: z.string().min(1).optional(),
+  ...holidayFields,
   isActive: z.boolean().optional(),
   justification: z.string().min(1).optional(),
 });
