@@ -1,4 +1,4 @@
-import { apiRequest, apiUpload } from "./apiClient.js";
+import { API_URL, ApiError, apiRequest, apiUpload } from "./apiClient.js";
 
 export interface RegisterInput {
   email: string;
@@ -30,8 +30,80 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-export function login(email: string, password: string): Promise<AuthTokens> {
+// §34 : pour un compte détenant un rôle sensible, POST /auth/login ne renvoie pas
+// de session mais un défi MFA (MFA déjà actif) ou une obligation d'inscription MFA
+// (MFA pas encore configuré) — voir LoginResult côté API (auth.service.ts).
+export interface MfaChallengeResult {
+  mfaRequired: true;
+  challengeToken: string;
+}
+
+export interface MfaEnrollmentResult {
+  mfaEnrollmentRequired: true;
+  enrollmentToken: string;
+}
+
+export type MfaPending = MfaChallengeResult | MfaEnrollmentResult;
+export type LoginResult = AuthTokens | MfaPending;
+
+export function isAuthTokens(result: LoginResult): result is AuthTokens {
+  return "accessToken" in result;
+}
+
+export function loginStart(email: string, password: string): Promise<LoginResult> {
   return apiRequest("/auth/login", { method: "POST", body: { email, password } });
+}
+
+/**
+ * Pour les écrans qui ne gèrent pas (encore) le second facteur : échoue
+ * explicitement avec MFA_REQUIRED plutôt que de laisser l'appelant utiliser un
+ * objet sans accessToken (ce qui produisait un 401 opaque sur /auth/me).
+ */
+export async function login(email: string, password: string): Promise<AuthTokens> {
+  const result = await loginStart(email, password);
+  if (isAuthTokens(result)) return result;
+  throw new ApiError(403, "MFA_REQUIRED", "A second authentication factor is required");
+}
+
+export function verifyMfaChallenge(challengeToken: string, code: string): Promise<AuthTokens> {
+  return apiRequest("/auth/mfa/verify", { method: "POST", body: { challengeToken, code } });
+}
+
+// Appels faits avec le jeton d'inscription MFA (pas un jeton d'accès) : fetch direct
+// plutôt qu'apiRequest, dont la logique de rafraîchissement sur 401 viderait la
+// session « staff » et redirigerait vers /connexion — sans rapport ici.
+async function mfaEnrollmentRequest<T>(path: string, enrollmentToken: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${enrollmentToken}` },
+    body: JSON.stringify(body),
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const errorBody = data as { code?: string; message?: string } | null;
+    throw new ApiError(
+      response.status,
+      errorBody?.code ?? "UNKNOWN_ERROR",
+      errorBody?.message ?? "Request failed",
+    );
+  }
+  return data as T;
+}
+
+export interface MfaSetupResult {
+  secret: string;
+  otpauthUri: string;
+}
+
+export function setupMfaWithEnrollmentToken(enrollmentToken: string): Promise<MfaSetupResult> {
+  return mfaEnrollmentRequest("/auth/mfa/setup", enrollmentToken, {});
+}
+
+export function enableMfaWithEnrollmentToken(
+  enrollmentToken: string,
+  code: string,
+): Promise<{ recoveryCodes: string[] }> {
+  return mfaEnrollmentRequest("/auth/mfa/enable", enrollmentToken, { code });
 }
 
 export interface OnboardTenantInput {
