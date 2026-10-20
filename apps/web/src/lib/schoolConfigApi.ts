@@ -276,3 +276,29 @@ export function setTenantLogo(logoUrl: string, creds: TenantCredentials): Promis
 export function uploadTenantLogo(file: File, creds: TenantCredentials): Promise<TenantLogo> {
   return apiUpload("/school-config/tenant-logo/upload", "logo", file, creds);
 }
+
+// §17 : catalogue de référence global — listes de choix de Configuration.
+export type CatalogKind = "EDUCATION_CYCLE" | "GRADE_LEVEL" | "SUBJECT" | "ASSESSMENT_TYPE" | "FEE_CATEGORY";
+
+export interface CatalogItem {
+  id: string;
+  kind: CatalogKind;
+  code: string;
+  nameFr: string;
+  nameEn: string;
+  order: number;
+  parentCode: string | null;
+  isActive: boolean;
+}
+
+export function listCatalogItems(kind: CatalogKind, creds: TenantCredentials): Promise<CatalogItem[]> {
+  return apiRequest(`/school-config/catalog?kind=${kind}`, { ...creds });
+}
+
+export function importCatalogItems(
+  kind: CatalogKind,
+  codes: string[],
+  creds: TenantCredentials,
+): Promise<{ created: string[]; skipped: string[] }> {
+  return apiRequest("/school-config/catalog/import", { method: "POST", body: { kind, codes }, ...creds });
+}

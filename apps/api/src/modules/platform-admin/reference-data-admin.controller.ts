@@ -3,9 +3,12 @@ import type { NextFunction, Request, Response } from "express";
 import { resolveActor } from "./platform-actor.js";
 import * as referenceDataAdminService from "./reference-data-admin.service.js";
 import {
+  createCatalogItemSchema,
   createCountrySchema,
   createCurrencySchema,
   createPaymentProviderSchema,
+  listCatalogItemsQuerySchema,
+  updateCatalogItemSchema,
   updateCountrySchema,
   updateCurrencySchema,
   updatePaymentProviderSchema,
@@ -87,5 +90,31 @@ export function updatePaymentProvider(req: Request, res: Response, next: NextFun
       actor,
     );
     res.status(200).json(provider);
+  })().catch(next);
+}
+
+export function listCatalogItems(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const query = listCatalogItemsQuerySchema.parse(req.query);
+    const items = await referenceDataAdminService.listCatalogItems(query.kind);
+    res.status(200).json(items);
+  })().catch(next);
+}
+
+export function createCatalogItem(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = createCatalogItemSchema.parse(req.body);
+    const actor = await resolveActor(req, input.justification ?? "");
+    const item = await referenceDataAdminService.createCatalogItem(input, actor);
+    res.status(201).json(item);
+  })().catch(next);
+}
+
+export function updateCatalogItem(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = updateCatalogItemSchema.parse(req.body);
+    const actor = await resolveActor(req, input.justification ?? "");
+    const item = await referenceDataAdminService.updateCatalogItem(req.params.id as string, input, actor);
+    res.status(200).json(item);
   })().catch(next);
 }

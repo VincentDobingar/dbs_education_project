@@ -1,4 +1,4 @@
-import type { Country, Currency, PaymentProvider, Prisma } from "@prisma/client";
+import type { CatalogItem, CatalogKind, Country, Currency, PaymentProvider, Prisma } from "@prisma/client";
 
 import { recordAuditLog } from "../../lib/audit-log.js";
 import { AppError } from "../../lib/errors.js";
@@ -6,9 +6,11 @@ import { prisma } from "../../lib/prisma.js";
 
 import type { PlatformActor } from "./platform-actor.js";
 import type {
+  CreateCatalogItemInput,
   CreateCountryInput,
   CreateCurrencyInput,
   CreatePaymentProviderInput,
+  UpdateCatalogItemInput,
   UpdateCountryInput,
   UpdateCurrencyInput,
   UpdatePaymentProviderInput,
@@ -246,6 +248,102 @@ export async function updatePaymentProvider(
     id,
     { isActive: before.isActive, isTestMode: before.isTestMode },
     { isActive: updated.isActive, isTestMode: updated.isTestMode },
+  );
+  return updated;
+}
+
+// ---------------------------------------------------------------------------
+// §17 : catalogue de référence global (CatalogItem) — listes de choix proposées
+// aux établissements dans Configuration. Les établissements en copient des
+// éléments : une modification ici ne touche jamais les données déjà importées.
+// ---------------------------------------------------------------------------
+
+export async function listCatalogItems(kind?: CatalogKind): Promise<CatalogItem[]> {
+  return prisma.catalogItem.findMany({
+    where: kind ? { kind } : {},
+    orderBy: [{ kind: "asc" }, { order: "asc" }, { nameFr: "asc" }],
+  });
+}
+
+async function requireCatalogParent(kind: CatalogKind, parentCode: string | undefined): Promise<void> {
+  if (kind !== "GRADE_LEVEL") {
+    if (parentCode) {
+      throw new AppError(422, "CATALOG_PARENT_NOT_ALLOWED", "Only grade levels have a parent cycle");
+    }
+    return;
+  }
+  if (!parentCode) {
+    throw new AppError(422, "CATALOG_PARENT_REQUIRED", "A grade level needs its parent cycle code");
+  }
+  const parent = await prisma.catalogItem.findUnique({
+    where: { kind_code: { kind: "EDUCATION_CYCLE", code: parentCode } },
+  });
+  if (!parent) {
+    throw new AppError(404, "CATALOG_PARENT_NOT_FOUND", `Unknown catalog cycle: ${parentCode}`);
+  }
+}
+
+export async function createCatalogItem(
+  input: CreateCatalogItemInput,
+  actor: PlatformActor,
+): Promise<CatalogItem> {
+  const existing = await prisma.catalogItem.findUnique({
+    where: { kind_code: { kind: input.kind, code: input.code } },
+  });
+  if (existing) {
+    throw new AppError(409, "CATALOG_CODE_TAKEN", `Catalog code already in use: ${input.code}`);
+  }
+  await requireCatalogParent(input.kind, input.parentCode);
+
+  const item = await prisma.catalogItem.create({
+    data: {
+      kind: input.kind,
+      code: input.code,
+      nameFr: input.nameFr,
+      nameEn: input.nameEn,
+      order: input.order,
+      ...(input.parentCode ? { parentCode: input.parentCode } : {}),
+    },
+  });
+
+  await auditReferenceData(actor, "catalog_item.create", "CatalogItem", item.id, undefined, {
+    kind: item.kind,
+    code: item.code,
+  });
+  return item;
+}
+
+export async function updateCatalogItem(
+  id: string,
+  input: UpdateCatalogItemInput,
+  actor: PlatformActor,
+): Promise<CatalogItem> {
+  const before = await prisma.catalogItem.findUnique({ where: { id } });
+  if (!before) {
+    throw new AppError(404, "CATALOG_ITEM_NOT_FOUND", `Catalog item not found: ${id}`);
+  }
+  if (input.parentCode !== undefined) {
+    await requireCatalogParent(before.kind, input.parentCode);
+  }
+
+  const updated = await prisma.catalogItem.update({
+    where: { id },
+    data: {
+      ...(input.nameFr !== undefined ? { nameFr: input.nameFr } : {}),
+      ...(input.nameEn !== undefined ? { nameEn: input.nameEn } : {}),
+      ...(input.order !== undefined ? { order: input.order } : {}),
+      ...(input.parentCode !== undefined ? { parentCode: input.parentCode } : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+    },
+  });
+
+  await auditReferenceData(
+    actor,
+    "catalog_item.update",
+    "CatalogItem",
+    id,
+    { nameFr: before.nameFr, isActive: before.isActive },
+    { nameFr: updated.nameFr, isActive: updated.isActive },
   );
   return updated;
 }

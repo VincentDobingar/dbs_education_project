@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
+import { CATALOG_ITEMS } from "./data/catalog.js";
 import { COUNTRIES, CURRENCIES } from "./data/countries-currencies.js";
 import { PAYMENT_PROVIDERS } from "./data/payment-providers.js";
 import { PLAN_FEATURES } from "./data/plan-features.js";
@@ -184,12 +185,37 @@ async function seedPaymentProviders(): Promise<void> {
   console.log(`Seeded ${PAYMENT_PROVIDERS.length} payment providers`);
 }
 
+/**
+ * §17 : catalogue de référence. Création seule (`update: {}`) — ce seed tourne à
+ * chaque déploiement (pre-deploy), et ne doit jamais écraser un libellé corrigé ni
+ * réactiver un élément désactivé depuis la super-administration.
+ */
+async function seedCatalogItems(): Promise<void> {
+  for (const item of CATALOG_ITEMS) {
+    await prisma.catalogItem.upsert({
+      where: { kind_code: { kind: item.kind, code: item.code } },
+      update: {},
+      create: {
+        kind: item.kind,
+        code: item.code,
+        nameFr: item.nameFr,
+        nameEn: item.nameEn,
+        order: item.order,
+        ...(item.parentCode ? { parentCode: item.parentCode } : {}),
+      },
+    });
+  }
+
+  console.log(`Seeded ${CATALOG_ITEMS.length} catalog items`);
+}
+
 async function main(): Promise<void> {
   await seedCurrenciesAndCountries();
   await seedRolesAndPermissions();
   await seedSubscriptionPlans();
   await seedPlanPricesAndFeatures();
   await seedPaymentProviders();
+  await seedCatalogItems();
 }
 
 main()

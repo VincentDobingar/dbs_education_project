@@ -174,3 +174,37 @@ model Campus {
   @@unique([tenantId, code])
   @@index([tenantId])
 }
+
+/// §17 : nature d'un élément du catalogue de référence (CatalogItem).
+enum CatalogKind {
+  EDUCATION_CYCLE
+  GRADE_LEVEL
+  SUBJECT
+  ASSESSMENT_TYPE
+  FEE_CATEGORY
+}
+
+/// Catalogue de référence global, partagé par tous les établissements : listes de
+/// choix proposées dans Configuration (cycles, niveaux, matières, types
+/// d'évaluation, catégories de frais) pour éviter une saisie complète. Un
+/// établissement en IMPORTE des éléments (copie dans ses propres tables
+/// tenant-scoped — EducationCycle, GradeLevel, Subject, AssessmentType,
+/// FeeCategory), jamais de lien vivant : le modifier ensuite ne change rien chez
+/// les établissements qui l'ont déjà importé. Pas de tenantId, donc ni RLS ni garde
+/// tenant (comme Country/Currency). Maintenu par la super-administration.
+model CatalogItem {
+  id         String      @id @default(cuid())
+  kind       CatalogKind
+  code       String
+  nameFr     String
+  nameEn     String
+  order      Int         @default(0)
+  /// GRADE_LEVEL uniquement : code du cycle parent (CatalogItem de kind EDUCATION_CYCLE).
+  parentCode String?
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([kind, code])
+  @@index([kind, isActive])
+}

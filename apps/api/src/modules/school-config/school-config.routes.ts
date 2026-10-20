@@ -12,6 +12,7 @@ import * as academicStructureController from "./academic-structure.controller.js
 import * as academicYearController from "./academic-year.controller.js";
 import * as calendarEventController from "./calendar-event.controller.js";
 import * as campusController from "./campus.controller.js";
+import * as catalogController from "./catalog.controller.js";
 import * as minorConsentSettingController from "./minor-consent-setting.controller.js";
 import * as programController from "./program.controller.js";
 import * as roomController from "./room.controller.js";
@@ -29,6 +30,11 @@ export const schoolConfigRouter: Router = Router();
 schoolConfigRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const manageSettings = requirePermission("tenant.settings.manage");
+
+// §17 : catalogue de référence global — listes de choix de Configuration. La
+// permission d'import dépend du type d'élément (vérifiée dans le contrôleur).
+schoolConfigRouter.get("/catalog", catalogController.listCatalogItems);
+schoolConfigRouter.post("/catalog/import", catalogController.importCatalogItems);
 
 schoolConfigRouter.post("/campuses", manageSettings, campusController.createCampus);
 schoolConfigRouter.get("/campuses", campusController.listCampuses);

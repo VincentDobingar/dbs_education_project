@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
+import { CatalogPicker, ManualEntry } from "../../components/CatalogPicker.js";
 import {
   createFeeCategory,
   createFeeStructure,
@@ -654,33 +655,47 @@ export function ConfigurationPage(): ReactNode {
           isError={cycles.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void cycleForm.handleSubmit((values) => createCycleMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input placeholder={t("config.form.code")} className="input w-28" {...cycleForm.register("code")} />
-          <input
-            placeholder={t("config.form.nameFr")}
-            className="input w-40"
-            {...cycleForm.register("nameFr")}
-          />
-          <input
-            placeholder={t("config.form.nameEn")}
-            className="input w-40"
-            {...cycleForm.register("nameEn")}
-          />
-          <input
-            type="number"
-            placeholder={t("config.form.order")}
-            className="input w-24"
-            {...cycleForm.register("order")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="EDUCATION_CYCLE"
+          existingCodes={(cycles.data ?? []).map((item) => item.code)}
+          creds={creds}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ["education-cycles", session.subdomain] });
+          }}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void cycleForm.handleSubmit((values) => createCycleMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.code")}
+              className="input w-28"
+              {...cycleForm.register("code")}
+            />
+            <input
+              placeholder={t("config.form.nameFr")}
+              className="input w-40"
+              {...cycleForm.register("nameFr")}
+            />
+            <input
+              placeholder={t("config.form.nameEn")}
+              className="input w-40"
+              {...cycleForm.register("nameEn")}
+            />
+            <input
+              type="number"
+              placeholder={t("config.form.order")}
+              className="input w-24"
+              {...cycleForm.register("order")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.gradeLevels")}>
@@ -695,45 +710,56 @@ export function ConfigurationPage(): ReactNode {
           isError={gradeLevels.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void gradeLevelForm.handleSubmit((values) => createGradeLevelMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <select className="input w-40" {...gradeLevelForm.register("cycleId")}>
-            <option value="">{t("config.form.selectCycle")}</option>
-            {(cycles.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nameFr}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder={t("config.form.code")}
-            className="input w-28"
-            {...gradeLevelForm.register("code")}
-          />
-          <input
-            placeholder={t("config.form.nameFr")}
-            className="input w-40"
-            {...gradeLevelForm.register("nameFr")}
-          />
-          <input
-            placeholder={t("config.form.nameEn")}
-            className="input w-40"
-            {...gradeLevelForm.register("nameEn")}
-          />
-          <input
-            type="number"
-            placeholder={t("config.form.order")}
-            className="input w-24"
-            {...gradeLevelForm.register("order")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="GRADE_LEVEL"
+          existingCodes={(gradeLevels.data ?? []).map((item) => item.code)}
+          creds={creds}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ["grade-levels", session.subdomain] });
+            void queryClient.invalidateQueries({ queryKey: ["education-cycles", session.subdomain] });
+          }}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void gradeLevelForm.handleSubmit((values) => createGradeLevelMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <select className="input w-40" {...gradeLevelForm.register("cycleId")}>
+              <option value="">{t("config.form.selectCycle")}</option>
+              {(cycles.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nameFr}
+                </option>
+              ))}
+            </select>
+            <input
+              placeholder={t("config.form.code")}
+              className="input w-28"
+              {...gradeLevelForm.register("code")}
+            />
+            <input
+              placeholder={t("config.form.nameFr")}
+              className="input w-40"
+              {...gradeLevelForm.register("nameFr")}
+            />
+            <input
+              placeholder={t("config.form.nameEn")}
+              className="input w-40"
+              {...gradeLevelForm.register("nameEn")}
+            />
+            <input
+              type="number"
+              placeholder={t("config.form.order")}
+              className="input w-24"
+              {...gradeLevelForm.register("order")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.classrooms")}>
@@ -799,31 +825,41 @@ export function ConfigurationPage(): ReactNode {
           isError={subjects.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void subjectForm.handleSubmit((values) => createSubjectMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.code")}
-            className="input w-28"
-            {...subjectForm.register("code")}
-          />
-          <input
-            placeholder={t("config.form.nameFr")}
-            className="input w-40"
-            {...subjectForm.register("nameFr")}
-          />
-          <input
-            placeholder={t("config.form.nameEn")}
-            className="input w-40"
-            {...subjectForm.register("nameEn")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="SUBJECT"
+          existingCodes={(subjects.data ?? []).map((item) => item.code)}
+          creds={creds}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ["subjects", session.subdomain] });
+          }}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void subjectForm.handleSubmit((values) => createSubjectMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.code")}
+              className="input w-28"
+              {...subjectForm.register("code")}
+            />
+            <input
+              placeholder={t("config.form.nameFr")}
+              className="input w-40"
+              {...subjectForm.register("nameFr")}
+            />
+            <input
+              placeholder={t("config.form.nameEn")}
+              className="input w-40"
+              {...subjectForm.register("nameEn")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.periods")}>
@@ -905,33 +941,43 @@ export function ConfigurationPage(): ReactNode {
           isError={assessmentTypes.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void assessmentTypeForm.handleSubmit((values) => createAssessmentTypeMutation.mutate(values))(
-              event,
-            )
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.code")}
-            className="input w-28"
-            {...assessmentTypeForm.register("code")}
-          />
-          <input
-            placeholder={t("config.form.nameFr")}
-            className="input w-40"
-            {...assessmentTypeForm.register("nameFr")}
-          />
-          <input
-            placeholder={t("config.form.nameEn")}
-            className="input w-40"
-            {...assessmentTypeForm.register("nameEn")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="ASSESSMENT_TYPE"
+          existingCodes={(assessmentTypes.data ?? []).map((item) => item.code)}
+          creds={creds}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ["assessment-types", session.subdomain] });
+          }}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void assessmentTypeForm.handleSubmit((values) => createAssessmentTypeMutation.mutate(values))(
+                event,
+              )
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.code")}
+              className="input w-28"
+              {...assessmentTypeForm.register("code")}
+            />
+            <input
+              placeholder={t("config.form.nameFr")}
+              className="input w-40"
+              {...assessmentTypeForm.register("nameFr")}
+            />
+            <input
+              placeholder={t("config.form.nameEn")}
+              className="input w-40"
+              {...assessmentTypeForm.register("nameEn")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.feeCategories")}>
@@ -942,31 +988,41 @@ export function ConfigurationPage(): ReactNode {
           isError={feeCategories.isError}
           errorMessage={t("list.error.loadFailed")}
         />
-        <form
-          onSubmit={(event) =>
-            void feeCategoryForm.handleSubmit((values) => createFeeCategoryMutation.mutate(values))(event)
-          }
-          className="flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("config.form.code")}
-            className="input w-28"
-            {...feeCategoryForm.register("code")}
-          />
-          <input
-            placeholder={t("config.form.nameFr")}
-            className="input w-40"
-            {...feeCategoryForm.register("nameFr")}
-          />
-          <input
-            placeholder={t("config.form.nameEn")}
-            className="input w-40"
-            {...feeCategoryForm.register("nameEn")}
-          />
-          <Button type="submit" variant="secondary">
-            {t("config.add")}
-          </Button>
-        </form>
+        <CatalogPicker
+          kind="FEE_CATEGORY"
+          existingCodes={(feeCategories.data ?? []).map((item) => item.code)}
+          creds={creds}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ["fee-categories", session.subdomain] });
+          }}
+        />
+        <ManualEntry>
+          <form
+            onSubmit={(event) =>
+              void feeCategoryForm.handleSubmit((values) => createFeeCategoryMutation.mutate(values))(event)
+            }
+            className="flex flex-wrap items-end gap-3"
+          >
+            <input
+              placeholder={t("config.form.code")}
+              className="input w-28"
+              {...feeCategoryForm.register("code")}
+            />
+            <input
+              placeholder={t("config.form.nameFr")}
+              className="input w-40"
+              {...feeCategoryForm.register("nameFr")}
+            />
+            <input
+              placeholder={t("config.form.nameEn")}
+              className="input w-40"
+              {...feeCategoryForm.register("nameEn")}
+            />
+            <Button type="submit" variant="secondary">
+              {t("config.add")}
+            </Button>
+          </form>
+        </ManualEntry>
       </Section>
 
       <Section title={t("config.feeStructures")}>

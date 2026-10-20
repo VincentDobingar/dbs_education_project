@@ -71,3 +71,40 @@ export const updatePaymentProviderSchema = z.object({
   justification: z.string().min(1).optional(),
 });
 export type UpdatePaymentProviderInput = z.infer<typeof updatePaymentProviderSchema>;
+
+const CATALOG_KINDS = [
+  "EDUCATION_CYCLE",
+  "GRADE_LEVEL",
+  "SUBJECT",
+  "ASSESSMENT_TYPE",
+  "FEE_CATEGORY",
+] as const;
+
+export const listCatalogItemsQuerySchema = z.object({
+  kind: z.enum(CATALOG_KINDS).optional(),
+});
+
+export const createCatalogItemSchema = z.object({
+  kind: z.enum(CATALOG_KINDS),
+  code: z
+    .string()
+    .min(1)
+    .max(30)
+    .regex(/^[A-Z0-9_]+$/, "Uppercase letters, digits and underscores only"),
+  nameFr: z.string().min(1),
+  nameEn: z.string().min(1),
+  order: z.number().int().min(0).default(0),
+  parentCode: z.string().min(1).optional(),
+  justification: z.string().min(1).optional(),
+});
+export type CreateCatalogItemInput = z.infer<typeof createCatalogItemSchema>;
+
+export const updateCatalogItemSchema = z.object({
+  nameFr: z.string().min(1).optional(),
+  nameEn: z.string().min(1).optional(),
+  order: z.number().int().min(0).optional(),
+  parentCode: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+  justification: z.string().min(1).optional(),
+});
+export type UpdateCatalogItemInput = z.infer<typeof updateCatalogItemSchema>;

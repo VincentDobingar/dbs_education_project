@@ -809,3 +809,49 @@ export function deletePlatformSetting(key: string, creds: AdminCredentials): Pro
     ...creds,
   });
 }
+
+// ---------------------------------------------------------------------------
+// §17 : catalogue de référence global (listes de choix de Configuration)
+// ---------------------------------------------------------------------------
+
+export type CatalogKind = "EDUCATION_CYCLE" | "GRADE_LEVEL" | "SUBJECT" | "ASSESSMENT_TYPE" | "FEE_CATEGORY";
+
+export interface PlatformCatalogItem {
+  id: string;
+  kind: CatalogKind;
+  code: string;
+  nameFr: string;
+  nameEn: string;
+  order: number;
+  parentCode: string | null;
+  isActive: boolean;
+}
+
+export function listPlatformCatalogItems(
+  kind: CatalogKind,
+  creds: AdminCredentials,
+): Promise<PlatformCatalogItem[]> {
+  return apiRequest(`/platform/catalog-items?kind=${kind}`, { ...creds });
+}
+
+export function createPlatformCatalogItem(
+  input: {
+    kind: CatalogKind;
+    code: string;
+    nameFr: string;
+    nameEn: string;
+    order: number;
+    parentCode?: string;
+  },
+  creds: AdminCredentials,
+): Promise<PlatformCatalogItem> {
+  return apiRequest("/platform/catalog-items", { method: "POST", body: input, ...creds });
+}
+
+export function updatePlatformCatalogItem(
+  id: string,
+  input: Partial<{ nameFr: string; nameEn: string; order: number; parentCode: string; isActive: boolean }>,
+  creds: AdminCredentials,
+): Promise<PlatformCatalogItem> {
+  return apiRequest(`/platform/catalog-items/${id}`, { method: "PATCH", body: input, ...creds });
+}

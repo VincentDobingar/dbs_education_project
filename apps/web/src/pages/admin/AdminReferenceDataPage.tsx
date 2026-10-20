@@ -18,6 +18,8 @@ import {
 } from "../../lib/platformAdminApi.js";
 import { useRequiredAdminSession } from "../../lib/useAdminSession.js";
 
+import { AdminCatalogSection } from "./AdminCatalogSection.js";
+
 const PAYMENT_METHOD_TYPES: PaymentMethodType[] = [
   "CASH",
   "BANK_TRANSFER",
@@ -28,7 +30,7 @@ const PAYMENT_METHOD_TYPES: PaymentMethodType[] = [
   "SPONSOR",
 ];
 
-type Tab = "countries" | "currencies" | "paymentProviders";
+type Tab = "countries" | "currencies" | "paymentProviders" | "catalog";
 
 export function AdminReferenceDataPage(): ReactNode {
   const { t } = useTranslation("app");
@@ -100,6 +102,7 @@ export function AdminReferenceDataPage(): ReactNode {
     { key: "countries", label: t("admin.referenceData.tab.countries") },
     { key: "currencies", label: t("admin.referenceData.tab.currencies") },
     { key: "paymentProviders", label: t("admin.referenceData.tab.paymentProviders") },
+    { key: "catalog", label: t("admin.referenceData.tab.catalog") },
   ];
 
   return (
@@ -365,6 +368,8 @@ export function AdminReferenceDataPage(): ReactNode {
           </form>
         </section>
       ) : null}
+
+      {tab === "catalog" ? <AdminCatalogSection creds={creds} /> : null}
     </div>
   );
 }

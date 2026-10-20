@@ -171,6 +171,25 @@ platformAdminRouter.patch(
 );
 
 platformAdminRouter.get(
+  "/catalog-items",
+  requireAuth,
+  readPlatform,
+  referenceDataAdminController.listCatalogItems,
+);
+platformAdminRouter.post(
+  "/catalog-items",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.createCatalogItem,
+);
+platformAdminRouter.patch(
+  "/catalog-items/:id",
+  requireAuth,
+  managePlatform,
+  referenceDataAdminController.updateCatalogItem,
+);
+
+platformAdminRouter.get(
   "/promotion-codes",
   requireAuth,
   readPlatform,
