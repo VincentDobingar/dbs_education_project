@@ -20,6 +20,7 @@
     "db:generate": "prisma generate --schema=./prisma/schema",
     "db:migrate:dev": "prisma migrate dev --schema=./prisma/schema",
     "db:seed": "tsx prisma/seed/index.ts",
+    "db:seed:demo": "tsx prisma/seed/demo/demo-school.ts",
     "db:seed:typecheck": "tsc --noEmit -p prisma/tsconfig.json",
     "db:studio": "prisma studio --schema=./prisma/schema"
   },
