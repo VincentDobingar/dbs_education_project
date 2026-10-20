@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, Navigate, Outlet } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { SidebarShell } from "../components/SidebarShell.js";
 import { getTenantLogo } from "../lib/schoolConfigApi.js";
+import { ACCESS_GRANTING_STATUSES, getSchoolSubscription } from "../lib/schoolSubscriptionApi.js";
 import { clearSession, loadSession } from "../lib/session.js";
 
 /**
@@ -114,6 +116,9 @@ const NAV_LINKS: readonly NavLinkDef[] = [
     roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
   },
   { to: "/configuration", key: "layout.nav.configuration", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN"] },
+  // GET /subscriptions/school n'exige aucune permission ; seul SCHOOL_OWNER détient
+  // subscriptions.manage pour souscrire (la page l'explique aux autres).
+  { to: "/abonnement", key: "layout.nav.subscription", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR"] },
 ];
 
 function isNavLinkVisible(roles: readonly string[] | undefined, userRoleCodes: readonly string[]): boolean {
@@ -123,13 +128,10 @@ function isNavLinkVisible(roles: readonly string[] | undefined, userRoleCodes: r
   return userRoleCodes.some((code) => roles.includes(code));
 }
 
-function navLinkClassName({ isActive }: { isActive: boolean }): string {
-  return `text-sm font-medium transition-colors ${isActive ? "text-brand-teal" : "text-white/70 hover:text-white"}`;
-}
-
 export function AppLayout(): ReactNode {
   const { t } = useTranslation("app");
   const session = loadSession();
+  const location = useLocation();
 
   // Le logo n'est pas dans la session (posé une fois à la connexion) : un
   // changement fait depuis Configuration doit apparaître ici sans se reconnecter,
@@ -137,6 +139,15 @@ export function AppLayout(): ReactNode {
   const tenantLogo = useQuery({
     queryKey: ["tenant-logo", session?.subdomain],
     queryFn: () => getTenantLogo({ accessToken: session!.accessToken, subdomain: session!.subdomain }),
+    enabled: Boolean(session),
+  });
+  // Sans abonnement actif, presque tous les modules répondent 402 : un bandeau
+  // explique pourquoi et mène à la page Abonnement, plutôt qu'une suite d'erreurs
+  // génériques page après page.
+  const subscription = useQuery({
+    queryKey: ["school-subscription-banner", session?.subdomain],
+    queryFn: () =>
+      getSchoolSubscription({ accessToken: session!.accessToken, subdomain: session!.subdomain }),
     enabled: Boolean(session),
   });
   // L'URL peut être valide en base mais momentanément injoignable (redémarrage du
@@ -154,48 +165,43 @@ export function AppLayout(): ReactNode {
     window.location.assign("/connexion");
   }
 
+  const links = NAV_LINKS.filter((link) => isNavLinkVisible(link.roles, session.roleCodes)).map((link) => ({
+    to: link.to,
+    label: t(link.key),
+  }));
+
+  const subscriptionInactive =
+    subscription.isSuccess &&
+    (subscription.data === null || !ACCESS_GRANTING_STATUSES.has(subscription.data.status));
+  const banner =
+    subscriptionInactive && location.pathname !== "/abonnement" ? (
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-6 py-3 text-sm text-amber-900">
+        <p>{t("subscription.banner.inactive")}</p>
+        <Link to="/abonnement" className="font-semibold underline hover:text-amber-950">
+          {t("subscription.banner.cta")}
+        </Link>
+      </div>
+    ) : null;
+
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="bg-brand-night">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt=""
-                className="h-10 w-10 shrink-0 rounded-md bg-white object-contain p-1"
-                onError={() => setLogoLoadFailed(true)}
-              />
-            ) : null}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{session.tenantName}</p>
-              <p className="truncate text-xs text-white/60">{session.email}</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="shrink-0 rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-white/10"
-          >
-            {t("layout.logout")}
-          </button>
-        </div>
-
-        <nav className="border-t border-white/10">
-          <div className="mx-auto flex max-w-7xl items-center gap-x-7 overflow-x-auto whitespace-nowrap px-6 py-2.5">
-            {NAV_LINKS.filter((link) => isNavLinkVisible(link.roles, session.roleCodes)).map((link) => (
-              <NavLink key={link.to} to={link.to} className={navLinkClassName}>
-                {t(link.key)}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
-      </header>
-
-      <main className="flex-1">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarShell
+      title={session.tenantName}
+      subtitle={session.email}
+      logo={
+        logoUrl ? (
+          <img
+            src={logoUrl}
+            alt=""
+            className="h-10 w-10 shrink-0 rounded-md bg-white object-contain p-1"
+            onError={() => setLogoLoadFailed(true)}
+          />
+        ) : null
+      }
+      links={links}
+      onLogout={handleLogout}
+      banner={banner}
+    >
+      <Outlet />
+    </SidebarShell>
   );
 }

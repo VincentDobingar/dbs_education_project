@@ -2,6 +2,7 @@ import type { Subscription } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { prisma } from "../../lib/prisma.js";
 import { requireFamilyAccountForUser } from "../family/family-account.service.js";
 import * as paymentService from "../payments/payment.service.js";
 import {
@@ -92,8 +93,16 @@ export function createSchoolSubscription(req: Request, res: Response, next: Next
 export function getSchoolSubscription(req: Request, res: Response, next: NextFunction): void {
   void (async () => {
     const tenantId = requireTenantId(req);
-    const subscription = await requireTenantSubscription(tenantId);
-    res.status(200).json(subscription);
+    // Statut à jour (essai ou période échus) et formule lisible pour la page
+    // « Abonnement » de l'établissement, qui n'a pas accès aux routes plateforme.
+    const subscription = await subscriptionService.advanceSubscriptionIfDue(
+      await requireTenantSubscription(tenantId),
+    );
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { id: subscription.planId },
+      select: { code: true, nameFr: true, nameEn: true, trialDays: true },
+    });
+    res.status(200).json({ ...subscription, plan });
   })().catch(next);
 }
 

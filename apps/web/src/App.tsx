@@ -8,6 +8,7 @@ import { AdminLayout } from "./layouts/AdminLayout.js";
 import { AppLayout } from "./layouts/AppLayout.js";
 import { MarketingLayout } from "./layouts/MarketingLayout.js";
 import { PortalLayout } from "./layouts/PortalLayout.js";
+import { ApiError } from "./lib/apiClient.js";
 import { lazyImport } from "./lib/lazyImport.js";
 import { LoginPage } from "./pages/app/LoginPage.js";
 import { ContactPage } from "./pages/marketing/ContactPage.js";
@@ -75,6 +76,7 @@ const HomeworkPage = lazyImport(() => import("./pages/app/HomeworkPage.js"), "Ho
 const LibraryPage = lazyImport(() => import("./pages/app/LibraryPage.js"), "LibraryPage");
 const ReportCardsPage = lazyImport(() => import("./pages/app/ReportCardsPage.js"), "ReportCardsPage");
 const StudentDetailPage = lazyImport(() => import("./pages/app/StudentDetailPage.js"), "StudentDetailPage");
+const SubscriptionPage = lazyImport(() => import("./pages/app/SubscriptionPage.js"), "SubscriptionPage");
 const StudentsPage = lazyImport(() => import("./pages/app/StudentsPage.js"), "StudentsPage");
 const SupportTicketsPage = lazyImport(
   () => import("./pages/app/SupportTicketsPage.js"),
@@ -95,7 +97,19 @@ const StudentPortalPage = lazyImport(
   "StudentPortalPage",
 );
 
-const queryClient = new QueryClient();
+// Une erreur 4xx (pas d'abonnement, droits insuffisants, ressource absente…) ne
+// changera pas en relançant : la configuration par défaut de React Query la
+// retentait 3 fois avec un délai croissant, d'où de longues attentes avant
+// d'afficher l'erreur (tableau de bord sans abonnement actif). Seules les erreurs
+// réseau/serveur sont retentées, une fois.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) =>
+        !(error instanceof ApiError && error.status >= 400 && error.status < 500) && failureCount < 1,
+    },
+  },
+});
 
 function RouteFallback(): ReactNode {
   const { t } = useTranslation();
@@ -123,6 +137,7 @@ export function App(): ReactNode {
             <Route element={<AppLayout />}>
               <Route path="/tableau-de-bord" element={<DashboardPage />} />
               <Route path="/configuration" element={<ConfigurationPage />} />
+              <Route path="/abonnement" element={<SubscriptionPage />} />
               <Route path="/eleves" element={<StudentsPage />} />
               <Route path="/eleves/:id" element={<StudentDetailPage />} />
               <Route path="/utilisateurs" element={<UsersPage />} />

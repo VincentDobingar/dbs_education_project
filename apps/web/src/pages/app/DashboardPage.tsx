@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { getDirectionDashboard } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
@@ -36,13 +37,18 @@ export function DashboardPage(): ReactNode {
 
       {isPending ? <p className="mt-8 text-sm text-slate-500">{t("dashboard.loading")}</p> : null}
 
-      {error ? (
+      {error instanceof ApiError && error.status === 402 ? (
+        <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          <p>{t("dashboard.error.noSubscription")}</p>
+          <Link to="/abonnement" className="mt-2 inline-block font-semibold underline">
+            {t("subscription.banner.cta")}
+          </Link>
+        </div>
+      ) : error ? (
         <p className="mt-8 text-sm text-red-600">
           {error instanceof ApiError && error.status === 403
             ? t("dashboard.error.forbidden")
-            : error instanceof ApiError && error.status === 402
-              ? t("dashboard.error.noSubscription")
-              : t("dashboard.error.generic")}
+            : t("dashboard.error.generic")}
         </p>
       ) : null}
 

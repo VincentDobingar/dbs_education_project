@@ -150,6 +150,20 @@ async function fetchWithAuthRetry(
   return fetch(`${API_URL}${path}`, { ...init, headers });
 }
 
+/**
+ * Contexte de session d'un appel qui ne le précise pas : déduit de la section du
+ * site où l'on se trouve. Sans cela, tous les appels de la super-administration
+ * et du portail famille/élève (qui ne passent pas `authContext`) étaient traités
+ * comme « staff » : à l'expiration du jeton d'accès (15 min), le rafraîchissement
+ * cherchait une session établissement inexistante et renvoyait vers /connexion.
+ */
+export function inferAuthContext(): AuthContext {
+  const pathname = typeof window === "undefined" ? undefined : window.location?.pathname;
+  if (pathname?.startsWith("/admin")) return "admin";
+  if (pathname?.startsWith("/portail")) return "portal";
+  return "staff";
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -174,7 +188,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     },
     options.accessToken,
-    options.authContext ?? "staff",
+    options.authContext ?? inferAuthContext(),
   );
 
   const data: unknown = await response.json().catch(() => null);
@@ -214,7 +228,7 @@ export async function apiUpload<T>(
       body: formData,
     },
     options.accessToken,
-    options.authContext ?? "staff",
+    options.authContext ?? inferAuthContext(),
   );
 
   const data: unknown = await response.json().catch(() => null);
@@ -250,7 +264,7 @@ export async function fetchBlob(
       },
     },
     options.accessToken,
-    options.authContext ?? "staff",
+    options.authContext ?? inferAuthContext(),
   );
   if (!response.ok) {
     throw new ApiError(response.status, "FILE_FETCH_FAILED", "Could not load the file");

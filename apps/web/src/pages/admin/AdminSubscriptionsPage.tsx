@@ -30,6 +30,33 @@ const STATUSES: SubscriptionStatus[] = [
 ];
 const OWNER_TYPES: SubscriberCategory[] = ["SCHOOL", "PARENT", "STUDENT", "ORGANIZATION"];
 
+// Copie de ALLOWED_SUBSCRIPTION_TRANSITIONS (apps/api/.../subscription-transitions.ts) :
+// la liste « Forcer une transition » ne propose que ce que l'API acceptera.
+const ALLOWED_TRANSITIONS: Record<SubscriptionStatus, SubscriptionStatus[]> = {
+  DRAFT: ["PENDING_PAYMENT", "TRIAL", "CANCELLED"],
+  PENDING_PAYMENT: ["ACTIVE", "PENDING_ACTIVATION", "CANCELLED"],
+  PENDING_ACTIVATION: ["ACTIVE", "CANCELLED"],
+  TRIAL: ["ACTIVE", "EXPIRED", "CANCELLED"],
+  ACTIVE: ["PAST_DUE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED", "EXPIRED", "REFUNDED"],
+  PAST_DUE: ["ACTIVE", "GRACE_PERIOD", "SUSPENDED", "CANCELLED"],
+  GRACE_PERIOD: ["ACTIVE", "SUSPENDED", "EXPIRED"],
+  SUSPENDED: ["ACTIVE", "CANCELLED", "EXPIRED"],
+  EXPIRED: ["ACTIVE", "CANCELLED"],
+  CANCELLED: [],
+  REFUNDED: [],
+};
+
+/** Chemin vers ACTIVE : DRAFT doit d'abord passer par PENDING_PAYMENT (pas de saut direct). */
+function activationPath(status: SubscriptionStatus): SubscriptionStatus[] | null {
+  if (status === "DRAFT") return ["PENDING_PAYMENT", "ACTIVE"];
+  return ALLOWED_TRANSITIONS[status].includes("ACTIVE") ? ["ACTIVE"] : null;
+}
+
+function errorMessage(error: unknown): string | null {
+  if (!error) return null;
+  return error instanceof Error ? error.message : "";
+}
+
 function ownerLabel(subscription: {
   owner: {
     ownerType: string;
@@ -46,7 +73,7 @@ function ownerLabel(subscription: {
 }
 
 export function AdminSubscriptionsPage(): ReactNode {
-  const { t } = useTranslation("app");
+  const { t, i18n } = useTranslation("app");
   const session = useRequiredAdminSession();
   const creds = { accessToken: session.accessToken };
   const queryClient = useQueryClient();
@@ -88,6 +115,20 @@ export function AdminSubscriptionsPage(): ReactNode {
   });
   const extendMutation = useMutation({
     mutationFn: () => extendTrial(selectedId, new Date(trialEndsAt).toISOString(), justification, creds),
+    onSuccess: invalidate,
+  });
+  const startTrialMutation = useMutation({
+    mutationFn: () => forceTransition(selectedId, "TRIAL", justification, creds),
+    onSuccess: invalidate,
+  });
+  const activateMutation = useMutation({
+    mutationFn: async () => {
+      const path = selected.data ? activationPath(selected.data.status) : null;
+      if (!path) throw new Error("Activation impossible depuis ce statut");
+      for (const step of path) {
+        await forceTransition(selectedId, step, justification, creds);
+      }
+    },
     onSuccess: invalidate,
   });
   const sweepMutation = useMutation({
@@ -142,8 +183,14 @@ export function AdminSubscriptionsPage(): ReactNode {
           </select>
         </div>
 
-        {(subscriptions.data ?? []).length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">{t("admin.common.empty")}</p>
+        {subscriptions.isPending ? (
+          <p className="mt-4 text-sm text-slate-500">{t("admin.common.loading")}</p>
+        ) : subscriptions.isError ? (
+          <p className="mt-4 text-sm text-red-600">
+            {t("admin.subscriptions.loadError")} ({errorMessage(subscriptions.error)})
+          </p>
+        ) : (subscriptions.data ?? []).length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">{t("admin.subscriptions.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="mt-4 w-full text-left text-sm">
@@ -152,6 +199,7 @@ export function AdminSubscriptionsPage(): ReactNode {
                   <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.owner")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.plan")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("students.status")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("admin.subscriptions.createdAt")}</th>
                   <th className="pb-2 pr-4" />
                 </tr>
               </thead>
@@ -163,6 +211,9 @@ export function AdminSubscriptionsPage(): ReactNode {
                     <td className="py-2 pr-4 text-slate-700">
                       {t(`admin.subscriptions.status.${subscription.status}`)}
                     </td>
+                    <td className="py-2 pr-4 text-slate-500">
+                      {new Date(subscription.createdAt).toLocaleDateString(i18n.language)}
+                    </td>
                     <td className="py-2 pr-4">
                       <button
                         type="button"
@@ -170,6 +221,7 @@ export function AdminSubscriptionsPage(): ReactNode {
                         onClick={() => {
                           setSelectedId(subscription.id);
                           setJustification("");
+                          setToStatus(ALLOWED_TRANSITIONS[subscription.status][0] ?? "ACTIVE");
                         }}
                       >
                         {t("admin.common.open")}
@@ -200,13 +252,45 @@ export function AdminSubscriptionsPage(): ReactNode {
             />
           </label>
 
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {ALLOWED_TRANSITIONS[selected.data.status].includes("TRIAL") ? (
+              <Button
+                variant="secondary"
+                disabled={!canAct || startTrialMutation.isPending}
+                onClick={() => startTrialMutation.mutate()}
+              >
+                {t("admin.subscriptions.action.startTrial")}
+              </Button>
+            ) : null}
+            {activationPath(selected.data.status) ? (
+              <Button
+                variant="secondary"
+                disabled={!canAct || activateMutation.isPending}
+                onClick={() => activateMutation.mutate()}
+              >
+                {t("admin.subscriptions.action.activate")}
+              </Button>
+            ) : null}
+            {!canAct ? (
+              <span className="text-xs text-slate-500">{t("admin.subscriptions.justificationRequired")}</span>
+            ) : null}
+          </div>
+          {[startTrialMutation, activateMutation, transitionMutation, extendMutation].map(
+            (mutation, index) =>
+              mutation.isError ? (
+                <p key={index} className="mt-2 text-sm text-red-600">
+                  {errorMessage(mutation.error)}
+                </p>
+              ) : null,
+          )}
+
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <select
               className="input w-56"
               value={toStatus}
               onChange={(event) => setToStatus(event.target.value as SubscriptionStatus)}
             >
-              {STATUSES.map((status) => (
+              {ALLOWED_TRANSITIONS[selected.data.status].map((status) => (
                 <option key={status} value={status}>
                   {t(`admin.subscriptions.status.${status}`)}
                 </option>

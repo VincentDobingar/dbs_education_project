@@ -5,10 +5,16 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "../i18n.js";
+import type * as SchoolSubscriptionApi from "../lib/schoolSubscriptionApi.js";
 import { saveSession } from "../lib/session.js";
 
 vi.mock("../lib/schoolConfigApi.js", () => ({
   getTenantLogo: vi.fn().mockResolvedValue({ logoUrl: null }),
+}));
+
+vi.mock("../lib/schoolSubscriptionApi.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof SchoolSubscriptionApi>()),
+  getSchoolSubscription: vi.fn().mockResolvedValue(null),
 }));
 
 import { AppLayout } from "./AppLayout.js";
@@ -87,6 +93,12 @@ describe("AppLayout — navigation filtrée par rôle", () => {
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+  });
+
+  it("affiche un bandeau menant à l'abonnement quand l'établissement n'en a pas", async () => {
+    renderLayoutFor(["SCHOOL_OWNER"]);
+
+    expect(await screen.findByText("Gérer l'abonnement")).toBeInTheDocument();
   });
 
   it("un ACCOUNTANT voit Finances mais pas Personnel ni les modules pédagogiques", () => {
