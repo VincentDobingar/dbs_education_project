@@ -40,6 +40,15 @@ const apiEnvSchema = baseEnvSchema.extend({
   // les utilisateurs dans le même compteur et `ipAddress` des journaux d'audit
   // serait faux. 0 (défaut) = aucun proxy, comportement inchangé en dev/test.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
+  // §34 : MFA obligatoire pour les rôles sensibles (authorization.ts). "false" le
+  // rend facultatif : un compte sensible sans MFA reçoit directement une session,
+  // un compte qui a activé le MFA garde son défi. Chaîne explicite plutôt que
+  // z.coerce.boolean (qui lirait "false" comme vrai). Activé par défaut.
+  MFA_REQUIRED_FOR_SENSITIVE_ROLES: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

@@ -81,6 +81,7 @@ services:
       # Un reverse proxy (Traefik de Coolify) devant l'API : sans cela, req.ip = IP du
       # proxy et le rate limiting comme les journaux d'audit sont faux.
       TRUST_PROXY_HOPS: "1"
+      MFA_REQUIRED_FOR_SENSITIVE_ROLES: ${MFA_REQUIRED_FOR_SENSITIVE_ROLES:-true}
       # Canaux optionnels (§28) : à décommenter ET renseigner en entier. Ne jamais
       # les passer vides — SMTP_PORT="" ou SMTP_FROM_ADDRESS="" font échouer le boot.
       # SMTP_SECURE : toute valeur non vide vaut `true` ; l'omettre pour STARTTLS (587).

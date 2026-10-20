@@ -1,5 +1,6 @@
 import type { User } from "@prisma/client";
 
+import { env } from "../../env.js";
 import {
   EMAIL_VERIFICATION_TTL_MS,
   generateEmailVerificationToken,
@@ -309,7 +310,7 @@ export async function login(email: string, password: string, meta: SessionMeta):
     return { mfaRequired: true, challengeToken: signMfaChallengeToken(user.id) };
   }
 
-  if (await userHasSensitiveRole(user.id)) {
+  if (env.MFA_REQUIRED_FOR_SENSITIVE_ROLES && (await userHasSensitiveRole(user.id))) {
     return { mfaEnrollmentRequired: true, enrollmentToken: signMfaEnrollmentToken(user.id) };
   }
 
