@@ -897,5 +897,16 @@
   "admin.catalog.kind.ROOM": "Rooms",
   "admin.catalog.kind.HOLIDAY": "Public holidays",
   "admin.catalog.col.country": "Country",
-  "admin.catalog.col.date": "Date (dd/mm)"
+  "admin.catalog.col.date": "Date (dd/mm)",
+  "layout.nav.guide": "User guide",
+  "portal.nav.guide": "User guide",
+  "admin.nav.guide": "Administration guide",
+  "guide.kicker": "Help",
+  "guide.title": "User guide",
+  "guide.subtitle": "Everything you need to get started with EduManage Africa: sign-up, configuration, day-to-day modules and the family portal.",
+  "guide.toc": "Contents",
+  "guide.downloadPdf": "Download the guide (PDF)",
+  "guide.frenchOnly": "This guide is currently available in French only.",
+  "admin.guide.title": "Administration guide",
+  "admin.guide.subtitle": "Tasks reserved for the DBS Africa team: verifying schools, activating subscriptions, maintaining the catalogue."
 }

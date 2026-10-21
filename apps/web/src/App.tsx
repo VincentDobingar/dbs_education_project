@@ -30,6 +30,7 @@ const AdminDashboardPage = lazyImport(
   () => import("./pages/admin/AdminDashboardPage.js"),
   "AdminDashboardPage",
 );
+const AdminGuidePage = lazyImport(() => import("./pages/admin/AdminGuidePage.js"), "AdminGuidePage");
 const AdminLoginPage = lazyImport(() => import("./pages/admin/AdminLoginPage.js"), "AdminLoginPage");
 const AdminMessageTemplatesPage = lazyImport(
   () => import("./pages/admin/AdminMessageTemplatesPage.js"),
@@ -72,6 +73,8 @@ const EmployeeDetailPage = lazyImport(
 const EmployeesPage = lazyImport(() => import("./pages/app/EmployeesPage.js"), "EmployeesPage");
 const FinancePage = lazyImport(() => import("./pages/app/FinancePage.js"), "FinancePage");
 const GradingPage = lazyImport(() => import("./pages/app/GradingPage.js"), "GradingPage");
+const GuidePage = lazyImport(() => import("./pages/marketing/GuidePage.js"), "GuidePage");
+const HelpPage = lazyImport(() => import("./pages/app/HelpPage.js"), "HelpPage");
 const HomeworkPage = lazyImport(() => import("./pages/app/HomeworkPage.js"), "HomeworkPage");
 const LibraryPage = lazyImport(() => import("./pages/app/LibraryPage.js"), "LibraryPage");
 const ReportCardsPage = lazyImport(() => import("./pages/app/ReportCardsPage.js"), "ReportCardsPage");
@@ -127,6 +130,7 @@ export function App(): ReactNode {
               <Route path="/" element={<HomePage />} />
               <Route path="/tarifs" element={<PricingPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/guide" element={<GuidePage />} />
               <Route path="/inscription" element={<SignupPage />} />
               <Route path="/connexion" element={<LoginPage />} />
               <Route path="/conditions-generales" element={<TermsPage />} />
@@ -157,6 +161,7 @@ export function App(): ReactNode {
               <Route path="/cantine" element={<CafeteriaPage />} />
               <Route path="/internat" element={<BoardingPage />} />
               <Route path="/e-learning" element={<ElearningPage />} />
+              <Route path="/aide" element={<HelpPage />} />
             </Route>
 
             <Route element={<PortalLayout />}>
@@ -164,6 +169,7 @@ export function App(): ReactNode {
               <Route path="/portail/parent/enfants/:studentId" element={<ParentChildPage />} />
               <Route path="/portail/eleve" element={<StudentPortalPage />} />
               <Route path="/portail/activation" element={<PortalRedeemPage />} />
+              <Route path="/portail/aide" element={<HelpPage />} />
             </Route>
             <Route path="/portail/connexion" element={<PortalLoginPage />} />
 
@@ -179,6 +185,7 @@ export function App(): ReactNode {
               <Route path="/admin/modeles-messages" element={<AdminMessageTemplatesPage />} />
               <Route path="/admin/sponsors" element={<AdminSponsorsPage />} />
               <Route path="/admin/parametres" element={<AdminPlatformSettingsPage />} />
+              <Route path="/admin/guide" element={<AdminGuidePage />} />
             </Route>
           </Routes>
         </Suspense>

@@ -7,6 +7,7 @@ import { LanguageSwitcher } from "../components/LanguageSwitcher.js";
 const NAV_LINKS = [
   { to: "/", key: "nav.home" },
   { to: "/tarifs", key: "nav.pricing" },
+  { to: "/guide", key: "nav.guide" },
   { to: "/contact", key: "nav.contact" },
 ] as const;
 
@@ -80,6 +81,11 @@ export function MarketingLayout(): ReactNode {
                 <li>
                   <Link to="/tarifs" className="hover:text-white">
                     {t("nav.pricing")}
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/guide" className="hover:text-white">
+                    {t("nav.guide")}
                   </Link>
                 </li>
                 <li>

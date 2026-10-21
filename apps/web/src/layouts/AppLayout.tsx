@@ -119,6 +119,7 @@ const NAV_LINKS: readonly NavLinkDef[] = [
   // GET /subscriptions/school n'exige aucune permission ; seul SCHOOL_OWNER détient
   // subscriptions.manage pour souscrire (la page l'explique aux autres).
   { to: "/abonnement", key: "layout.nav.subscription", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR"] },
+  { to: "/aide", key: "layout.nav.guide" },
 ];
 
 function isNavLinkVisible(roles: readonly string[] | undefined, userRoleCodes: readonly string[]): boolean {

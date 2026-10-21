@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { to: "/portail/parent", key: "portal.nav.parent" },
   { to: "/portail/eleve", key: "portal.nav.student" },
   { to: "/portail/activation", key: "portal.nav.redeem" },
+  { to: "/portail/aide", key: "portal.nav.guide" },
 ] as const;
 
 export function PortalLayout(): ReactNode {
