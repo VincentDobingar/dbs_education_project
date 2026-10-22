@@ -153,6 +153,25 @@ Parents et élèves ont leur propre espace, séparé de celui de l'établissemen
 
 Le dossier détaillé d'un enfant demande un abonnement familial (à partir de 1 000 FCFA par mois), souscrit depuis le portail, ou une licence offerte par un sponsor.
 
+## Utilisation hors connexion
+
+EduManage Africa reste utilisable quand le réseau coupe ou devient trop lent : les écrans s'ouvrent, et les familles retrouvent les informations déjà consultées. En revanche, rien ne peut être enregistré sans connexion.
+
+Dès la première visite, l'application garde ses écrans en mémoire sur l'appareil. Quand la connexion tombe, un bandeau orange « Vous êtes hors connexion — certaines données affichées peuvent dater de votre dernière visite » apparaît en haut de l'écran ; il disparaît dès que le réseau revient.
+
+| Ce que vous faites                                                                                          | Sans connexion                                                               |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Ouvrir l'application, naviguer entre les écrans, lire ce guide                                              | Oui                                                                          |
+| Portail famille et élève : tableau de bord, présences, devoirs, annonces, emploi du temps, bulletins, reçus | Oui, pour ce qui a été consulté avec connexion au cours des 7 derniers jours |
+| Télécharger un bulletin ou un reçu en PDF                                                                   | Oui s'il a déjà été ouvert avec connexion, sinon non                         |
+| Se connecter, créer un compte, activer un code                                                              | Non                                                                          |
+| Espace établissement : listes d'élèves, notes, finances, configuration                                      | Non : les écrans s'ouvrent mais les données ne se chargent pas               |
+| Enregistrer quoi que ce soit : appel, notes, paiement, devoir rendu, message                                | Non : l'action échoue, il faut la refaire une fois reconnecté                |
+
+Avec une connexion faible, l'application attend au plus 4 secondes la réponse du serveur sur le portail famille, puis affiche la dernière version gardée en mémoire : les parents voient tout de suite l'essentiel au lieu d'un écran de chargement.
+
+> **Bon réflexe.** Avant un déplacement ou une zone mal couverte, ouvrez une fois avec connexion les pages utiles (bulletin, emploi du temps, reçus) : elles resteront consultables hors connexion pendant 7 jours. Pour l'appel et la saisie des notes, attendez d'être connecté : rien n'est mis en attente automatiquement.
+
 ## Dépannage
 
 | Message ou symptôme                                            | Cause                                                     | Que faire                                                                                                                  |
@@ -165,13 +184,14 @@ Le dossier détaillé d'un enfant demande un abonnement familial (à partir de 1
 | « Créez d'abord une année scolaire, un campus et des niveaux » | Ordre de Configuration non respecté                       | Suivre l'ordre de la section Configuration                                                                                 |
 | Créneau refusé dans l'emploi du temps                          | Salle ou enseignant déjà occupé à cette heure             | Choisir une autre salle ou un autre horaire                                                                                |
 | « Seul un membre du personnel avec une fiche employé liée… »   | Le compte n'est pas lié à une fiche du Personnel          | Créer sa fiche employé, puis demander au support de la lier à son compte                                                   |
+| Bandeau orange « Vous êtes hors connexion »                    | Le téléphone n'a plus de réseau ou de données mobiles     | Consulter ce qui a déjà été ouvert ; pour enregistrer, attendre le retour du réseau (voir Utilisation hors connexion)      |
 | Page blanche ou ancienne version après une mise à jour         | Ancienne version gardée en cache                          | Cliquer sur **Mettre à jour** dans le bandeau, ou recharger la page ; l'application se recharge seule si un fichier manque |
 
 Si le problème persiste, ouvrez un ticket dans **Support** en décrivant la page, l'heure et le message affiché.
 
 ## Nouveautés d'octobre 2026
 
-Toutes ces nouveautés sont en ligne depuis le 20 octobre 2026.
+Ces nouveautés sont en ligne depuis le 20 octobre 2026, sauf les trois dernières, ajoutées le 22 octobre.
 
 | Nouveauté                                                                                                                                                                  | Pour qui                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
@@ -181,3 +201,6 @@ Toutes ces nouveautés sont en ligne depuis le 20 octobre 2026.
 | Tableau de bord plus rapide en cas d'erreur ; sans abonnement, il mène à la page Abonnement                                                                                | Tous                         |
 | Double authentification désactivée : connexion par email et mot de passe                                                                                                   | Tous                         |
 | Rechargement automatique après une mise à jour de l'application                                                                                                            | Tous                         |
+| Menu ☰ sur téléphone pour le site public (Accueil, Tarifs, Guide, Contact, Portail famille)                                                                               | Tous                         |
+| Bouton « Installer l'application » : invite d'installation sur Android et ordinateur, mode d'emploi sur iPhone                                                             | Tous                         |
+| Guide d'utilisation en ligne et en PDF, avec une section sur l'utilisation hors connexion                                                                                  | Tous                         |
