@@ -25,6 +25,7 @@ import { libraryRouter } from "./modules/library/library.routes.js";
 import { parentPortalRouter } from "./modules/parent-portal/parent-portal.routes.js";
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { platformAdminRouter } from "./modules/platform-admin/platform-admin.routes.js";
+import { publicRouter } from "./modules/public/public.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { studentPortalRouter } from "./modules/student-portal/student-portal.routes.js";
 import { studentRouter } from "./modules/students/student.routes.js";
@@ -76,6 +77,7 @@ export function createApp(): express.Express {
   // Plus strict que le backstop général — brute force de mot de passe/OTP et
   // credential stuffing (§34), complète le verrouillage par compte déjà en place.
   app.use("/api/v1/auth", authRateLimiter, authRouter);
+  app.use("/api/v1/public", publicRouter);
   app.use("/api/v1/tenants", tenantRouter);
   app.use("/api/v1/subscriptions", subscriptionRouter);
   app.use("/api/v1/school-config", schoolConfigRouter);

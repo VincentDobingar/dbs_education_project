@@ -4,7 +4,7 @@ import { CATALOG_ITEMS } from "./data/catalog.js";
 import { COUNTRIES, CURRENCIES } from "./data/countries-currencies.js";
 import { PAYMENT_PROVIDERS } from "./data/payment-providers.js";
 import { PLAN_FEATURES } from "./data/plan-features.js";
-import { PLAN_PRICES } from "./data/plan-prices.js";
+import { EXCHANGE_RATE_DATE, PLAN_PRICES } from "./data/plan-prices.js";
 import {
   INDIVIDUAL_ROLES,
   PERMISSIONS,
@@ -33,6 +33,8 @@ async function seedCurrenciesAndCountries(): Promise<void> {
     await prisma.country.upsert({
       where: { isoCode: country.isoCode },
       update: {
+        isoAlpha3: country.isoAlpha3,
+        region: country.region,
         nameFr: country.nameFr,
         nameEn: country.nameEn,
         phoneCallingCode: country.phoneCallingCode,
@@ -40,6 +42,8 @@ async function seedCurrenciesAndCountries(): Promise<void> {
       },
       create: {
         isoCode: country.isoCode,
+        isoAlpha3: country.isoAlpha3,
+        region: country.region,
         nameFr: country.nameFr,
         nameEn: country.nameEn,
         phoneCallingCode: country.phoneCallingCode,
@@ -153,6 +157,14 @@ async function seedPlanPricesAndFeatures(): Promise<void> {
       },
     });
   }
+
+  // Date des taux ayant servi à convertir les tarifs : affichée par le simulateur
+  // de la page Tarifs (« taux du … »).
+  await prisma.platformSetting.upsert({
+    where: { key: "pricing.exchangeRateDate" },
+    update: { value: EXCHANGE_RATE_DATE },
+    create: { key: "pricing.exchangeRateDate", value: EXCHANGE_RATE_DATE },
+  });
 
   console.log(`Seeded ${PLAN_PRICES.length} plan prices and ${PLAN_FEATURES.length} plan features`);
 }

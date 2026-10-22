@@ -1,5 +1,6 @@
 import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -15,8 +16,11 @@ import {
   verifyEmail,
 } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
+import { listPublicCountries } from "../../lib/publicApi.js";
 
-const COUNTRIES = [
+// Liste de secours si l'API des pays ne répond pas : l'inscription reste possible
+// dans les pays historiques. La liste complète (54 pays) vient de /public/countries.
+const FALLBACK_COUNTRIES: readonly SignupCountry[] = [
   { iso: "CM", currency: "XAF", nameFr: "Cameroun", nameEn: "Cameroon" },
   { iso: "GA", currency: "XAF", nameFr: "Gabon", nameEn: "Gabon" },
   { iso: "CG", currency: "XAF", nameFr: "Congo", nameEn: "Congo" },
@@ -26,7 +30,14 @@ const COUNTRIES = [
   { iso: "UG", currency: "UGX", nameFr: "Ouganda", nameEn: "Uganda" },
   { iso: "CI", currency: "XOF", nameFr: "Côte d'Ivoire", nameEn: "Ivory Coast" },
   { iso: "SN", currency: "XOF", nameFr: "Sénégal", nameEn: "Senegal" },
-] as const;
+];
+
+interface SignupCountry {
+  iso: string;
+  currency: string;
+  nameFr: string;
+  nameEn: string;
+}
 
 const SCHOOL_PLANS = ["SCHOOL_ESSENTIAL", "SCHOOL_PROFESSIONAL", "SCHOOL_PREMIUM"] as const;
 
@@ -62,7 +73,7 @@ const STEP_KEYS = [
 ] as const;
 
 export function SignupPage(): ReactNode {
-  const { t } = useTranslation("marketing");
+  const { t, i18n } = useTranslation("marketing");
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ subdomain: string } | null>(null);
@@ -95,8 +106,28 @@ export function SignupPage(): ReactNode {
     defaultValues: { ownershipType: "PRIVATE", countryIsoCode: "CM" },
   });
 
+  const countriesQuery = useQuery({
+    queryKey: ["public-countries"],
+    queryFn: listPublicCountries,
+    staleTime: 600_000,
+  });
+  const isFr = i18n.language.startsWith("fr");
+  const countries: readonly SignupCountry[] = countriesQuery.data?.length
+    ? countriesQuery.data
+        .filter((country) => country.currency)
+        .map((country) => ({
+          iso: country.isoCode,
+          currency: country.currency!.isoCode,
+          nameFr: country.nameFr,
+          nameEn: country.nameEn,
+        }))
+        .sort((a, b) =>
+          isFr ? a.nameFr.localeCompare(b.nameFr, "fr") : a.nameEn.localeCompare(b.nameEn, "en"),
+        )
+    : FALLBACK_COUNTRIES;
+
   const values = watch();
-  const selectedCountry = COUNTRIES.find((country) => country.iso === values.countryIsoCode) ?? COUNTRIES[0];
+  const selectedCountry = countries.find((country) => country.iso === values.countryIsoCode) ?? countries[0]!;
 
   async function goNext(): Promise<void> {
     const fields = STEP_FIELDS[step];
@@ -245,9 +276,9 @@ export function SignupPage(): ReactNode {
             </Field>
             <Field label={t("signup.school.country")}>
               <select className="input" {...register("countryIsoCode")}>
-                {COUNTRIES.map((country) => (
+                {countries.map((country) => (
                   <option key={country.iso} value={country.iso}>
-                    {country.nameFr}
+                    {isFr ? country.nameFr : country.nameEn}
                   </option>
                 ))}
               </select>

@@ -19,16 +19,27 @@ enum TenantStatus {
   CANCELLED
 }
 
+/// Régions de l'Union africaine (regroupement des pays dans les listes).
+enum CountryRegion {
+  CENTRAL_AFRICA
+  EAST_AFRICA
+  NORTH_AFRICA
+  SOUTHERN_AFRICA
+  WEST_AFRICA
+}
+
 model Country {
-  id                String   @id @default(cuid())
-  isoCode           String   @unique // ISO 3166-1 alpha-2, ex: CM, KE, CI
+  id                String         @id @default(cuid())
+  isoCode           String         @unique // ISO 3166-1 alpha-2, ex: CM, KE, CI
+  isoAlpha3         String?        @unique // ISO 3166-1 alpha-3, ex: CMR, KEN, CIV
+  region            CountryRegion?
   nameFr            String
   nameEn            String
   phoneCallingCode  String
   defaultCurrencyId String?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   defaultCurrency Currency? @relation(fields: [defaultCurrencyId], references: [id])
   tenants         Tenant[]

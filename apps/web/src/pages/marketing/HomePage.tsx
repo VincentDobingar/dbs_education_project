@@ -282,6 +282,7 @@ export function HomePage(): ReactNode {
               </div>
             </div>
             <p className="mt-6 text-sm text-slate-600">{t("home.pricing.note")}</p>
+            <p className="mt-1 text-sm text-slate-600">{t("home.pricing.localNote")}</p>
             <Link to="/tarifs" className="mt-6 inline-block">
               <Button variant="primary">{t("home.pricing.cta")}</Button>
             </Link>
