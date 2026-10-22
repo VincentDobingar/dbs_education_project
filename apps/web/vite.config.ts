@@ -22,7 +22,9 @@ export default defineConfig({
         // SPA sous BrowserRouter : un lien profond (/portail/parent, /portail/eleve,
         // ...) rechargé hors-ligne doit retomber sur l'app shell, jamais un 404 du SW.
         navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//],
+        // Un fichier (PDF du guide…) ouvert par un lien est aussi une requête de
+        // navigation : sans cette exclusion, le SW servait index.html à sa place.
+        navigateFallbackDenylist: [/^\/api\//, /\/[^/?]+\.[a-z0-9]+$/i],
         runtimeCaching: [
           // Lecture hors-ligne des portails parent/élève (zones à couverture réseau
           // intermittente) : uniquement les GET, jamais /auth/* ni une mutation —
