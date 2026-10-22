@@ -1,0 +1,3476 @@
+{
+  "countries": [
+    {
+      "isoCode": "ZA",
+      "isoAlpha3": "ZAF",
+      "nameFr": "Afrique du Sud",
+      "nameEn": "South Africa",
+      "phoneCallingCode": "+27",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "ZAR",
+        "nameFr": "Rand sud-africain",
+        "nameEn": "South African rand",
+        "symbol": "R",
+        "decimalDigits": 2
+      },
+      "monetaryZone": {
+        "code": "CMA",
+        "nameFr": "Zone monétaire commune (rand)",
+        "nameEn": "Common Monetary Area (rand)"
+      }
+    },
+    {
+      "isoCode": "DZ",
+      "isoAlpha3": "DZA",
+      "nameFr": "Algérie",
+      "nameEn": "Algeria",
+      "phoneCallingCode": "+213",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "DZD",
+        "nameFr": "Dinar algérien",
+        "nameEn": "Algerian dinar",
+        "symbol": "DA",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "AO",
+      "isoAlpha3": "AGO",
+      "nameFr": "Angola",
+      "nameEn": "Angola",
+      "phoneCallingCode": "+244",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "AOA",
+        "nameFr": "Kwanza angolais",
+        "nameEn": "Angolan kwanza",
+        "symbol": "Kz",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "BJ",
+      "isoAlpha3": "BEN",
+      "nameFr": "Bénin",
+      "nameEn": "Benin",
+      "phoneCallingCode": "+229",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "BW",
+      "isoAlpha3": "BWA",
+      "nameFr": "Botswana",
+      "nameEn": "Botswana",
+      "phoneCallingCode": "+267",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "BWP",
+        "nameFr": "Pula botswanais",
+        "nameEn": "Botswana pula",
+        "symbol": "P",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "BF",
+      "isoAlpha3": "BFA",
+      "nameFr": "Burkina Faso",
+      "nameEn": "Burkina Faso",
+      "phoneCallingCode": "+226",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "BI",
+      "isoAlpha3": "BDI",
+      "nameFr": "Burundi",
+      "nameEn": "Burundi",
+      "phoneCallingCode": "+257",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "BIF",
+        "nameFr": "Franc burundais",
+        "nameEn": "Burundian franc",
+        "symbol": "FBu",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "CV",
+      "isoAlpha3": "CPV",
+      "nameFr": "Cabo Verde",
+      "nameEn": "Cabo Verde",
+      "phoneCallingCode": "+238",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "CVE",
+        "nameFr": "Escudo cap-verdien",
+        "nameEn": "Cape Verdean escudo",
+        "symbol": "Esc",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "CM",
+      "isoAlpha3": "CMR",
+      "nameFr": "Cameroun",
+      "nameEn": "Cameroon",
+      "phoneCallingCode": "+237",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "KM",
+      "isoAlpha3": "COM",
+      "nameFr": "Comores",
+      "nameEn": "Comoros",
+      "phoneCallingCode": "+269",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "KMF",
+        "nameFr": "Franc comorien",
+        "nameEn": "Comorian franc",
+        "symbol": "CF",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "CG",
+      "isoAlpha3": "COG",
+      "nameFr": "Congo",
+      "nameEn": "Republic of the Congo",
+      "phoneCallingCode": "+242",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "CI",
+      "isoAlpha3": "CIV",
+      "nameFr": "Côte d'Ivoire",
+      "nameEn": "Côte d'Ivoire",
+      "phoneCallingCode": "+225",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "DJ",
+      "isoAlpha3": "DJI",
+      "nameFr": "Djibouti",
+      "nameEn": "Djibouti",
+      "phoneCallingCode": "+253",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "DJF",
+        "nameFr": "Franc djiboutien",
+        "nameEn": "Djiboutian franc",
+        "symbol": "Fdj",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "EG",
+      "isoAlpha3": "EGY",
+      "nameFr": "Égypte",
+      "nameEn": "Egypt",
+      "phoneCallingCode": "+20",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "EGP",
+        "nameFr": "Livre égyptienne",
+        "nameEn": "Egyptian pound",
+        "symbol": "E£",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "ER",
+      "isoAlpha3": "ERI",
+      "nameFr": "Érythrée",
+      "nameEn": "Eritrea",
+      "phoneCallingCode": "+291",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "ERN",
+        "nameFr": "Nakfa érythréen",
+        "nameEn": "Eritrean nakfa",
+        "symbol": "Nfk",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SZ",
+      "isoAlpha3": "SWZ",
+      "nameFr": "Eswatini",
+      "nameEn": "Eswatini",
+      "phoneCallingCode": "+268",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "SZL",
+        "nameFr": "Lilangeni swazi",
+        "nameEn": "Swazi lilangeni",
+        "symbol": "E",
+        "decimalDigits": 2
+      },
+      "monetaryZone": {
+        "code": "CMA",
+        "nameFr": "Zone monétaire commune (rand)",
+        "nameEn": "Common Monetary Area (rand)"
+      }
+    },
+    {
+      "isoCode": "ET",
+      "isoAlpha3": "ETH",
+      "nameFr": "Éthiopie",
+      "nameEn": "Ethiopia",
+      "phoneCallingCode": "+251",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "ETB",
+        "nameFr": "Birr éthiopien",
+        "nameEn": "Ethiopian birr",
+        "symbol": "Br",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "GA",
+      "isoAlpha3": "GAB",
+      "nameFr": "Gabon",
+      "nameEn": "Gabon",
+      "phoneCallingCode": "+241",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "GM",
+      "isoAlpha3": "GMB",
+      "nameFr": "Gambie",
+      "nameEn": "The Gambia",
+      "phoneCallingCode": "+220",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "GMD",
+        "nameFr": "Dalasi gambien",
+        "nameEn": "Gambian dalasi",
+        "symbol": "D",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "GH",
+      "isoAlpha3": "GHA",
+      "nameFr": "Ghana",
+      "nameEn": "Ghana",
+      "phoneCallingCode": "+233",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "GHS",
+        "nameFr": "Cedi ghanéen",
+        "nameEn": "Ghanaian cedi",
+        "symbol": "GH₵",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "GN",
+      "isoAlpha3": "GIN",
+      "nameFr": "Guinée",
+      "nameEn": "Guinea",
+      "phoneCallingCode": "+224",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "GNF",
+        "nameFr": "Franc guinéen",
+        "nameEn": "Guinean franc",
+        "symbol": "FG",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "GQ",
+      "isoAlpha3": "GNQ",
+      "nameFr": "Guinée équatoriale",
+      "nameEn": "Equatorial Guinea",
+      "phoneCallingCode": "+240",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "GW",
+      "isoAlpha3": "GNB",
+      "nameFr": "Guinée-Bissau",
+      "nameEn": "Guinea-Bissau",
+      "phoneCallingCode": "+245",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "KE",
+      "isoAlpha3": "KEN",
+      "nameFr": "Kenya",
+      "nameEn": "Kenya",
+      "phoneCallingCode": "+254",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "KES",
+        "nameFr": "Shilling kényan",
+        "nameEn": "Kenyan shilling",
+        "symbol": "KSh",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "LS",
+      "isoAlpha3": "LSO",
+      "nameFr": "Lesotho",
+      "nameEn": "Lesotho",
+      "phoneCallingCode": "+266",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "LSL",
+        "nameFr": "Loti lesothan",
+        "nameEn": "Lesotho loti",
+        "symbol": "L",
+        "decimalDigits": 2
+      },
+      "monetaryZone": {
+        "code": "CMA",
+        "nameFr": "Zone monétaire commune (rand)",
+        "nameEn": "Common Monetary Area (rand)"
+      }
+    },
+    {
+      "isoCode": "LR",
+      "isoAlpha3": "LBR",
+      "nameFr": "Liberia",
+      "nameEn": "Liberia",
+      "phoneCallingCode": "+231",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "LRD",
+        "nameFr": "Dollar libérien",
+        "nameEn": "Liberian dollar",
+        "symbol": "L$",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "LY",
+      "isoAlpha3": "LBY",
+      "nameFr": "Libye",
+      "nameEn": "Libya",
+      "phoneCallingCode": "+218",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "LYD",
+        "nameFr": "Dinar libyen",
+        "nameEn": "Libyan dinar",
+        "symbol": "LD",
+        "decimalDigits": 3
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "MG",
+      "isoAlpha3": "MDG",
+      "nameFr": "Madagascar",
+      "nameEn": "Madagascar",
+      "phoneCallingCode": "+261",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "MGA",
+        "nameFr": "Ariary malgache",
+        "nameEn": "Malagasy ariary",
+        "symbol": "Ar",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "MW",
+      "isoAlpha3": "MWI",
+      "nameFr": "Malawi",
+      "nameEn": "Malawi",
+      "phoneCallingCode": "+265",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "MWK",
+        "nameFr": "Kwacha malawien",
+        "nameEn": "Malawian kwacha",
+        "symbol": "MK",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "ML",
+      "isoAlpha3": "MLI",
+      "nameFr": "Mali",
+      "nameEn": "Mali",
+      "phoneCallingCode": "+223",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "MA",
+      "isoAlpha3": "MAR",
+      "nameFr": "Maroc",
+      "nameEn": "Morocco",
+      "phoneCallingCode": "+212",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "MAD",
+        "nameFr": "Dirham marocain",
+        "nameEn": "Moroccan dirham",
+        "symbol": "DH",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "MU",
+      "isoAlpha3": "MUS",
+      "nameFr": "Maurice",
+      "nameEn": "Mauritius",
+      "phoneCallingCode": "+230",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "MUR",
+        "nameFr": "Roupie mauricienne",
+        "nameEn": "Mauritian rupee",
+        "symbol": "Rs",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "MR",
+      "isoAlpha3": "MRT",
+      "nameFr": "Mauritanie",
+      "nameEn": "Mauritania",
+      "phoneCallingCode": "+222",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "MRU",
+        "nameFr": "Ouguiya mauritanien",
+        "nameEn": "Mauritanian ouguiya",
+        "symbol": "UM",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "MZ",
+      "isoAlpha3": "MOZ",
+      "nameFr": "Mozambique",
+      "nameEn": "Mozambique",
+      "phoneCallingCode": "+258",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "MZN",
+        "nameFr": "Metical mozambicain",
+        "nameEn": "Mozambican metical",
+        "symbol": "MT",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "NA",
+      "isoAlpha3": "NAM",
+      "nameFr": "Namibie",
+      "nameEn": "Namibia",
+      "phoneCallingCode": "+264",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "NAD",
+        "nameFr": "Dollar namibien",
+        "nameEn": "Namibian dollar",
+        "symbol": "N$",
+        "decimalDigits": 2
+      },
+      "monetaryZone": {
+        "code": "CMA",
+        "nameFr": "Zone monétaire commune (rand)",
+        "nameEn": "Common Monetary Area (rand)"
+      }
+    },
+    {
+      "isoCode": "NE",
+      "isoAlpha3": "NER",
+      "nameFr": "Niger",
+      "nameEn": "Niger",
+      "phoneCallingCode": "+227",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "NG",
+      "isoAlpha3": "NGA",
+      "nameFr": "Nigeria",
+      "nameEn": "Nigeria",
+      "phoneCallingCode": "+234",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "NGN",
+        "nameFr": "Naira nigérian",
+        "nameEn": "Nigerian naira",
+        "symbol": "₦",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "UG",
+      "isoAlpha3": "UGA",
+      "nameFr": "Ouganda",
+      "nameEn": "Uganda",
+      "phoneCallingCode": "+256",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "UGX",
+        "nameFr": "Shilling ougandais",
+        "nameEn": "Ugandan shilling",
+        "symbol": "USh",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "CF",
+      "isoAlpha3": "CAF",
+      "nameFr": "République centrafricaine",
+      "nameEn": "Central African Republic",
+      "phoneCallingCode": "+236",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "CD",
+      "isoAlpha3": "COD",
+      "nameFr": "République démocratique du Congo",
+      "nameEn": "Democratic Republic of the Congo",
+      "phoneCallingCode": "+243",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "CDF",
+        "nameFr": "Franc congolais",
+        "nameEn": "Congolese franc",
+        "symbol": "FC",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "RW",
+      "isoAlpha3": "RWA",
+      "nameFr": "Rwanda",
+      "nameEn": "Rwanda",
+      "phoneCallingCode": "+250",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "RWF",
+        "nameFr": "Franc rwandais",
+        "nameEn": "Rwandan franc",
+        "symbol": "FRw",
+        "decimalDigits": 0
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "ST",
+      "isoAlpha3": "STP",
+      "nameFr": "Sao Tomé-et-Principe",
+      "nameEn": "São Tomé and Príncipe",
+      "phoneCallingCode": "+239",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "STN",
+        "nameFr": "Dobra santoméen",
+        "nameEn": "São Tomé and Príncipe dobra",
+        "symbol": "Db",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SN",
+      "isoAlpha3": "SEN",
+      "nameFr": "Sénégal",
+      "nameEn": "Senegal",
+      "phoneCallingCode": "+221",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "SC",
+      "isoAlpha3": "SYC",
+      "nameFr": "Seychelles",
+      "nameEn": "Seychelles",
+      "phoneCallingCode": "+248",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "SCR",
+        "nameFr": "Roupie seychelloise",
+        "nameEn": "Seychellois rupee",
+        "symbol": "SR",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SL",
+      "isoAlpha3": "SLE",
+      "nameFr": "Sierra Leone",
+      "nameEn": "Sierra Leone",
+      "phoneCallingCode": "+232",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "SLE",
+        "nameFr": "Leone sierra-léonais",
+        "nameEn": "Sierra Leonean leone",
+        "symbol": "Le",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SO",
+      "isoAlpha3": "SOM",
+      "nameFr": "Somalie",
+      "nameEn": "Somalia",
+      "phoneCallingCode": "+252",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "SOS",
+        "nameFr": "Shilling somalien",
+        "nameEn": "Somali shilling",
+        "symbol": "Sh.So.",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SD",
+      "isoAlpha3": "SDN",
+      "nameFr": "Soudan",
+      "nameEn": "Sudan",
+      "phoneCallingCode": "+249",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "SDG",
+        "nameFr": "Livre soudanaise",
+        "nameEn": "Sudanese pound",
+        "symbol": "LS",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "SS",
+      "isoAlpha3": "SSD",
+      "nameFr": "Soudan du Sud",
+      "nameEn": "South Sudan",
+      "phoneCallingCode": "+211",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "SSP",
+        "nameFr": "Livre sud-soudanaise",
+        "nameEn": "South Sudanese pound",
+        "symbol": "SS£",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "TZ",
+      "isoAlpha3": "TZA",
+      "nameFr": "Tanzanie",
+      "nameEn": "Tanzania",
+      "phoneCallingCode": "+255",
+      "region": "EAST_AFRICA",
+      "currency": {
+        "isoCode": "TZS",
+        "nameFr": "Shilling tanzanien",
+        "nameEn": "Tanzanian shilling",
+        "symbol": "TSh",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "TD",
+      "isoAlpha3": "TCD",
+      "nameFr": "Tchad",
+      "nameEn": "Chad",
+      "phoneCallingCode": "+235",
+      "region": "CENTRAL_AFRICA",
+      "currency": {
+        "isoCode": "XAF",
+        "nameFr": "Franc CFA (BEAC)",
+        "nameEn": "Central African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "CEMAC",
+        "nameFr": "Zone CEMAC (franc CFA BEAC)",
+        "nameEn": "CEMAC zone (CFA franc BEAC)"
+      }
+    },
+    {
+      "isoCode": "TG",
+      "isoAlpha3": "TGO",
+      "nameFr": "Togo",
+      "nameEn": "Togo",
+      "phoneCallingCode": "+228",
+      "region": "WEST_AFRICA",
+      "currency": {
+        "isoCode": "XOF",
+        "nameFr": "Franc CFA (BCEAO)",
+        "nameEn": "West African CFA franc",
+        "symbol": "FCFA",
+        "decimalDigits": 0
+      },
+      "monetaryZone": {
+        "code": "UEMOA",
+        "nameFr": "Zone UEMOA (franc CFA BCEAO)",
+        "nameEn": "WAEMU zone (CFA franc BCEAO)"
+      }
+    },
+    {
+      "isoCode": "TN",
+      "isoAlpha3": "TUN",
+      "nameFr": "Tunisie",
+      "nameEn": "Tunisia",
+      "phoneCallingCode": "+216",
+      "region": "NORTH_AFRICA",
+      "currency": {
+        "isoCode": "TND",
+        "nameFr": "Dinar tunisien",
+        "nameEn": "Tunisian dinar",
+        "symbol": "DT",
+        "decimalDigits": 3
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "ZM",
+      "isoAlpha3": "ZMB",
+      "nameFr": "Zambie",
+      "nameEn": "Zambia",
+      "phoneCallingCode": "+260",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "ZMW",
+        "nameFr": "Kwacha zambien",
+        "nameEn": "Zambian kwacha",
+        "symbol": "ZK",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    },
+    {
+      "isoCode": "ZW",
+      "isoAlpha3": "ZWE",
+      "nameFr": "Zimbabwe",
+      "nameEn": "Zimbabwe",
+      "phoneCallingCode": "+263",
+      "region": "SOUTHERN_AFRICA",
+      "currency": {
+        "isoCode": "ZWG",
+        "nameFr": "Or du Zimbabwe (ZiG)",
+        "nameEn": "Zimbabwe Gold (ZiG)",
+        "symbol": "ZiG",
+        "decimalDigits": 2
+      },
+      "monetaryZone": null
+    }
+  ],
+  "pricing": {
+    "exchangeRateDate": "2026-10-21",
+    "plans": [
+      {
+        "code": "SCHOOL_ESSENTIAL",
+        "category": "SCHOOL",
+        "nameFr": "Établissement Essentiel",
+        "nameEn": "School Essential",
+        "trialDays": 30,
+        "maxStudents": 300,
+        "maxUsers": 15,
+        "maxCampuses": 1,
+        "childrenCovered": null
+      },
+      {
+        "code": "SCHOOL_PROFESSIONAL",
+        "category": "SCHOOL",
+        "nameFr": "Établissement Professionnel",
+        "nameEn": "School Professional",
+        "trialDays": 30,
+        "maxStudents": 1000,
+        "maxUsers": 50,
+        "maxCampuses": 3,
+        "childrenCovered": null
+      },
+      {
+        "code": "SCHOOL_PREMIUM",
+        "category": "SCHOOL",
+        "nameFr": "Établissement Premium",
+        "nameEn": "School Premium",
+        "trialDays": 30,
+        "maxStudents": 3000,
+        "maxUsers": 150,
+        "maxCampuses": 10,
+        "childrenCovered": null
+      },
+      {
+        "code": "SCHOOL_ENTERPRISE",
+        "category": "SCHOOL",
+        "nameFr": "Établissement Entreprise",
+        "nameEn": "School Enterprise",
+        "trialDays": 30,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": null
+      },
+      {
+        "code": "PARENT_BASIC",
+        "category": "PARENT",
+        "nameFr": "Parent Essentiel",
+        "nameEn": "Parent Basic",
+        "trialDays": 14,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": 1
+      },
+      {
+        "code": "PARENT_PREMIUM",
+        "category": "PARENT",
+        "nameFr": "Parent Premium",
+        "nameEn": "Parent Premium",
+        "trialDays": 14,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": 1
+      },
+      {
+        "code": "FAMILY_PLAN",
+        "category": "PARENT",
+        "nameFr": "Formule Famille",
+        "nameEn": "Family Plan",
+        "trialDays": 14,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": 5
+      },
+      {
+        "code": "STUDENT_BASIC",
+        "category": "STUDENT",
+        "nameFr": "Élève Essentiel",
+        "nameEn": "Student Basic",
+        "trialDays": 14,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": null
+      },
+      {
+        "code": "STUDENT_PREMIUM",
+        "category": "STUDENT",
+        "nameFr": "Élève Premium",
+        "nameEn": "Student Premium",
+        "trialDays": 14,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": null
+      },
+      {
+        "code": "SCHOOL_BULK_LICENSE",
+        "category": "SCHOOL",
+        "nameFr": "Licences en volume (établissement)",
+        "nameEn": "School Bulk License",
+        "trialDays": 0,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": null
+      },
+      {
+        "code": "ORGANIZATION_SPONSORED_LICENSE",
+        "category": "ORGANIZATION",
+        "nameFr": "Licence sponsorisée (organisation)",
+        "nameEn": "Organization Sponsored License",
+        "trialDays": 0,
+        "maxStudents": null,
+        "maxUsers": null,
+        "maxCampuses": null,
+        "childrenCovered": null
+      }
+    ],
+    "prices": [
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 25000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 65000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "XAF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 25000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 65000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "XOF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3900000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 10000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 23000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 160000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 390000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 630000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 78000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "AOA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 160000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 130000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 330000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 770000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 13000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 21000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "BIF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 58000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 350000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "BWP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9900000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 26000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 59000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 990000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1600000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 200000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "CDF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 420000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 17000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 42000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 67000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 8400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "CVE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 17000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 20000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 46000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 760,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "DJF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 580000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1500000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3500000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 23000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 58000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 92000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 12000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "DZD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 23000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 230000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 600000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 23000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 37000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4700,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "EGP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 64000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 170000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 380000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 10000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "ERN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 690000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1800000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 28000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 69000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 110000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 14000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "ETB",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 28000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 50000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 130000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 8000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 990,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "GHS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 320000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 830000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1900000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 13000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 32000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 51000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "GMD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 13000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 380000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 980000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 38000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 61000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "GNF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 560000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 22000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 56000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 89000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "KES",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 22000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 19000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 49000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 110000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 750,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 380,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "KMF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 750,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 730000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1900000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 29000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 73000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 120000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "LRD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 29000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 70000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 180000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 420000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "LSL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 270000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 710000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1600000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 27000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 44000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "LYD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 42000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 110000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 250000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1700,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6700,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 840,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1700,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 20000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 51000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 120000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 790000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 390000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MGA",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 790000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 170000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 450000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 17000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 27000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MRU",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 200000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 530000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1200000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 8100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 20000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 32000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MUR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 8100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 19000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 44000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 740000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1200000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MWK",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 270000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 710000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1600000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 27000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 43000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "MZN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 70000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 180000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 420000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "NAD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5700000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 34000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 230000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 570000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 910000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 110000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "NGN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 230000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 63000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 160000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 380000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 10000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "RWF",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 64000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 170000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 380000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 10000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SCR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2600000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6700000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 260000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 410000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 51000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SDG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 98000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 250000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 590000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 16000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SLE",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 6400000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 98000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 240000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 390000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 49000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SOS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 98000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 25000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 64000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 150000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 980000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2500000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3900000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 490000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SSP",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 980000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 94000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 250000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 570000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 9400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 15000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1900,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "STN",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 70000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 180000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 420000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "SZL",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 130000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 330000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 770000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 13000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 21000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "TND",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 5100,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 29000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 68000000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 450000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1800000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 230000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "TZS",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 450000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 180000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 470000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1100000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 18000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 29000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "UGX",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7200,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 70000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 180000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 420000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 7000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "ZAR",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2800,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 86000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 220000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 520000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 8600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 14000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 1700,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "ZMW",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 3400,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 110000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 300000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 680000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 18000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 2300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "ZWG",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4600,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_ESSENTIAL",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 4300,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PROFESSIONAL",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 11000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "SCHOOL_PREMIUM",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 26000,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_BASIC",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 170,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "PARENT_PREMIUM",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 430,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "FAMILY_PLAN",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 680,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_BASIC",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 86,
+        "countryIsoCode": null
+      },
+      {
+        "planCode": "STUDENT_PREMIUM",
+        "currencyIsoCode": "USD",
+        "billingPeriod": "MONTHLY",
+        "amountCents": 170,
+        "countryIsoCode": null
+      }
+    ]
+  }
+}

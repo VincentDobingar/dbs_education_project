@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// L'API ne répond pas : la page Tarifs doit se rabattre sur la copie embarquée.
+vi.mock("./apiClient.js", () => ({
+  apiRequest: vi.fn().mockRejectedValue(new Error("API indisponible")),
+}));
 
 import {
   formatMoney,
+  getPublicPricingOrSnapshot,
+  listPublicCountriesOrSnapshot,
   monthlyPriceFor,
   recommendedSchoolPlan,
   type PublicPlan,
@@ -87,5 +94,25 @@ describe("formatMoney", () => {
     expect(formatMoney(25_000, XAF, "fr-FR").replace(/\s/g, " ")).toBe("25 000 FCFA");
     expect(formatMoney(560_000, KES, "fr-FR").replace(/\s/g, " ")).toBe("5 600 KSh");
     expect(formatMoney(990, { ...KES, symbol: "GH₵" }, "en-GB")).toBe("9.90 GH₵");
+  });
+});
+
+describe("copie embarquée de la grille tarifaire", () => {
+  it("sert les 54 pays et un prix Essentiel dans la monnaie de chacun quand l'API échoue", async () => {
+    const [countries, pricing] = await Promise.all([
+      listPublicCountriesOrSnapshot(),
+      getPublicPricingOrSnapshot(),
+    ]);
+
+    expect(countries).toHaveLength(54);
+    expect(countries.find((country) => country.isoCode === "TD")).toMatchObject({
+      isoAlpha3: "TCD",
+      phoneCallingCode: "+235",
+      currency: { isoCode: "XAF" },
+      monetaryZone: { code: "CEMAC" },
+    });
+    for (const country of countries) {
+      expect(monthlyPriceFor(pricing, "SCHOOL_ESSENTIAL", country), country.isoCode).toBeGreaterThan(0);
+    }
   });
 });

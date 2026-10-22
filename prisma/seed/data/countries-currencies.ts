@@ -645,3 +645,18 @@ export const COUNTRIES: readonly CountrySeed[] = [
     defaultCurrency: "ZWG",
   },
 ];
+
+/**
+ * Zones monétaires partageant une même monnaie ou une parité fixe. Même table que
+ * apps/api/src/modules/public/public.service.ts (réponse de /public/countries).
+ */
+export const MONETARY_ZONES: Partial<
+  Record<CurrencyIsoCode, { code: string; nameFr: string; nameEn: string }>
+> = {
+  XAF: { code: "CEMAC", nameFr: "Zone CEMAC (franc CFA BEAC)", nameEn: "CEMAC zone (CFA franc BEAC)" },
+  XOF: { code: "UEMOA", nameFr: "Zone UEMOA (franc CFA BCEAO)", nameEn: "WAEMU zone (CFA franc BCEAO)" },
+  ZAR: { code: "CMA", nameFr: "Zone monétaire commune (rand)", nameEn: "Common Monetary Area (rand)" },
+  LSL: { code: "CMA", nameFr: "Zone monétaire commune (rand)", nameEn: "Common Monetary Area (rand)" },
+  NAD: { code: "CMA", nameFr: "Zone monétaire commune (rand)", nameEn: "Common Monetary Area (rand)" },
+  SZL: { code: "CMA", nameFr: "Zone monétaire commune (rand)", nameEn: "Common Monetary Area (rand)" },
+};

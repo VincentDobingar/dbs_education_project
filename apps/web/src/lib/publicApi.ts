@@ -109,3 +109,36 @@ export function recommendedSchoolPlan(plans: PublicPlan[], studentCount: number)
     .sort((a, b) => (a.maxStudents ?? Infinity) - (b.maxStudents ?? Infinity));
   return schoolPlans.find((plan) => plan.maxStudents === null || plan.maxStudents >= studentCount) ?? null;
 }
+
+interface PricingSnapshot {
+  countries: PublicCountry[];
+  pricing: PublicPricing;
+}
+
+/** Copie embarquée (content/pricing-snapshot.json, `pnpm pricing:snapshot`), chargée à la demande. */
+async function loadSnapshot(): Promise<PricingSnapshot> {
+  const module = (await import("../content/pricing-snapshot.json")) as { default: PricingSnapshot };
+  return module.default;
+}
+
+/**
+ * Pour la page Tarifs : l'API d'abord (prix éventuellement ajustés par pays), la
+ * copie embarquée si elle ne répond pas — le simulateur reste utilisable pendant
+ * une panne ou un déploiement de l'API. L'inscription, elle, n'utilise que l'API :
+ * un pays absent de la base y serait refusé.
+ */
+export async function listPublicCountriesOrSnapshot(): Promise<PublicCountry[]> {
+  try {
+    return await listPublicCountries();
+  } catch {
+    return (await loadSnapshot()).countries;
+  }
+}
+
+export async function getPublicPricingOrSnapshot(): Promise<PublicPricing> {
+  try {
+    return await getPublicPricing();
+  } catch {
+    return (await loadSnapshot()).pricing;
+  }
+}

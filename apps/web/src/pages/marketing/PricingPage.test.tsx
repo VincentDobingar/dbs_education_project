@@ -8,8 +8,8 @@ import i18n from "../../i18n.js";
 import type * as PublicApi from "../../lib/publicApi.js";
 
 const api = vi.hoisted(() => ({
-  listPublicCountries: vi.fn(),
-  getPublicPricing: vi.fn(),
+  listPublicCountriesOrSnapshot: vi.fn(),
+  getPublicPricingOrSnapshot: vi.fn(),
 }));
 
 vi.mock("../../lib/publicApi.js", async (importOriginal) => ({
@@ -75,12 +75,12 @@ const price = (planCode: string, currencyIsoCode: string, amountCents: number) =
 
 beforeAll(async () => {
   await i18n.changeLanguage("fr");
-  api.listPublicCountries.mockResolvedValue([
+  api.listPublicCountriesOrSnapshot.mockResolvedValue([
     country("CM", "CMR", "Cameroun", "CENTRAL_AFRICA", XAF, CEMAC),
     country("TD", "TCD", "Tchad", "CENTRAL_AFRICA", XAF, CEMAC),
     country("NG", "NGA", "Nigeria", "WEST_AFRICA", NGN, null),
   ]);
-  api.getPublicPricing.mockResolvedValue({
+  api.getPublicPricingOrSnapshot.mockResolvedValue({
     exchangeRateDate: "2026-10-21",
     plans: [
       plan("SCHOOL_ESSENTIAL", "SCHOOL", 300),

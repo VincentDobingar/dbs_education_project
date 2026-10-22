@@ -6,8 +6,8 @@ import { Link } from "react-router-dom";
 
 import {
   formatMoney,
-  getPublicPricing,
-  listPublicCountries,
+  getPublicPricingOrSnapshot,
+  listPublicCountriesOrSnapshot,
   monthlyPriceFor,
   recommendedSchoolPlan,
   REGION_ORDER,
@@ -364,13 +364,13 @@ function ZoneTable({
 export function PricingPage(): ReactNode {
   const { t } = useTranslation("marketing");
   const countriesQuery = useQuery({
-    queryKey: ["public-countries"],
-    queryFn: listPublicCountries,
+    queryKey: ["public-countries-or-snapshot"],
+    queryFn: listPublicCountriesOrSnapshot,
     staleTime: 600_000,
   });
   const pricingQuery = useQuery({
     queryKey: ["public-pricing"],
-    queryFn: getPublicPricing,
+    queryFn: getPublicPricingOrSnapshot,
     staleTime: 600_000,
   });
   const [selected, setSelected] = useState<string | null>(null);
