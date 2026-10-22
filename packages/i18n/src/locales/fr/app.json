@@ -908,5 +908,12 @@
   "guide.downloadPdf": "Télécharger le guide (PDF)",
   "guide.frenchOnly": "Ce guide est disponible en français uniquement pour le moment.",
   "admin.guide.title": "Guide d'administration",
-  "admin.guide.subtitle": "Tâches réservées à l'équipe DBS Africa : valider les établissements, activer les abonnements, tenir le catalogue."
+  "admin.guide.subtitle": "Tâches réservées à l'équipe DBS Africa : valider les établissements, activer les abonnements, tenir le catalogue.",
+  "pwa.install": "Installer l'application",
+  "pwa.ios.title": "Installer l'application sur iPhone",
+  "pwa.ios.step1": "Dans Safari, touchez le bouton Partager",
+  "pwa.ios.step2": "Faites défiler puis touchez « Sur l'écran d'accueil ».",
+  "pwa.ios.step3": "Touchez « Ajouter » : l'icône apparaît sur votre écran d'accueil et s'ouvre en plein écran.",
+  "pwa.ios.safariOnly": "Sur iPhone et iPad, l'installation se fait depuis Safari.",
+  "pwa.ios.close": "J'ai compris"
 }

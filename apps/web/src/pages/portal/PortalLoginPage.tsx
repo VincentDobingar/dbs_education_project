@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { InstallAppButton } from "../../components/InstallAppButton.js";
 import { login, registerAccount, verifyEmail } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 import { savePortalSession } from "../../lib/portalSession.js";
@@ -165,6 +166,10 @@ export function PortalLoginPage(): ReactNode {
       >
         {mode === "login" ? t("portal.switchToRegister") : t("portal.switchToLogin")}
       </button>
+
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <InstallAppButton className="flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-brand-night transition-colors hover:bg-slate-50" />
+      </div>
     </div>
   );
 }

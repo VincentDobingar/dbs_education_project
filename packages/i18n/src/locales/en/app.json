@@ -908,5 +908,12 @@
   "guide.downloadPdf": "Download the guide (PDF)",
   "guide.frenchOnly": "This guide is currently available in French only.",
   "admin.guide.title": "Administration guide",
-  "admin.guide.subtitle": "Tasks reserved for the DBS Africa team: verifying schools, activating subscriptions, maintaining the catalogue."
+  "admin.guide.subtitle": "Tasks reserved for the DBS Africa team: verifying schools, activating subscriptions, maintaining the catalogue.",
+  "pwa.install": "Install the app",
+  "pwa.ios.title": "Install the app on iPhone",
+  "pwa.ios.step1": "In Safari, tap the Share button",
+  "pwa.ios.step2": "Scroll down and tap “Add to Home Screen”.",
+  "pwa.ios.step3": "Tap “Add”: the icon appears on your home screen and opens full screen.",
+  "pwa.ios.safariOnly": "On iPhone and iPad, install the app from Safari.",
+  "pwa.ios.close": "Got it"
 }

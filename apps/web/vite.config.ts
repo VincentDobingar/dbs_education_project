@@ -9,14 +9,70 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
+        id: "/",
         name: "Digital Business Services Africa School",
-        short_name: "DBS Africa School",
-        description: "Plateforme SaaS de gestion des établissements d'enseignement en Afrique",
+        short_name: "DBS School",
+        description:
+          "Plateforme de gestion des établissements d'enseignement en Afrique : élèves, notes, présences, finances et portail des familles.",
+        lang: "fr",
+        dir: "ltr",
         theme_color: "#0f172a",
         background_color: "#ffffff",
         display: "standalone",
+        orientation: "any",
         start_url: "/",
-        icons: [{ src: "/favicon-512.png", sizes: "512x512", type: "image/png" }],
+        scope: "/",
+        categories: ["education", "productivity"],
+        icons: [
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+        // Appui long sur l'icône (Android, ordinateur) : accès direct aux espaces.
+        shortcuts: [
+          {
+            name: "Portail famille",
+            short_name: "Famille",
+            url: "/portail/connexion",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+          {
+            name: "Espace établissement",
+            short_name: "Établissement",
+            url: "/connexion",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+          {
+            name: "Guide d'utilisation",
+            short_name: "Guide",
+            url: "/guide",
+            icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+        ],
+        // Captures affichées par Android dans la fenêtre d'installation.
+        screenshots: [
+          {
+            src: "/screenshots/accueil.webp",
+            sizes: "824x1830",
+            type: "image/webp",
+            form_factor: "narrow",
+            label: "Accueil",
+          },
+          {
+            src: "/screenshots/portail.webp",
+            sizes: "824x1830",
+            type: "image/webp",
+            form_factor: "narrow",
+            label: "Portail famille et élève",
+          },
+          {
+            src: "/screenshots/guide.webp",
+            sizes: "824x1830",
+            type: "image/webp",
+            form_factor: "narrow",
+            label: "Guide d'utilisation",
+          },
+        ],
       },
       workbox: {
         // SPA sous BrowserRouter : un lien profond (/portail/parent, /portail/eleve,

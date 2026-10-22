@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
 
+import { InstallAppButton } from "./InstallAppButton.js";
+
 export interface SidebarLink {
   to: string;
   label: string;
@@ -135,7 +137,8 @@ export function SidebarShell({
           ))}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
+        <div className="space-y-2 border-t border-white/10 p-3">
+          <InstallAppButton className="flex w-full items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-left text-sm font-medium text-white transition-colors hover:bg-white/15" />
           <button
             type="button"
             onClick={onLogout}

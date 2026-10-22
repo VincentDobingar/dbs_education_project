@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App.js";
 import "./i18n.js";
+// Écoute `beforeinstallprompt` avant le premier rendu (événement émis tôt).
+import "./lib/pwaInstall.js";
 import "./index.css";
 
 // Après un nouveau déploiement, un onglet (ou le cache PWA) qui exécute encore

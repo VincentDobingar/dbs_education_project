@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
+import { InstallAppButton } from "../components/InstallAppButton.js";
 import { LanguageSwitcher } from "../components/LanguageSwitcher.js";
 
 const NAV_LINKS = [
@@ -11,18 +13,29 @@ const NAV_LINKS = [
   { to: "/contact", key: "nav.contact" },
 ] as const;
 
+function mobileNavLinkClassName({ isActive }: { isActive: boolean }): string {
+  return `border-b border-white/10 py-3 text-base font-medium ${isActive ? "text-brand-teal" : "text-white/90"}`;
+}
+
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return `text-sm font-medium transition-colors ${isActive ? "text-brand-teal" : "text-white/80 hover:text-white"}`;
 }
 
 export function MarketingLayout(): ReactNode {
   const { t } = useTranslation("marketing");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Referme le menu mobile à chaque changement de page.
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="bg-brand-night">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center rounded-md bg-white px-3 py-1.5">
+      <header className="relative z-40 bg-brand-night">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+          <Link to="/" className="flex shrink-0 items-center rounded-md bg-white px-3 py-1.5">
             <img
               src="/logo-dbsas-trimmed.png"
               alt="Digital Business Services Africa School"
@@ -38,7 +51,7 @@ export function MarketingLayout(): ReactNode {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 md:flex">
             <LanguageSwitcher />
             <Link
               to="/connexion"
@@ -53,7 +66,61 @@ export function MarketingLayout(): ReactNode {
               {t("nav.subscribe")}
             </Link>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            aria-expanded={isMenuOpen}
+            aria-controls="marketing-menu"
+            aria-label={t(isMenuOpen ? "nav.menu.close" : "nav.menu.open")}
+            className="inline-flex items-center justify-center rounded-md border border-white/30 p-2 text-white transition-colors hover:bg-white/10 md:hidden"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+              aria-hidden="true"
+            >
+              {isMenuOpen ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
         </div>
+
+        {isMenuOpen ? (
+          <div
+            id="marketing-menu"
+            className="absolute inset-x-0 top-full border-t border-white/10 bg-brand-night px-4 pb-6 pt-2 shadow-xl md:hidden"
+          >
+            <nav className="flex flex-col">
+              {NAV_LINKS.map((link) => (
+                <NavLink key={link.to} to={link.to} end className={mobileNavLinkClassName}>
+                  {t(link.key)}
+                </NavLink>
+              ))}
+              <NavLink to="/connexion" className={mobileNavLinkClassName}>
+                {t("nav.login")}
+              </NavLink>
+              <NavLink to="/portail/connexion" className={mobileNavLinkClassName}>
+                {t("nav.portal")}
+              </NavLink>
+            </nav>
+            <Link
+              to="/inscription"
+              className="mt-4 block rounded-md bg-brand-teal px-4 py-3 text-center text-sm font-semibold text-brand-night"
+            >
+              {t("nav.subscribe")}
+            </Link>
+            <InstallAppButton className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-white/30 px-4 py-3 text-sm font-medium text-white" />
+            <div className="mt-4 flex justify-center">
+              <LanguageSwitcher />
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main className="flex-1">

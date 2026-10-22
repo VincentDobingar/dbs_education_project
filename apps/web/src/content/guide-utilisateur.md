@@ -13,7 +13,7 @@ L'identifiant de l'établissement est le sous-domaine choisi à l'inscription. L
 
 La double authentification est désactivée pour le moment : l'email et le mot de passe suffisent, quel que soit le rôle. Si elle est réactivée, l'écran « Vérification en deux étapes » demandera un code à 6 chiffres issu d'une application d'authentification (Google Authenticator, Microsoft Authenticator…).
 
-L'application s'installe sur téléphone ou ordinateur (bouton « Installer » du navigateur). Quand une nouvelle version est publiée, un bandeau « Une nouvelle version est disponible » apparaît : cliquez sur **Mettre à jour**.
+L'application s'installe sur téléphone comme une vraie app, sans passer par un store. Sur Android, ouvrez le menu ☰ du site puis touchez **Installer l'application**. Sur iPhone, ouvrez le site dans Safari, touchez **Partager** puis **Sur l'écran d'accueil**. Une fois connecté, le bouton **Installer l'application** se trouve aussi en bas du menu latéral. Quand une nouvelle version est publiée, l'application se met à jour d'elle-même ; si le bandeau « Une nouvelle version est disponible » apparaît, cliquez sur **Mettre à jour**.
 
 ## Démarrer : inscription et abonnement
 
