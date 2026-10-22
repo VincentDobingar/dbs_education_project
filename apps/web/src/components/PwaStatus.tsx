@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 // callbacks so the UI can surface them instead of leaving autoUpdate silent.
 import { useRegisterSW } from "virtual:pwa-register/react";
 
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+
 /**
  * Zones à couverture réseau intermittente : affiche un bandeau quand le
  * navigateur se déclare hors-ligne (les pages portail parent/élève restent
@@ -20,7 +22,28 @@ export function PwaStatus(): ReactNode {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
-  } = useRegisterSW();
+  } = useRegisterSW({
+    // Le navigateur ne cherche un nouveau service worker qu'à une navigation
+    // complète : une SPA restée ouverte (ou installée) gardait l'ancienne version
+    // pendant des heures après un déploiement. On vérifie donc toutes les 30 min
+    // et à chaque retour sur l'onglet ; autoUpdate recharge alors la page.
+    onRegisteredSW(_swUrl, registration) {
+      if (!registration) {
+        return;
+      }
+      const checkForUpdate = (): void => {
+        if (navigator.onLine) {
+          void registration.update().catch(() => undefined);
+        }
+      };
+      setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          checkForUpdate();
+        }
+      });
+    },
+  });
 
   useEffect(() => {
     function handleOnline(): void {
