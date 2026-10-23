@@ -36,6 +36,10 @@ const readPlatformSupport = requirePlatformRole(
 );
 const manageSupportTickets = requirePlatformRole("SUPER_ADMIN", "SUPPORT_AGENT");
 
+// Purge des journaux d'audit : action irréversible sur une table par ailleurs
+// immuable (voir identity.prisma) — réservée à SUPER_ADMIN, pas readPlatform/managePlatform.
+const purgeAuditLogsRole = requirePlatformRole("SUPER_ADMIN");
+
 platformAdminRouter.get("/tenants", requireAuth, readPlatform, tenantAdminController.listPlatformTenants);
 platformAdminRouter.get("/tenants/:id", requireAuth, readPlatform, tenantAdminController.getPlatformTenant);
 platformAdminRouter.post(
@@ -83,6 +87,24 @@ platformAdminRouter.post(
 );
 
 platformAdminRouter.get("/audit-logs", requireAuth, readPlatform, auditLogController.listAuditLogs);
+platformAdminRouter.get(
+  "/audit-logs/export.csv",
+  requireAuth,
+  readPlatform,
+  auditLogController.exportAuditLogsCsv,
+);
+platformAdminRouter.get(
+  "/audit-logs/export.xlsx",
+  requireAuth,
+  readPlatform,
+  auditLogController.exportAuditLogsXlsx,
+);
+platformAdminRouter.post(
+  "/audit-logs/purge",
+  requireAuth,
+  purgeAuditLogsRole,
+  auditLogController.purgeAuditLogs,
+);
 
 platformAdminRouter.get(
   "/subscriptions",

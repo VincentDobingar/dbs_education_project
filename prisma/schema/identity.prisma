@@ -201,7 +201,11 @@ model Session {
   @@index([expiresAt])
 }
 
-/// Journal d'audit immuable : jamais de update/delete applicatif sur cette table.
+/// Journal d'audit immuable : jamais de update applicatif sur cette table. Seule
+/// exception à "jamais de delete" : la purge de rétention (SUPER_ADMIN uniquement,
+/// seuil minimal 365 jours, voir audit-log.service.ts purgeAuditLogs) — la purge
+/// elle-même reste journalisée (action "audit_log.purge") pour qu'une suppression
+/// en masse ne laisse jamais la piste d'audit totalement muette sur son propre passage.
 /// tenantId = null pour une action strictement plateforme (ex: creation d'un pays).
 model AuditLog {
   id            String   @id @default(cuid())
