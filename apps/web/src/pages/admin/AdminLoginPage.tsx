@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { ForgotPasswordLink } from "../../components/ForgotPasswordLink.js";
 import { MfaStep } from "../../components/MfaStep.js";
 import { saveAdminSession } from "../../lib/adminSession.js";
 import type { AuthTokens, MfaPending } from "../../lib/api.js";
@@ -123,6 +124,7 @@ export function AdminLoginPage(): ReactNode {
           <Button type="submit" variant="secondary" disabled={isSubmitting}>
             {isSubmitting ? t("login.submitting") : t("login.submit")}
           </Button>
+          <ForgotPasswordLink space="admin" />
         </form>
       )}
     </div>

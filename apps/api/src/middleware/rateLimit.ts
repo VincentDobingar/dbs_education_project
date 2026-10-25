@@ -125,3 +125,17 @@ export const resendVerificationRateLimiter = buildRateLimiter({
     return typeof email === "string" ? email.trim().toLowerCase() : "unknown";
   },
 });
+
+/**
+ * « Mot de passe oublié » : chaque appel envoie un e-mail au titulaire de l'adresse.
+ * Keyé par l'adresse visée (comme resendVerificationRateLimiter) pour qu'un tiers ne
+ * puisse pas inonder une boîte de liens de réinitialisation depuis plusieurs IP.
+ */
+export const forgotPasswordRateLimiter = buildRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  keyGenerator: (req) => {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    return typeof email === "string" ? email.trim().toLowerCase() : "unknown";
+  },
+});

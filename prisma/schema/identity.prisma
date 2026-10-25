@@ -46,6 +46,11 @@ model User {
   /// que si un telephone a ete renseigne.
   phoneVerificationCodeHash  String?
   phoneVerificationExpiresAt DateTime?
+  /// Réinitialisation du mot de passe : même principe que emailVerificationTokenHash —
+  /// jeton haché, à usage unique, envoyé uniquement par e-mail (jamais dans une
+  /// réponse HTTP), effacé dès qu'il est consommé ou qu'un nouveau est demandé.
+  passwordResetTokenHash     String?    @unique
+  passwordResetExpiresAt     DateTime?
   /// Secret TOTP chiffre (§34) — seule donnee de ce schema qui doit rester reversible
   /// (il faut le relire pour verifier un code), contrairement a tous les autres champs
   /// *Hash de ce modele qui sont a sens unique. Present des `setupMfa` (avant confirmation),

@@ -29,3 +29,18 @@ export const verifyPhoneSchema = z.object({
 export const resendVerificationSchema = z.object({
   email: z.string().email(),
 });
+
+/** Espace d'où vient la demande : décide de la page de connexion proposée après coup. */
+export const passwordResetSpaces = ["staff", "portal", "admin"] as const;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+  space: z.enum(passwordResetSpaces).default("staff"),
+  locale: z.enum(["fr", "en"]).default("fr"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  // Même règle que l'inscription (registerSchema).
+  password: z.string().min(12),
+});

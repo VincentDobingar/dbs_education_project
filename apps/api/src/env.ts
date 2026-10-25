@@ -4,6 +4,9 @@ import { z } from "zod";
 const apiEnvSchema = baseEnvSchema.extend({
   PORT: z.coerce.number().int().min(1).default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  // Origine du site web, pour les liens envoyés par e-mail (réinitialisation du mot
+  // de passe). Par défaut CORS_ORIGIN, qui est déjà l'origine unique du frontend.
+  WEB_APP_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   // AES-256 : 32 octets, encodés hex (openssl rand -hex 32). Chiffre le secret TOTP

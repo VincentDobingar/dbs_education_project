@@ -73,6 +73,11 @@ const EmployeeDetailPage = lazyImport(
 const EmployeesPage = lazyImport(() => import("./pages/app/EmployeesPage.js"), "EmployeesPage");
 const FinancePage = lazyImport(() => import("./pages/app/FinancePage.js"), "FinancePage");
 const GradingPage = lazyImport(() => import("./pages/app/GradingPage.js"), "GradingPage");
+const ForgotPasswordPage = lazyImport(
+  () => import("./pages/auth/ForgotPasswordPage.js"),
+  "ForgotPasswordPage",
+);
+const ResetPasswordPage = lazyImport(() => import("./pages/auth/ResetPasswordPage.js"), "ResetPasswordPage");
 const GuidePage = lazyImport(() => import("./pages/marketing/GuidePage.js"), "GuidePage");
 const HelpPage = lazyImport(() => import("./pages/app/HelpPage.js"), "HelpPage");
 const HomeworkPage = lazyImport(() => import("./pages/app/HomeworkPage.js"), "HomeworkPage");
@@ -133,6 +138,8 @@ export function App(): ReactNode {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/inscription" element={<SignupPage />} />
               <Route path="/connexion" element={<LoginPage />} />
+              <Route path="/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
+              <Route path="/reinitialiser-mot-de-passe" element={<ResetPasswordPage />} />
               <Route path="/conditions-generales" element={<TermsPage />} />
               <Route path="/confidentialite" element={<PrivacyPage />} />
               <Route path="/remboursement" element={<RefundPolicyPage />} />

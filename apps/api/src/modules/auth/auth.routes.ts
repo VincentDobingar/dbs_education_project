@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { resendVerificationRateLimiter } from "../../middleware/rateLimit.js";
+import { forgotPasswordRateLimiter, resendVerificationRateLimiter } from "../../middleware/rateLimit.js";
 import { requireAuth, requireAuthOrMfaEnrollment } from "../../middleware/requireAuth.js";
 
 import * as authController from "./auth.controller.js";
@@ -27,6 +27,11 @@ authRouter.post(
   resendVerificationRateLimiter,
   authController.resendPhoneVerification,
 );
+
+// Mot de passe oublié : lien à usage unique envoyé par e-mail (jamais renvoyé dans la
+// réponse) ; la réinitialisation révoque toutes les sessions du compte.
+authRouter.post("/forgot-password", forgotPasswordRateLimiter, authController.forgotPassword);
+authRouter.post("/reset-password", authController.resetPassword);
 
 // §15/§34 : appareils connectés / révocation de session — jamais par refresh token
 // (l'appelant peut vouloir couper l'accès d'un appareil qu'il n'a plus en main).

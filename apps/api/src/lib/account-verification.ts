@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 
 export const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 heures
 export const PHONE_VERIFICATION_TTL_MS = 15 * 60 * 1000; // 15 minutes
+export const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Jeton "lien de vérification" (§34) : opaque, haute entropie, comparé par égalité de
@@ -29,4 +30,17 @@ export function generatePhoneVerificationCode(): string {
 
 export function hashPhoneVerificationCode(email: string, code: string): string {
   return createHash("sha256").update(`${email}:${code}`).digest("hex");
+}
+
+/**
+ * Jeton de réinitialisation du mot de passe : même construction que le jeton de
+ * vérification d'e-mail (opaque, 256 bits, seul son hash est stocké).
+ */
+export function generatePasswordResetToken(): { token: string; hash: string } {
+  const token = randomBytes(32).toString("base64url");
+  return { token, hash: hashPasswordResetToken(token) };
+}
+
+export function hashPasswordResetToken(token: string): string {
+  return createHash("sha256").update(`password-reset:${token}`).digest("hex");
 }

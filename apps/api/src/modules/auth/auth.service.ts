@@ -6,9 +6,13 @@ import {
   generateEmailVerificationToken,
   generatePhoneVerificationCode,
   hashEmailVerificationToken,
+  generatePasswordResetToken,
+  hashPasswordResetToken,
   hashPhoneVerificationCode,
+  PASSWORD_RESET_TTL_MS,
   PHONE_VERIFICATION_TTL_MS,
 } from "../../lib/account-verification.js";
+import { recordAuditLog } from "../../lib/audit-log.js";
 import { getPlatformRoleCodes, userHasSensitiveRole } from "../../lib/authorization.js";
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { decrypt } from "../../lib/encryption.js";
@@ -499,4 +503,124 @@ export async function getCurrentUserProfile(userId: string): Promise<CurrentUser
     })),
     platformRoleCodes,
   };
+}
+
+export type PasswordResetSpace = "staff" | "portal" | "admin";
+
+const RESET_EMAIL = {
+  fr: {
+    subject: "Réinitialisation de votre mot de passe",
+    body: (link: string, minutes: number) =>
+      `Bonjour,\n\nVous avez demandé à réinitialiser le mot de passe de votre compte Digital Business Services Africa School.\n\nOuvrez ce lien pour choisir un nouveau mot de passe (valable ${minutes} minutes, utilisable une seule fois) :\n${link}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste inchangé.`,
+    doneSubject: "Votre mot de passe a été modifié",
+    doneBody:
+      "Bonjour,\n\nLe mot de passe de votre compte Digital Business Services Africa School vient d'être modifié, et vos appareils connectés ont été déconnectés.\n\nSi vous n'êtes pas à l'origine de ce changement, contactez immédiatement le support.",
+  },
+  en: {
+    subject: "Reset your password",
+    body: (link: string, minutes: number) =>
+      `Hello,\n\nYou asked to reset the password of your Digital Business Services Africa School account.\n\nOpen this link to choose a new password (valid for ${minutes} minutes, single use):\n${link}\n\nIf you did not request this, ignore this message: your current password stays unchanged.`,
+    doneSubject: "Your password was changed",
+    doneBody:
+      "Hello,\n\nThe password of your Digital Business Services Africa School account was just changed, and your connected devices were signed out.\n\nIf you did not make this change, contact support immediately.",
+  },
+} as const;
+
+function passwordResetLink(token: string, space: PasswordResetSpace): string {
+  const origin = (env.WEB_APP_URL ?? env.CORS_ORIGIN).replace(/\/+$/, "");
+  // Jeton dans le fragment (#) : jamais envoyé au serveur web ni dans l'en-tête
+  // Referer, donc absent des journaux d'accès de l'hébergeur du site.
+  return `${origin}/reinitialiser-mot-de-passe?espace=${space}#token=${token}`;
+}
+
+/**
+ * « Mot de passe oublié » : ne renvoie jamais rien qui distingue un compte existant
+ * d'un compte inconnu (même réponse côté contrôleur, comme resendEmailVerification),
+ * et — contrairement au jeton de vérification d'e-mail — le jeton n'apparaît JAMAIS
+ * dans la réponse HTTP : il ne part que par e-mail, sinon n'importe qui pourrait
+ * prendre le contrôle d'un compte en connaissant son adresse.
+ */
+export async function requestPasswordReset(
+  email: string,
+  space: PasswordResetSpace,
+  locale: "fr" | "en",
+): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || user.deletedAt || (user.status !== "ACTIVE" && user.status !== "PENDING")) {
+    return;
+  }
+
+  const { token, hash } = generatePasswordResetToken();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetTokenHash: hash,
+      passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+    },
+  });
+
+  const texts = RESET_EMAIL[locale];
+  sendEmail({
+    to: user.email,
+    subject: texts.subject,
+    text: texts.body(passwordResetLink(token, space), PASSWORD_RESET_TTL_MS / 60_000),
+  });
+}
+
+/**
+ * Consomme le jeton (usage unique), change le mot de passe, lève un éventuel
+ * verrouillage et révoque toutes les sessions : un appareil volé ou une session
+ * ouverte par un tiers ne survit pas à la réinitialisation. Le MFA, s'il est actif,
+ * reste exigé à la prochaine connexion. Ouvrir le lien reçu prouve la possession de
+ * l'adresse : un compte encore en attente de vérification devient actif.
+ */
+export async function resetPassword(token: string, newPassword: string, meta: SessionMeta): Promise<void> {
+  const tokenHash = hashPasswordResetToken(token);
+  const user = await prisma.user.findUnique({ where: { passwordResetTokenHash: tokenHash } });
+  if (!user || user.deletedAt) {
+    throw new AppError(404, "PASSWORD_RESET_TOKEN_INVALID", "Invalid or already used reset link");
+  }
+  if (!user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetTokenHash: null, passwordResetExpiresAt: null },
+    });
+    throw new AppError(410, "PASSWORD_RESET_TOKEN_EXPIRED", "Reset link has expired");
+  }
+
+  const now = new Date();
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        ...(user.status === "PENDING"
+          ? { status: "ACTIVE", emailVerifiedAt: user.emailVerifiedAt ?? now }
+          : {}),
+      },
+    }),
+    prisma.session.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: now, revokedReason: "PASSWORD_RESET" },
+    }),
+  ]);
+
+  await recordAuditLog({
+    actorUserId: user.id,
+    action: "AUTH_PASSWORD_RESET",
+    entityType: "User",
+    entityId: user.id,
+    ...(meta.ipAddress ? { ipAddress: meta.ipAddress } : {}),
+  });
+
+  sendEmail({
+    to: user.email,
+    subject: RESET_EMAIL.fr.doneSubject,
+    text: `${RESET_EMAIL.fr.doneBody}\n\n---\n\n${RESET_EMAIL.en.doneBody}`,
+  });
 }

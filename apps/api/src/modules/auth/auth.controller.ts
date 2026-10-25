@@ -4,10 +4,12 @@ import { AppError } from "../../lib/errors.js";
 
 import * as authService from "./auth.service.js";
 import {
+  forgotPasswordSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
   resendVerificationSchema,
+  resetPasswordSchema,
   verifyEmailSchema,
   verifyPhoneSchema,
 } from "./auth.validation.js";
@@ -139,5 +141,27 @@ export function getCurrentUser(req: Request, res: Response, next: NextFunction):
 
     const profile = await authService.getCurrentUserProfile(req.user.id);
     res.status(200).json(profile);
+  })().catch(next);
+}
+
+const GENERIC_PASSWORD_RESET_MESSAGE =
+  "If an account exists for this email, a password reset link has been sent to it.";
+
+export function forgotPassword(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = forgotPasswordSchema.parse(req.body);
+    await authService.requestPasswordReset(input.email, input.space, input.locale);
+    res.status(200).json({ message: GENERIC_PASSWORD_RESET_MESSAGE });
+  })().catch(next);
+}
+
+export function resetPassword(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const input = resetPasswordSchema.parse(req.body);
+    await authService.resetPassword(input.token, input.password, {
+      ...(req.headers["user-agent"] ? { userAgent: req.headers["user-agent"] } : {}),
+      ...(req.ip ? { ipAddress: req.ip } : {}),
+    });
+    res.status(200).json({ message: "Password updated" });
   })().catch(next);
 }

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { ForgotPasswordLink } from "../../components/ForgotPasswordLink.js";
 import { InstallAppButton } from "../../components/InstallAppButton.js";
 import { login, registerAccount, verifyEmail } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
@@ -115,6 +116,7 @@ export function PortalLoginPage(): ReactNode {
           <Button type="submit" variant="secondary" disabled={isSubmitting}>
             {isSubmitting ? t("login.submitting") : t("login.submit")}
           </Button>
+          <ForgotPasswordLink space="portal" />
         </form>
       ) : (
         <form onSubmit={(event) => void onRegister(event)} className="mt-8 space-y-4" noValidate>

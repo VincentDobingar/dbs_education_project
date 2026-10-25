@@ -25,6 +25,21 @@ export function verifyEmail(token: string): Promise<{ id: string; status: string
   return apiRequest("/auth/verify-email", { method: "POST", body: { token } });
 }
 
+/** Espace d'où part la demande : décide de la page de connexion proposée ensuite. */
+export type PasswordResetSpace = "staff" | "portal" | "admin";
+
+export function requestPasswordReset(
+  email: string,
+  space: PasswordResetSpace,
+  locale: "fr" | "en",
+): Promise<{ message: string }> {
+  return apiRequest("/auth/forgot-password", { method: "POST", body: { email, space, locale } });
+}
+
+export function resetPassword(token: string, password: string): Promise<{ message: string }> {
+  return apiRequest("/auth/reset-password", { method: "POST", body: { token, password } });
+}
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
