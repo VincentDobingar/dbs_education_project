@@ -29,6 +29,12 @@ const apiEnvSchema = baseEnvSchema.extend({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM_ADDRESS: z.string().email().optional(),
+  // Alternative à SMTP quand l'hébergeur bloque les ports SMTP sortants (Railway
+  // hors offre Pro) : API HTTP de Brevo, prioritaire sur SMTP si la clé est
+  // renseignée. Expéditeur : EMAIL_FROM_ADDRESS, sinon SMTP_FROM_ADDRESS.
+  BREVO_API_KEY: z.string().optional(),
+  EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  EMAIL_FROM_NAME: z.string().min(1).default("EduManage Africa"),
 
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

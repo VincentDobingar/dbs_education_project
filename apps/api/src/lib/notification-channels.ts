@@ -1,5 +1,6 @@
 import { env } from "../env.js";
 
+import { BrevoEmailAdapter } from "./email-provider/brevo-adapter.js";
 import { registerEmailProviderAdapter } from "./email-provider/registry.js";
 import { SmtpEmailAdapter } from "./email-provider/smtp-adapter.js";
 import { registerSmsProviderAdapter } from "./sms-provider/registry.js";
@@ -14,7 +15,14 @@ import { TwilioSmsAdapter } from "./sms-provider/twilio-adapter.js";
  * no-op and log, exactly like the current "token returned in the response" behavior.
  */
 export function bootstrapNotificationChannels(): void {
-  if (env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASSWORD && env.SMTP_FROM_ADDRESS) {
+  const fromAddress = env.EMAIL_FROM_ADDRESS ?? env.SMTP_FROM_ADDRESS;
+  if (env.BREVO_API_KEY && fromAddress) {
+    // Prioritaire sur SMTP : passe par HTTPS, donc aussi chez les hébergeurs qui
+    // bloquent les ports SMTP sortants.
+    registerEmailProviderAdapter(
+      new BrevoEmailAdapter({ apiKey: env.BREVO_API_KEY, fromAddress, fromName: env.EMAIL_FROM_NAME }),
+    );
+  } else if (env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASSWORD && env.SMTP_FROM_ADDRESS) {
     registerEmailProviderAdapter(
       new SmtpEmailAdapter({
         host: env.SMTP_HOST,
