@@ -1,7 +1,11 @@
 import { z } from "zod";
 
+// Adresses comparées en minuscules et sans espaces : le clavier des téléphones met
+// souvent une majuscule en tête de champ.
+const emailSchema = z.string().trim().toLowerCase().email();
+
 export const registerSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(12),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -9,7 +13,7 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(1),
 });
 
@@ -22,19 +26,19 @@ export const verifyEmailSchema = z.object({
 });
 
 export const verifyPhoneSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   code: z.string().min(1),
 });
 
 export const resendVerificationSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
 });
 
 /** Espace d'où vient la demande : décide de la page de connexion proposée après coup. */
 export const passwordResetSpaces = ["staff", "portal", "admin"] as const;
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   space: z.enum(passwordResetSpaces).default("staff"),
   locale: z.enum(["fr", "en"]).default("fr"),
 });

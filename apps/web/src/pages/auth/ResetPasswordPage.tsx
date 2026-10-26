@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
+import { PasswordInput } from "../../components/PasswordInput.js";
 import { resetPassword } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 
@@ -102,8 +103,7 @@ export function ResetPasswordPage(): ReactNode {
           <form onSubmit={(event) => void onSubmit(event)} className="mt-8 space-y-4" noValidate>
             <label className="block text-sm font-medium text-slate-700">
               {t("passwordReset.reset.newPassword")}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 className="input mt-1"
                 value={password}
@@ -112,8 +112,7 @@ export function ResetPasswordPage(): ReactNode {
             </label>
             <label className="block text-sm font-medium text-slate-700">
               {t("passwordReset.reset.confirmPassword")}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 className="input mt-1"
                 value={confirmation}

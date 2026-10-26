@@ -21,6 +21,8 @@ export const onboardTenantSchema = z
     currencyIsoCode: z.string().length(3),
     subdomain: z
       .string()
+      .trim()
+      .toLowerCase()
       .min(3)
       .max(63)
       .regex(SUBDOMAIN_PATTERN, "Subdomain must be lowercase letters, digits and hyphens only"),

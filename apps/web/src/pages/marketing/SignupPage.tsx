@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
+import { PasswordInput } from "../../components/PasswordInput.js";
 import {
   login,
   onboardTenant,
@@ -43,16 +44,32 @@ const SCHOOL_PLANS = ["SCHOOL_ESSENTIAL", "SCHOOL_PROFESSIONAL", "SCHOOL_PREMIUM
 
 const SUBDOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
 
+// Messages = clés de traduction (affichées via t() dans <Field>).
+const trimmed = (schema: z.ZodString) =>
+  z.preprocess((value) => (typeof value === "string" ? value.trim() : value), schema);
+
 const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(12),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  schoolName: z.string().min(2),
+  email: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+    z.string().email("signup.validation.email"),
+  ),
+  password: z.string().min(12, "signup.validation.password"),
+  firstName: trimmed(z.string().min(1, "signup.validation.required")),
+  lastName: trimmed(z.string().min(1, "signup.validation.required")),
+  schoolName: trimmed(z.string().min(2, "signup.validation.schoolName")),
   ownershipType: z.enum(["PUBLIC", "PRIVATE"]),
   countryIsoCode: z.string().length(2),
   city: z.string().optional(),
-  subdomain: z.string().min(3).max(63).regex(SUBDOMAIN_PATTERN),
+  // Le clavier des téléphones ajoute souvent une majuscule ou une espace finale :
+  // normalisées plutôt que refusées.
+  subdomain: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+    z
+      .string()
+      .min(3, "signup.validation.subdomainLength")
+      .max(63, "signup.validation.subdomainLength")
+      .regex(SUBDOMAIN_PATTERN, "signup.validation.subdomainFormat"),
+  ),
   planCode: z.string().optional(),
   promoCode: z.string().optional(),
 });
@@ -74,6 +91,7 @@ const STEP_KEYS = [
 
 export function SignupPage(): ReactNode {
   const { t, i18n } = useTranslation("marketing");
+  const errorText = (key?: string): string | undefined => (key ? t(key) : undefined);
   const [step, setStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ subdomain: string } | null>(null);
@@ -243,29 +261,24 @@ export function SignupPage(): ReactNode {
       <form onSubmit={(event) => void onSubmit(event)} className="mt-8 space-y-4" noValidate>
         {step === 0 ? (
           <>
-            <Field label={t("signup.account.firstName")} error={errors.firstName?.message}>
+            <Field label={t("signup.account.firstName")} error={errorText(errors.firstName?.message)}>
               <input type="text" autoComplete="given-name" className="input" {...register("firstName")} />
             </Field>
-            <Field label={t("signup.account.lastName")} error={errors.lastName?.message}>
+            <Field label={t("signup.account.lastName")} error={errorText(errors.lastName?.message)}>
               <input type="text" autoComplete="family-name" className="input" {...register("lastName")} />
             </Field>
-            <Field label={t("signup.account.email")} error={errors.email?.message}>
+            <Field label={t("signup.account.email")} error={errorText(errors.email?.message)}>
               <input type="email" autoComplete="email" className="input" {...register("email")} />
             </Field>
-            <Field label={t("signup.account.password")} error={errors.password?.message}>
-              <input
-                type="password"
-                autoComplete="new-password"
-                className="input"
-                {...register("password")}
-              />
+            <Field label={t("signup.account.password")} error={errorText(errors.password?.message)}>
+              <PasswordInput autoComplete="new-password" className="input" {...register("password")} />
             </Field>
           </>
         ) : null}
 
         {step === 1 ? (
           <>
-            <Field label={t("signup.school.name")} error={errors.schoolName?.message}>
+            <Field label={t("signup.school.name")} error={errorText(errors.schoolName?.message)}>
               <input type="text" className="input" {...register("schoolName")} />
             </Field>
             <Field label={t("signup.school.ownershipType")}>
@@ -286,10 +299,20 @@ export function SignupPage(): ReactNode {
             <Field label={t("signup.school.city")}>
               <input type="text" className="input" {...register("city")} />
             </Field>
-            <Field label={t("signup.school.subdomain")} error={errors.subdomain?.message}>
-              <input type="text" className="input" {...register("subdomain")} />
+            <Field label={t("signup.school.subdomain")} error={errorText(errors.subdomain?.message)}>
+              <input
+                type="text"
+                className="input"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="url"
+                {...register("subdomain")}
+              />
               <p className="mt-1 text-xs text-slate-500">
-                {t("signup.school.subdomainHint", { subdomain: values.subdomain || "…" })}
+                {t("signup.school.subdomainHint", {
+                  subdomain: (values.subdomain ?? "").trim().toLowerCase() || "…",
+                })}
               </p>
             </Field>
             <Field label={t("signup.school.logo")}>
@@ -400,7 +423,11 @@ function Field({
         {label}
         <div className="mt-1">{children}</div>
       </label>
-      {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <p className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

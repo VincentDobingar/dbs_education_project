@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { ForgotPasswordLink } from "../../components/ForgotPasswordLink.js";
 import { MfaStep } from "../../components/MfaStep.js";
+import { PasswordInput } from "../../components/PasswordInput.js";
 import { saveAdminSession } from "../../lib/adminSession.js";
 import type { AuthTokens, MfaPending } from "../../lib/api.js";
 import { getCurrentUser, isAuthTokens, loginStart } from "../../lib/api.js";
@@ -111,8 +112,7 @@ export function AdminLoginPage(): ReactNode {
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.password")}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="current-password"
                 className="input mt-1"
                 {...register("password")}

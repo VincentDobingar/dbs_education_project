@@ -1,4 +1,6 @@
 {
+  "password.show": "Afficher le mot de passe",
+  "password.hide": "Masquer le mot de passe",
   "list.error.loadFailed": "Impossible de charger ces données pour le moment. Réessayez plus tard.",
   "pwa.offlineReady": "L'application est disponible hors connexion.",
   "pwa.updateAvailable": "Une nouvelle version est disponible.",
@@ -8,7 +10,7 @@
   "list.pagination.next": "Suivant",
   "list.pagination.pageInfo": "Page {{page}} sur {{totalPages}}",
   "login.title": "Connexion à votre établissement",
-  "login.subtitle": "Utilisez les identifiants du responsable créés à l'inscription.",
+  "login.subtitle": "Direction, enseignants et personnel : connectez-vous avec l'adresse e-mail de votre compte. Première connexion ? Choisissez votre mot de passe avec « Mot de passe oublié ? ».",
   "login.subdomain": "Identifiant de l'établissement",
   "login.email": "Adresse email",
   "login.password": "Mot de passe",

@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { ForgotPasswordLink } from "../../components/ForgotPasswordLink.js";
 import { InstallAppButton } from "../../components/InstallAppButton.js";
+import { PasswordInput } from "../../components/PasswordInput.js";
 import { login, registerAccount, verifyEmail } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 import { savePortalSession } from "../../lib/portalSession.js";
@@ -105,8 +106,7 @@ export function PortalLoginPage(): ReactNode {
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.password")}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="current-password"
                 className="input mt-1"
                 {...loginForm.register("password")}
@@ -144,8 +144,7 @@ export function PortalLoginPage(): ReactNode {
           <div>
             <label className="block text-sm font-medium text-slate-700">
               {t("login.password")}
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 className="input mt-1"
                 {...registerForm.register("password")}

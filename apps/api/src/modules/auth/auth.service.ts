@@ -266,8 +266,20 @@ async function createSession(userId: string, meta: SessionMeta): Promise<AuthTok
   return { accessToken: signAccessToken({ sub: userId }), refreshToken: token };
 }
 
+/**
+ * Recherche par e-mail tolérante à la casse : les adresses saisies sont désormais
+ * normalisées en minuscules, mais des comptes plus anciens ont pu être créés avec
+ * des majuscules.
+ */
+async function findUserByEmail(email: string) {
+  return (
+    (await prisma.user.findUnique({ where: { email } })) ??
+    (await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } }))
+  );
+}
+
 export async function login(email: string, password: string, meta: SessionMeta): Promise<LoginResult> {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserByEmail(email);
 
   if (!user) {
     await verifyPassword(DUMMY_PASSWORD_HASH, password);
@@ -545,7 +557,7 @@ export async function requestPasswordReset(
   space: PasswordResetSpace,
   locale: "fr" | "en",
 ): Promise<void> {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserByEmail(email);
   if (!user || user.deletedAt || (user.status !== "ACTIVE" && user.status !== "PENDING")) {
     return;
   }

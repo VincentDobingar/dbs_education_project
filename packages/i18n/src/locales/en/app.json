@@ -1,4 +1,6 @@
 {
+  "password.show": "Show password",
+  "password.hide": "Hide password",
   "list.error.loadFailed": "Unable to load this data right now. Please try again later.",
   "pwa.offlineReady": "The app is ready to work offline.",
   "pwa.updateAvailable": "A new version is available.",
@@ -8,7 +10,7 @@
   "list.pagination.next": "Next",
   "list.pagination.pageInfo": "Page {{page}} of {{totalPages}}",
   "login.title": "Log in to your school",
-  "login.subtitle": "Use the responsible account's credentials created at signup.",
+  "login.subtitle": "Management, teachers and staff: sign in with your account email. First time? Choose your password with “Forgot password?”.",
   "login.subdomain": "School identifier",
   "login.email": "Email address",
   "login.password": "Password",
