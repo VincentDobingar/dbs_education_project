@@ -20,7 +20,12 @@ const apiEnvSchema = baseEnvSchema.extend({
   // renseignés — jamais un boot qui échoue faute de ces identifiants.
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).optional(),
-  SMTP_SECURE: z.coerce.boolean().optional(),
+  // "true"/"false" explicites : z.coerce.boolean() lisait "false" comme true
+  // (toute chaîne non vide), ce qui forçait TLS direct sur le port 587 (STARTTLS).
+  // Une valeur vide (SMTP_SECURE= dans un .env) reste « non renseignée ».
+  SMTP_SECURE: z
+    .preprocess((value) => (value === "" ? undefined : value), z.enum(["true", "false"]).optional())
+    .transform((value) => (value === undefined ? undefined : value === "true")),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM_ADDRESS: z.string().email().optional(),
