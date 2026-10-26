@@ -4,6 +4,7 @@ import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
+import { getTimetableBreaks } from "./timetable-breaks.service.js";
 import type {
   CreateTimetableEntryInput,
   CreateTimetableInput,
@@ -72,6 +73,8 @@ export async function addTimetableEntry(
   input: CreateTimetableEntryInput,
 ): Promise<TimetableEntry> {
   const timetable = await requireTimetable(timetableId);
+  const currentYear = await prisma.academicYear.findFirst({ where: { isCurrent: true, deletedAt: null } });
+  if (timetable.academicYearId === currentYear?.id && (await getTimetableBreaks()).some(b => b.days.includes(input.dayOfWeek) && input.startTime < b.endTime && b.startTime < input.endTime)) throw new AppError(409, "LESSON_BREAK_OVERLAP", "Ce cours chevauche une récréation.");
 
   const [subject, teacher, room] = await Promise.all([
     prisma.subject.findUnique({ where: { id: input.subjectId } }),
@@ -162,10 +165,12 @@ export async function addTimetableEntry(
 
 export async function listTimetableEntries(timetableId: string): Promise<TimetableEntry[]> {
   await requireTimetable(timetableId);
-  return prisma.timetableEntry.findMany({
+  const entries = await prisma.timetableEntry.findMany({
     where: { timetableId },
+    include: { subject: { select: { nameFr: true } }, teacherEmployee: { select: { firstName: true, lastName: true } } },
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });
+  return entries.map(({ subject, teacherEmployee, ...entry }) => ({ ...entry, subjectName: subject.nameFr, teacherName: `${teacherEmployee.firstName} ${teacherEmployee.lastName}` }));
 }
 
 export async function removeTimetableEntry(timetableId: string, id: string): Promise<void> {

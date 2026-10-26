@@ -1,5 +1,7 @@
 import { Router } from "express";
+import { z } from "zod";
 
+import { rawPrisma } from "../../lib/prisma.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePlatformRole } from "../../middleware/requirePlatformRole.js";
 
@@ -17,12 +19,25 @@ import * as tenantAdminController from "./tenant-admin.controller.js";
 import * as tenantElevationAdminController from "./tenant-elevation-admin.controller.js";
 
 export const platformAdminRouter: Router = Router();
+platformAdminRouter.get("/users", requireAuth, requirePlatformRole("SUPER_ADMIN"), (req, res, next) => {
+  void (async () => {
+    const { q } = z.object({ q: z.string().trim().max(200).default("") }).parse(req.query);
+    res.set("Cache-Control", "private, no-store");
+    return res.json(await rawPrisma.user.findMany({ where: q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { profile: { firstName: { contains: q, mode: "insensitive" } } }, { profile: { lastName: { contains: q, mode: "insensitive" } } }] } : {}, select: { id: true, email: true, status: true, profile: { select: { firstName: true, lastName: true } } }, take: 100, orderBy: { id: "desc" } }));
+  })().catch(next);
+});
 
 // §31 : jamais enforceTenantScope/requireTenantMembership — une action cross-tenant
 // par nature, gardée par le rôle plateforme de l'appelant plutôt qu'une appartenance
 // à un tenant précis.
 const readPlatform = requirePlatformRole("SUPER_ADMIN", "PLATFORM_ADMIN", "PLATFORM_AUDITOR");
 const managePlatform = requirePlatformRole("SUPER_ADMIN", "PLATFORM_ADMIN");
+platformAdminRouter.post(
+  "/parent-subscriptions/:id/cash-payment",
+  requireAuth,
+  requirePlatformRole("SUPER_ADMIN", "BILLING_MANAGER"),
+  subscriptionAdminController.recordParentCashPayment,
+);
 
 // Tickets de support : le seed (prisma/seed/data/roles-permissions.ts) n'accorde la
 // permission platform.support.manage qu'à SUPER_ADMIN et SUPPORT_AGENT (pas

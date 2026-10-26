@@ -20,3 +20,16 @@ export function generateIdCard(req: Request, res: Response, next: NextFunction):
       .send(pdf);
   })().catch(next);
 }
+
+export function generateClassIdCards(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.tenant) throw new AppError(400, "TENANT_REQUIRED", "Tenant required");
+    const classroomId = req.params.classroomId as string;
+    const pdf = await idCardService.generateClassIdCardsPdf(classroomId, req.tenant);
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `attachment; filename="cartes-classe-${classroomId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}

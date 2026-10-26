@@ -13,6 +13,7 @@ import {
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("portail élève — lecture (§26)", () => {
   const app = createApp();
@@ -20,6 +21,10 @@ describe("portail élève — lecture (§26)", () => {
   const createdSubscribedStudentIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.grade.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.assessment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.assessmentType.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.attendance.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.entitlement.deleteMany({
       where: { subscription: { owner: { studentId: { in: createdSubscribedStudentIds } } } },
     });
@@ -64,6 +69,7 @@ describe("portail élève — lecture (§26)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -159,7 +165,7 @@ describe("portail élève — lecture (§26)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, classroomId, campusId, gradeLevelId }));
 
     // Rattachement STUDENT via le vrai flux d'activation (§8) plutôt qu'un insert
     // direct — vérifie que StudentUserLink.tenantId reste correctement posé.
@@ -281,11 +287,167 @@ describe("portail élève — lecture (§26)", () => {
     expect(dashboardBody.profile.student.id).toBe(studentId);
     expect(dashboardBody.recentReportCards.some((r) => r.id === reportCard.id)).toBe(true);
     expect(dashboardBody.subscription).toBeNull();
+    for (const section of [
+      "grades",
+      "incidents",
+      "attendance",
+      "id-card",
+      "invoices",
+      `invoices/${invoiceId}/pdf`,
+    ]) {
+      expect(
+        (
+          await request(app)
+            .get(`/api/v1/student-portal/students/${studentId}/${section}`)
+            .set("Authorization", `Bearer ${studentToken}`)
+        ).status,
+      ).toBe(402);
+      expect(
+        (
+          await request(app)
+            .get(`/api/v1/student-portal/students/${studentId}/${section}`)
+            .set("Authorization", `Bearer ${strangerToken}`)
+        ).status,
+      ).toBe(403);
+    }
 
+    const blockedProfileEdit = await request(app)
+      .patch(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ address: "Test" });
+    expect(blockedProfileEdit.status).toBe(402);
     // §26/§37 : abonnement individuel actif — débloque désormais les fonctions protégées.
     createdSubscribedStudentIds.push(studentId);
     const studentSubscription = await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
     await grantEntitlement(studentSubscription.id, "report_card.download", { quotaLimit: 12 });
+    const assessmentType = await testAdminPrisma.assessmentType.create({
+      data: { tenantId: tenant.id, code: "TEST", nameFr: "Contrôle", nameEn: "Test" },
+    });
+    const report = await testAdminPrisma.reportCard.findUniqueOrThrow({ where: { id: reportCard.id } });
+    for (const published of [true, false]) {
+      const assessment = await testAdminPrisma.assessment.create({
+        data: {
+          tenantId: tenant.id,
+          subjectId,
+          classroomId,
+          assessmentTypeId: assessmentType.id,
+          academicPeriodId: report.academicPeriodId,
+          title: published ? "Publié" : "Brouillon",
+          maxScore: 20,
+          isPublished: published,
+        },
+      });
+      await testAdminPrisma.grade.create({
+        data: { tenantId: tenant.id, assessmentId: assessment.id, studentId, score: 15 },
+      });
+    }
+    await testAdminPrisma.attendance.create({
+      data: { tenantId: tenant.id, studentId, classroomId, date: new Date(), status: "ABSENT" },
+    });
+    const contactUpdate = await request(app)
+      .patch(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({
+        address: "12 avenue Test",
+        phone: "+237600123456",
+        birthPlace: "Douala",
+        nationality: "Camerounaise",
+        emergencyContactName: "Tuteur Test",
+        emergencyContactPhone: "+237600654321",
+      });
+    expect(contactUpdate.status).toBe(200);
+    expect((contactUpdate.body as { address: string }).address).toBe("12 avenue Test");
+    expect(contactUpdate.body).not.toHaveProperty("medicalNotes");
+    const foreignUpdate = await request(app)
+      .patch(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${strangerToken}`)
+      .send({ address: "Intrus" });
+    expect(foreignUpdate.status).toBe(403);
+    const identityUpdate = await request(app)
+      .patch(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .send({ firstName: "Autre" });
+    expect(identityUpdate.status).toBe(400);
+    const invalidPhoto = await request(app)
+      .post(`/api/v1/student-portal/students/${studentId}/photo`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .attach("photo", Buffer.from("not an image"), { filename: "fake.png", contentType: "image/png" });
+    expect(invalidPhoto.status).toBe(400);
+    const validPhoto = await request(app)
+      .post(`/api/v1/student-portal/students/${studentId}/photo`)
+      .set("Authorization", `Bearer ${studentToken}`)
+      .attach(
+        "photo",
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1sAAAAASUVORK5CYII=",
+          "base64",
+        ),
+        { filename: "photo.png", contentType: "image/png" },
+      );
+    expect(validPhoto.status).toBe(200);
+    expect((validPhoto.body as { photoUrl: string }).photoUrl).toContain("/uploads/student-photos/");
+    const staffProfile = await request(app)
+      .patch(`/api/v1/students/${studentId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        address: "24 avenue modifiée par l'établissement",
+        phone: "+237600222333",
+        birthPlace: "Yaoundé",
+      });
+    expect(staffProfile.status).toBe(200);
+    const syncedProfile = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/profile`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(syncedProfile.status).toBe(200);
+    expect(
+      (syncedProfile.body as { student: { address: string; phone: string; birthPlace: string } }).student,
+    ).toMatchObject({
+      address: "24 avenue modifiée par l'établissement",
+      phone: "+237600222333",
+      birthPlace: "Yaoundé",
+    });
+    const incident = await testAdminPrisma.disciplinaryIncident.create({
+      data: {
+        tenantId: tenant.id,
+        studentId,
+        occurredAt: new Date(),
+        description: "Incident visible",
+        severity: "MINOR",
+        sanction: "Rappel",
+        correctiveAction: "Dialogue",
+      },
+    });
+    await testAdminPrisma.disciplinaryIncident.create({
+      data: {
+        tenantId: tenant.id,
+        studentId,
+        occurredAt: new Date(),
+        description: "Incident supprimé",
+        severity: "MINOR",
+        deletedAt: new Date(),
+      },
+    });
+    const incidents = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/incidents`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(incidents.status).toBe(200);
+    expect(incidents.body).toEqual([
+      expect.objectContaining({ id: incident.id, sanction: "Rappel", correctiveAction: "Dialogue" }),
+    ]);
+    expect((incidents.body as Record<string, unknown>[])[0]).not.toHaveProperty("reportedByEmployeeId");
+    const ownGrades = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/grades`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(ownGrades.status).toBe(200);
+    expect(
+      (ownGrades.body as { assessment: { title: string } }[]).map((grade) => grade.assessment.title),
+    ).toEqual(["Publié"]);
+    const ownAttendance = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/attendance`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(ownAttendance.status).toBe(200);
+    expect((ownAttendance.body as { status: string }[])[0]?.status).toBe("ABSENT");
 
     const profile = await request(app)
       .get(`/api/v1/student-portal/students/${studentId}/profile`)
@@ -335,6 +497,23 @@ describe("portail élève — lecture (§26)", () => {
     const receiptPdf = await request(app)
       .get(`/api/v1/student-portal/students/${studentId}/receipts/${receiptId}/pdf`)
       .set("Authorization", `Bearer ${studentToken}`);
+    const invoices = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/invoices`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(invoices.status).toBe(200);
+    expect((invoices.body as { id: string }[]).some((i) => i.id === invoiceId)).toBe(true);
+    const invoicePdf = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    const cardPdf = await request(app)
+      .get(`/api/v1/student-portal/students/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(cardPdf.status).toBe(200);
+    expect(cardPdf.headers["content-type"]).toBe("application/pdf");
+    expect((cardPdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
+    expect(invoicePdf.status).toBe(200);
+    expect(invoicePdf.headers["content-type"]).toBe("application/pdf");
+    expect((invoicePdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
     expect(receiptPdf.status).toBe(200);
     expect(receiptPdf.headers["content-type"]).toBe("application/pdf");
 
@@ -375,5 +554,9 @@ describe("portail élève — lecture (§26)", () => {
       .get(`/api/v1/student-portal/students/${otherStudentId}/receipts/${receiptId}/pdf`)
       .set("Authorization", `Bearer ${otherStudentToken}`);
     expect(crossStudentReceipt.status).toBe(404);
+    const wrongInvoice = await request(app)
+      .get(`/api/v1/student-portal/students/${otherStudentId}/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${otherStudentToken}`);
+    expect(wrongInvoice.status).toBe(404);
   }, 30000);
 });

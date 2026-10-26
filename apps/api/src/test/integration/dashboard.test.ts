@@ -5,6 +5,7 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("tableaux de bord (§18)", () => {
   const app = createApp();
@@ -14,6 +15,12 @@ describe("tableaux de bord (§18)", () => {
     await testAdminPrisma.announcement.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.disciplinaryIncident.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.attendance.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.gradeChangeLog.deleteMany({
+      where: { grade: { tenantId: { in: createdTenantIds } } },
+    });
+    await testAdminPrisma.grade.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.assessment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.assessmentType.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.reportCard.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.studentReceipt.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.studentPayment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -39,6 +46,7 @@ describe("tableaux de bord (§18)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -98,6 +106,7 @@ describe("tableaux de bord (§18)", () => {
       .set("X-Tenant-Slug", subdomain)
       .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
     const academicYearId = (year.body as { id: string }).id;
+    await testAdminPrisma.academicYear.update({ where: { id: academicYearId }, data: { isCurrent: true } });
 
     const period = await request(app)
       .post(`/api/v1/school-config/academic-years/${academicYearId}/periods`)
@@ -173,7 +182,9 @@ describe("tableaux de bord (§18)", () => {
       .post(`/api/v1/students/${student1Id}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(
+        await prepareEnrollmentInput(student1Id, { academicYearId, classroomId, campusId, gradeLevelId }),
+      );
 
     const student2 = await request(app)
       .post("/api/v1/students")
@@ -185,7 +196,9 @@ describe("tableaux de bord (§18)", () => {
       .post(`/api/v1/students/${student2Id}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(
+        await prepareEnrollmentInput(student2Id, { academicYearId, classroomId, campusId, gradeLevelId }),
+      );
 
     // L'enseignant fait l'appel pour la matière du jour — sa classe ne doit plus
     // apparaître dans "classesNeedingRollCall" pour son propre tableau de bord.
@@ -320,6 +333,92 @@ describe("tableaux de bord (§18)", () => {
     expect(teacherBody.todayClasses.some((c) => c.subjectId === subjectId)).toBe(true);
     // Déjà fait l'appel pour cette classe/matière aujourd'hui — ne doit plus apparaître.
     expect(teacherBody.classesNeedingRollCall.some((c) => c.classroomId === classroomId)).toBe(false);
+
+    await testAdminPrisma.academicYear.update({ where: { id: academicYearId }, data: { isCurrent: true } });
+    const work = await request(app)
+      .get("/api/v1/dashboard/enseignant/workspace")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(work.status).toBe(200);
+    const assignmentId = (work.body as { assignments: { id: string }[] }).assignments[0]!.id;
+    const room = await request(app)
+      .get(`/api/v1/dashboard/enseignant/assignments/${assignmentId}`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(room.status).toBe(200);
+    expect((room.body as { students: unknown[] }).students).toHaveLength(2);
+    const outside = await request(app)
+      .get("/api/v1/dashboard/enseignant/assignments/unknown")
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(outside.status).toBe(403);
+    const roll = await request(app)
+      .post(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/attendance`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        date: today,
+        entries: [
+          { studentId: student1Id, status: "PRESENT" },
+          { studentId: student2Id, status: "PRESENT" },
+        ],
+      });
+    expect(roll.status).toBe(200);
+    const savedRoll = await request(app)
+      .get(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/attendance`)
+      .query({ date: today.slice(0, 10) })
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(savedRoll.status).toBe(200);
+    expect(savedRoll.body).toEqual(
+      expect.arrayContaining([expect.objectContaining({ studentId: student1Id, status: "PRESENT" })]),
+    );
+    const invalidDate = await request(app)
+      .get(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/attendance`)
+      .query({ date: "2026-02-31" })
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(invalidDate.status).toBe(400);
+    const badRoll = await request(app)
+      .post(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/attendance`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ date: today, entries: [{ studentId: "foreign", status: "PRESENT" }] });
+    expect(badRoll.status).toBe(400);
+    const type = await testAdminPrisma.assessmentType.create({
+      data: { tenantId: tenant.id, code: "WORKSPACE", nameFr: "Contrôle", nameEn: "Test" },
+    });
+    const draft = await request(app)
+      .post(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/assessments`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ title: "Contrôle enseignant", maxScore: 20, academicPeriodId, assessmentTypeId: type.id });
+    expect(draft.status).toBe(201);
+    const draftId = (draft.body as { id: string }).id;
+    const saveGrades = await request(app)
+      .put(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/assessments/${draftId}/grades`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({
+        grades: [
+          { studentId: student1Id, score: 17 },
+          { studentId: student2Id, isAbsent: true },
+        ],
+      });
+    expect(saveGrades.status).toBe(200);
+    const readGrades = await request(app)
+      .get(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/assessments/${draftId}/grades`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(readGrades.status).toBe(200);
+    expect((readGrades.body as unknown[]).length).toBe(2);
+    await testAdminPrisma.assessment.update({ where: { id: draftId }, data: { isPublished: true } });
+    const locked = await request(app)
+      .put(`/api/v1/dashboard/enseignant/assignments/${assignmentId}/assessments/${draftId}/grades`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ grades: [{ studentId: student1Id, score: 10 }] });
+    expect(locked.status).toBe(409);
 
     // teacher-dashboard.service.ts ne filtrait ni publishedAt ni expiresAt sur les
     // annonces staff-facing, contrairement à listAnnouncementsForStudent

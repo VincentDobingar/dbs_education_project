@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
 
-import { generateReportCardPdf } from "./report-card-pdf.service.js";
+import { generateClassReportCardsPdf, generateReportCardPdf } from "./report-card-pdf.service.js";
 import * as reportCardService from "./report-card.service.js";
 import { generateReportCardsSchema, listReportCardsQuerySchema } from "./report-card.validation.js";
 
@@ -42,6 +42,18 @@ export function getReportCardPdf(req: Request, res: Response, next: NextFunction
       .status(200)
       .set("Content-Type", "application/pdf")
       .set("Content-Disposition", `inline; filename="bulletin-${reportCardId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}
+
+export function getClassReportCardsPdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.tenant) throw new AppError(400, "TENANT_REQUIRED", "Tenant required");
+    const { classroomId, academicPeriodId } = generateReportCardsSchema.parse(req.query);
+    const pdf = await generateClassReportCardsPdf(classroomId, academicPeriodId, req.tenant);
+    res
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `attachment; filename="bulletins-${classroomId}-${academicPeriodId}.pdf"`)
       .send(pdf);
   })().catch(next);
 }

@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ApiError } from "../../lib/apiClient.js";
-import { listEmployees } from "../../lib/employeesApi.js";
+import { TimetableGrid } from "../../components/TimetableGrid.js";
+import { ApiError, apiRequest } from "../../lib/apiClient.js";
 import { listClassrooms, listRooms, listSubjects, type Classroom } from "../../lib/schoolConfigApi.js";
 import {
   addTimetableEntry,
@@ -14,15 +14,21 @@ import {
   listTimetables,
   removeTimetableEntry,
 } from "../../lib/timetableApi.js";
+import { loadBreaks } from "../../lib/timetableBreaksApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
+
+import { MyTimetable } from "./MyTimetable.js";
+import { TimetableBreaks } from "./TimetableBreaks.js";
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
-export function TimetablePage(): ReactNode {
+function SchoolTimetablePage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
+  const breaks = useQuery({ queryKey: ["timetable-breaks", session.subdomain], queryFn: () => loadBreaks(creds) });
+  const canManage = session.roleCodes.some(r => ["SCHOOL_OWNER", "SCHOOL_ADMIN"].includes(r));
 
   const classrooms = useQuery({
     queryKey: ["classrooms", session.subdomain],
@@ -33,8 +39,9 @@ export function TimetablePage(): ReactNode {
     queryFn: () => listSubjects(creds),
   });
   const employees = useQuery({
-    queryKey: ["employees", session.subdomain],
-    queryFn: () => listEmployees(creds),
+    queryKey: ["timetable-staff", session.subdomain],
+    queryFn: () => apiRequest<{ id: string; firstName: string; lastName: string }[]>("/school-config/teaching-staff", creds),
+    enabled: canManage,
   });
   const rooms = useQuery({
     queryKey: ["rooms", session.subdomain],
@@ -173,60 +180,15 @@ export function TimetablePage(): ReactNode {
         </section>
       ) : null}
 
+      {canManage && <TimetableBreaks creds={creds} />}
       {timetable ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("timetable.entries")}</h2>
 
           {entries.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
-          {(entries.data ?? []).length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">{t("timetable.empty")}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="mt-3 w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="pb-2 pr-4 font-medium">{t("timetable.day")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("timetable.time")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("timetable.subject")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("timetable.teacher")}</th>
-                    <th className="pb-2 pr-4 font-medium">{t("timetable.room")}</th>
-                    <th className="pb-2 pr-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(entries.data ?? [])
-                    .slice()
-                    .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-                    .map((entry) => (
-                      <tr key={entry.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-2 pr-4 text-slate-700">
-                          {t(`timetable.dayOfWeek.${DAY_KEYS[entry.dayOfWeek]}`)}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-700">
-                          {entry.startTime}–{entry.endTime}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-700">{subjectName(entry.subjectId)}</td>
-                        <td className="py-2 pr-4 text-slate-700">{employeeName(entry.teacherEmployeeId)}</td>
-                        <td className="py-2 pr-4 text-slate-700">
-                          {entry.roomId ? roomName(entry.roomId) : (entry.roomLabel ?? "—")}
-                        </td>
-                        <td className="py-2 pr-4">
-                          <button
-                            type="button"
-                            onClick={() => removeEntryMutation.mutate(entry.id)}
-                            className="text-xs text-slate-400 hover:text-red-600"
-                          >
-                            {t("discipline.remove")}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <TimetableGrid lessons={(entries.data ?? []).map(e => ({ ...e, label: e.subjectName ?? subjectName(e.subjectId), detail: `${e.teacherName ?? employeeName(e.teacherEmployeeId)} · ${e.roomId ? roomName(e.roomId) : e.roomLabel ?? ""}` }))} breaks={breaks.data ?? []} onRemove={canManage ? id => removeEntryMutation.mutate(id) : undefined} />
 
-          <form
+          {canManage && (<form
             onSubmit={(event) => {
               event.preventDefault();
               addEntryMutation.mutate();
@@ -305,10 +267,15 @@ export function TimetablePage(): ReactNode {
             <Button type="submit" variant="secondary" disabled={!subjectId || !teacherEmployeeId}>
               {t("timetable.add")}
             </Button>
-          </form>
+          </form>)}
           {formError ? <p className="mt-2 text-sm text-red-600">{formError}</p> : null}
         </section>
       ) : null}
     </div>
   );
+}
+
+export function TimetablePage(): ReactNode {
+  const s = useRequiredSession();
+  return s.roleCodes.includes("TEACHER") && !s.roleCodes.some(r => ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR"].includes(r)) ? <MyTimetable /> : <SchoolTimetablePage />;
 }

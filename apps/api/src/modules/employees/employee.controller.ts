@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { z } from "zod";
 
 import * as employeeService from "./employee.service.js";
 import {
@@ -49,5 +50,12 @@ export function getEmployeeWorkload(req: Request, res: Response, next: NextFunct
     const query = employeeWorkloadQuerySchema.parse(req.query);
     const workload = await employeeService.getEmployeeWorkload(req.params.id as string, query.academicYearId);
     res.status(200).json(workload);
+  })().catch(next);
+}
+
+export function linkTeacherAccount(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const { email } = z.object({ email: z.string().trim().email() }).parse(req.body);
+    res.json(await employeeService.linkTeacherAccount(req.params.id as string, email));
   })().catch(next);
 }

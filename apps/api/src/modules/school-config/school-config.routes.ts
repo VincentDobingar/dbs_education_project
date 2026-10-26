@@ -1,5 +1,7 @@
 import { Router } from "express";
 
+import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
+import { prisma } from "../../lib/prisma.js";
 import { imageUpload } from "../../lib/upload-middleware.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
 import { logoUploadRateLimiter } from "../../middleware/rateLimit.js";
@@ -20,6 +22,7 @@ import * as subjectCoefficientController from "./subject-coefficient.controller.
 import * as subjectController from "./subject.controller.js";
 import * as teacherAssignmentController from "./teacher-assignment.controller.js";
 import * as tenantLogoController from "./tenant-logo.controller.js";
+import { getTimetableBreaks, saveTimetableBreaks, timetableBreaksSchema } from "./timetable-breaks.service.js";
 import * as timetableController from "./timetable.controller.js";
 
 export const schoolConfigRouter: Router = Router();
@@ -30,6 +33,16 @@ export const schoolConfigRouter: Router = Router();
 schoolConfigRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requireActiveSubscription());
 
 const manageSettings = requirePermission("tenant.settings.manage");
+schoolConfigRouter.get("/teaching-staff", manageSettings, (_req, res, next) => { void prisma.employee.findMany({ where: { deletedAt: null, status: { not: "TERMINATED" } }, select: { id: true, tenantId: true, firstName: true, lastName: true }, orderBy: { lastName: "asc" } }).then(data => res.json(data)).catch(next); });
+schoolConfigRouter.get("/timetable-breaks", (_req, res, next) => { void getTimetableBreaks().then(data => res.json(data)).catch(next); });
+schoolConfigRouter.put("/timetable-breaks", manageSettings, (req, res, next) => { void (async () => res.json(await saveTimetableBreaks(timetableBreaksSchema.parse(req.body), req.user!.id)))().catch(next); });
+schoolConfigRouter.get("/my-timetable", (req, res, next) => {
+  void (async () => {
+    const employeeId = await resolveActingEmployeeId(req.user!.id);
+    if (!employeeId) return res.json([]);
+    return res.json(await prisma.timetableEntry.findMany({ where: { teacherEmployeeId: employeeId, timetable: { academicYear: { isCurrent: true } } }, include: { subject: true, timetable: { include: { classroom: true } } }, orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }] }));
+  })().catch(next);
+});
 
 // §17 : catalogue de référence global — listes de choix de Configuration. La
 // permission d'import dépend du type d'élément (vérifiée dans le contrôleur).

@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
-import { ApiError } from "../../lib/apiClient.js";
+import { ApiError, apiRequest } from "../../lib/apiClient.js";
+import { HOMEWORK_KINDS } from "../../lib/homeworkKinds.js";
 import {
+  fetchChildIdCardPdf,
+  fetchChildInvoicePdf,
   fetchChildReceiptPdf,
   fetchChildReportCardPdf,
   getChildAnnouncements,
@@ -18,54 +21,165 @@ import {
 } from "../../lib/parentPortalApi.js";
 import { loadPortalSession } from "../../lib/portalSession.js";
 
-const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+import { FamilyCourses } from "./FamilyCourses.js";
+import { PortalSchoolFollowUp } from "./PortalSchoolFollowUp.js";
+import { PortalTimetable } from "./PortalTimetable.js";
 
 function formatAmount(cents: number): string {
   return (cents / 100).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
 }
 
 export function ParentChildPage(): ReactNode {
+  const { studentId } = useParams<{ studentId: string }>();
+  const session = loadPortalSession();
+  const access = useQuery({
+    queryKey: ["parent-child-access", session?.accessToken, studentId],
+    queryFn: () =>
+      apiRequest(`/parent-portal/children/${studentId}/access`, {
+        accessToken: session!.accessToken,
+        authContext: "portal",
+      }),
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
+    refetchInterval: 60_000,
+  });
+  if (access.isPending) return <p className="px-6 py-10">Vérification de la couverture…</p>;
+  if (access.isError)
+    return (
+      <div className="px-6 py-10">
+        <p role="alert">
+          L'accès à cet enfant nécessite un lien vérifié et un abonnement actif couvrant son établissement.
+          Une connexion réseau est nécessaire pour vérifier vos droits.
+        </p>
+        <Link className="text-teal-700 underline" to="/portail/abonnements">
+          Gérer mes abonnements
+        </Link>
+      </div>
+    );
+  return (
+    <>
+      {access.fetchStatus !== "idle" && <p className="px-6 py-10">Vérification de la couverture…</p>}
+      <div hidden={access.fetchStatus !== "idle"}>
+        <ParentChildContent key={studentId} />
+      </div>
+    </>
+  );
+}
+
+function ParentChildContent(): ReactNode {
   const { t } = useTranslation("app");
   const { studentId } = useParams<{ studentId: string }>();
   const id = studentId as string;
   const session = loadPortalSession();
   const accessToken = session?.accessToken as string;
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfDocument, setPdfDocument] = useState<{ url: string; filename: string } | null>(null);
+  useEffect(
+    () => () => {
+      if (pdfDocument) URL.revokeObjectURL(pdfDocument.url);
+    },
+    [pdfDocument],
+  );
+
+  function showPdf(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    setPdfDocument({ url, filename });
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
 
   const attendance = useQuery({
-    queryKey: ["child-attendance", id],
+    queryKey: ["child-attendance", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildAttendance(id, accessToken),
   });
   const timetable = useQuery({
-    queryKey: ["child-timetable", id],
+    queryKey: ["child-timetable", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildTimetable(id, accessToken),
   });
   const reportCards = useQuery({
-    queryKey: ["child-report-cards", id],
+    queryKey: ["child-report-cards", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildReportCards(id, accessToken),
   });
   const announcements = useQuery({
-    queryKey: ["child-announcements", id],
+    queryKey: ["child-announcements", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildAnnouncements(id, accessToken),
   });
   const homework = useQuery({
-    queryKey: ["child-homework", id],
+    queryKey: ["child-homework", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildHomework(id, accessToken),
   });
   const situation = useQuery({
-    queryKey: ["child-finance", id],
+    queryKey: ["child-finance", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildFinancialSituation(id, accessToken),
   });
   const receipts = useQuery({
-    queryKey: ["child-receipts", id],
+    queryKey: ["child-receipts", id, accessToken],
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
     queryFn: () => getChildReceipts(id, accessToken),
   });
 
   async function openReportCardPdf(reportCardId: string): Promise<void> {
     setPdfLoadingId(reportCardId);
+    setPdfError(null);
     try {
       const blob = await fetchChildReportCardPdf(id, reportCardId, accessToken);
-      window.open(URL.createObjectURL(blob), "_blank");
+      showPdf(blob, `bulletin-${reportCardId}.pdf`);
+    } catch (error) {
+      setPdfError(
+        error instanceof ApiError
+          ? t(`portal.child.pdfError.${error.code}`, { defaultValue: t("portal.child.pdfError.generic") })
+          : t("portal.child.pdfError.generic"),
+      );
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
+
+  async function openIdCardPdf(): Promise<void> {
+    setPdfLoadingId("id-card");
+    setPdfError(null);
+    try {
+      showPdf(await fetchChildIdCardPdf(id, accessToken), `carte-scolaire-${id}.pdf`);
+    } catch {
+      setPdfError(t("portal.child.pdfError.generic"));
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
+
+  async function openInvoicePdf(invoiceId: string): Promise<void> {
+    setPdfLoadingId(invoiceId);
+    setPdfError(null);
+    try {
+      showPdf(await fetchChildInvoicePdf(id, invoiceId, accessToken), `facture-${invoiceId}.pdf`);
+    } catch {
+      setPdfError(t("portal.child.pdfError.generic"));
     } finally {
       setPdfLoadingId(null);
     }
@@ -73,9 +187,12 @@ export function ParentChildPage(): ReactNode {
 
   async function openReceiptPdf(receiptId: string): Promise<void> {
     setPdfLoadingId(receiptId);
+    setPdfError(null);
     try {
       const blob = await fetchChildReceiptPdf(id, receiptId, accessToken);
-      window.open(URL.createObjectURL(blob), "_blank");
+      showPdf(blob, `recu-${receiptId}.pdf`);
+    } catch {
+      setPdfError(t("portal.child.pdfError.generic"));
     } finally {
       setPdfLoadingId(null);
     }
@@ -92,8 +209,36 @@ export function ParentChildPage(): ReactNode {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+      {[attendance, timetable, reportCards, announcements, homework, situation, receipts].some(
+        (query) => query.isError,
+      ) && <p role="alert">{t("list.error.loadFailed")}</p>}
+      {pdfError && (
+        <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-800">
+          {pdfError}
+        </p>
+      )}
+      {pdfDocument && (
+        <p role="status" className="rounded border border-teal-200 bg-teal-50 p-3">
+          {t("portal.child.pdfReady")}{" "}
+          <a
+            className="font-medium text-teal-800 underline"
+            href={pdfDocument.url}
+            download={pdfDocument.filename}
+          >
+            {t("portal.child.downloadPdf")}
+          </a>
+        </p>
+      )}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{t("portal.child.title")}</h1>
+        <button
+          type="button"
+          className="mt-3 text-sm text-brand-teal hover:underline disabled:opacity-50"
+          disabled={pdfLoadingId === "id-card"}
+          onClick={() => void openIdCardPdf()}
+        >
+          {pdfLoadingId === "id-card" ? t("studentDetail.loadingPdf") : t("studentDetail.downloadIdCard")}
+        </button>
       </div>
 
       {subscriptionRequired ? (
@@ -130,6 +275,33 @@ export function ParentChildPage(): ReactNode {
           </dl>
         ) : null}
 
+        {(situation.data?.invoices ?? []).filter((invoice) => invoice.status !== "DRAFT").length > 0 && (
+          <div className="mt-4">
+            <h3 className="font-medium text-slate-900">Factures</h3>
+            <ul className="mt-2 space-y-2 text-sm">
+              {(situation.data?.invoices ?? [])
+                .filter((invoice) => invoice.status !== "DRAFT")
+                .map((invoice) => (
+                  <li
+                    key={invoice.id}
+                    className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2"
+                  >
+                    <span>
+                      {invoice.number} · {formatAmount(invoice.totalCents)}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-brand-teal hover:underline disabled:opacity-50"
+                      disabled={pdfLoadingId === invoice.id}
+                      onClick={() => void openInvoicePdf(invoice.id)}
+                    >
+                      {pdfLoadingId === invoice.id ? t("studentDetail.loadingPdf") : "Télécharger la facture"}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
         {(receipts.data ?? []).length > 0 ? (
           <ul className="mt-4 space-y-1 text-sm">
             {(receipts.data ?? []).map((receipt) => (
@@ -193,6 +365,7 @@ export function ParentChildPage(): ReactNode {
         )}
       </section>
 
+      <PortalSchoolFollowUp studentId={id} accessToken={accessToken} parent />
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("attendance.title")}</h2>
         {(attendance.data ?? []).length === 0 ? (
@@ -211,23 +384,12 @@ export function ParentChildPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("timetable.title")}</h2>
-        {(timetable.data ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">{t("timetable.empty")}</p>
-        ) : (
-          <ul className="mt-3 space-y-1 text-sm">
-            {(timetable.data ?? [])
-              .slice()
-              .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-              .map((entry) => (
-                <li key={entry.id} className="flex justify-between border-b border-slate-100 pb-1">
-                  <span className="text-slate-700">
-                    {t(`timetable.dayOfWeek.${DAY_KEYS[entry.dayOfWeek]}`)} {entry.startTime}–{entry.endTime}
-                  </span>
-                  <span className="text-slate-500">{entry.roomLabel ?? "—"}</span>
-                </li>
-              ))}
-          </ul>
-        )}
+        <PortalTimetable
+          entries={timetable.data ?? []}
+          studentId={studentId!}
+          accessToken={accessToken}
+          parent
+        />
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -238,7 +400,10 @@ export function ParentChildPage(): ReactNode {
           <ul className="mt-3 space-y-1 text-sm">
             {(homework.data ?? []).map((hw) => (
               <li key={hw.id} className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-slate-700">{hw.title}</span>
+                <div className="text-slate-700">
+                  {HOMEWORK_KINDS[hw.kind ?? "HOMEWORK"] ?? "Devoir"} · {hw.title}
+                  {hw.instructions && <p className="whitespace-pre-line text-sm">{hw.instructions}</p>}
+                </div>
                 <span className="text-slate-500">{hw.dueAt.slice(0, 10)}</span>
               </li>
             ))}
@@ -247,6 +412,7 @@ export function ParentChildPage(): ReactNode {
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <FamilyCourses studentId={studentId!} accessToken={accessToken} />
         <h2 className="text-lg font-semibold text-slate-900">{t("portal.child.announcements")}</h2>
         {(announcements.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">{t("portal.child.noAnnouncements")}</p>

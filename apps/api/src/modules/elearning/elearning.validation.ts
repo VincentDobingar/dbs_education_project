@@ -34,5 +34,14 @@ export const createResourceSchema = z
   })
   .refine((data) => data.url !== undefined || data.content !== undefined, {
     message: "Provide at least one of url or content",
-  });
+  })
+  .refine(
+    (data) => {
+      if (data.type !== "VIDEO") return true;
+      try {
+        return !!data.url && ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(new URL(data.url).hostname);
+      } catch { return false; }
+    },
+    { message: "Pour une vidéo, indiquez un lien YouTube public gratuit." },
+  );
 export type CreateResourceInput = z.infer<typeof createResourceSchema>;

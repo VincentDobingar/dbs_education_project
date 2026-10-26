@@ -5,6 +5,7 @@ import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import type { CreateEnrollmentInput, UpdateEnrollmentStatusInput } from "./enrollment.validation.js";
+import { installmentsSchema } from "./registration.validation.js";
 import { requireStudentRecord } from "./student.service.js";
 
 async function assertReferencesExist(input: CreateEnrollmentInput): Promise<void> {
@@ -33,12 +34,42 @@ async function assertReferencesExist(input: CreateEnrollmentInput): Promise<void
       "Classroom does not belong to the given academic year",
     );
   }
+  if (classroom.campusId !== input.campusId || classroom.gradeLevelId !== input.gradeLevelId) {
+    throw new AppError(
+      400,
+      "CLASSROOM_STRUCTURE_MISMATCH",
+      "Le campus et le niveau doivent correspondre à la classe",
+    );
+  }
 }
 
 /** Inscription/réinscription (§19) — one Enrollment row per student per academic year. */
 export async function enrollStudent(studentId: string, input: CreateEnrollmentInput): Promise<Enrollment> {
   const student = await requireStudentRecord(studentId);
   await assertReferencesExist(input);
+  if (!student.primaryGuardianId) {
+    throw new AppError(
+      400,
+      "PRIMARY_GUARDIAN_REQUIRED",
+      "Renseignez le parent/tuteur principal avant l'inscription",
+    );
+  }
+  const period = await prisma.registrationPeriod.findUnique({ where: { id: input.registrationPeriodId } });
+  if (!period || period.academicYearId !== input.academicYearId) {
+    throw new AppError(
+      400,
+      "REGISTRATION_PERIOD_YEAR_MISMATCH",
+      "La période doit appartenir à l'année de la classe",
+    );
+  }
+  if (!period.isOpen || period.startDate > new Date() || period.endDate < new Date()) {
+    throw new AppError(
+      400,
+      "REGISTRATION_PERIOD_CLOSED",
+      "La période d'inscription est fermée ou hors dates",
+    );
+  }
+  const installments = installmentsSchema.parse(period.installments);
 
   const existing = await prisma.enrollment.findUnique({
     where: { studentId_academicYearId: { studentId, academicYearId: input.academicYearId } },
@@ -54,16 +85,79 @@ export async function enrollStudent(studentId: string, input: CreateEnrollmentIn
   const tenantId = requireCurrentTenantId();
 
   return withTenantSession(tenantId, async (tx) => {
+    // Sérialiser les inscriptions d'un élève : deux requêtes concurrentes ne
+    // créent ni deux inscriptions ni un second jeu de factures.
+    await tx.$queryRaw`SELECT id FROM "Student" WHERE id = ${studentId} AND "tenantId" = ${tenantId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "RegistrationPeriod" WHERE id = ${period.id} AND "tenantId" = ${tenantId} FOR SHARE`;
+    const currentPeriod = await tx.registrationPeriod.findUnique({ where: { id: period.id } });
+    if (
+      !currentPeriod?.isOpen ||
+      currentPeriod.startDate > new Date() ||
+      currentPeriod.endDate < new Date()
+    ) {
+      throw new AppError(
+        400,
+        "REGISTRATION_PERIOD_CLOSED",
+        "La période d'inscription est fermée ou hors dates",
+      );
+    }
+    const currentStudent = await tx.student.findUnique({ where: { id: studentId } });
+    if (
+      !currentStudent ||
+      currentStudent.deletedAt ||
+      ["ARCHIVED", "TRANSFERRED", "GRADUATED", "WITHDRAWN"].includes(currentStudent.status)
+    ) {
+      throw new AppError(400, "STUDENT_NOT_ENROLLABLE", "Le dossier élève ne permet pas une inscription");
+    }
+    if (!currentStudent.primaryGuardianId)
+      throw new AppError(400, "PRIMARY_GUARDIAN_REQUIRED", "Tuteur principal obligatoire");
+    if (
+      await tx.enrollment.findUnique({
+        where: { studentId_academicYearId: { studentId, academicYearId: input.academicYearId } },
+      })
+    ) {
+      throw new AppError(
+        409,
+        "ALREADY_ENROLLED_THIS_YEAR",
+        "Cet élève est déjà inscrit pour cette année académique",
+      );
+    }
+    const previousEnrollment = await tx.enrollment.findFirst({
+      where: { studentId, tenantId, deletedAt: null },
+    });
     const enrollment = await tx.enrollment.create({
       data: {
         tenantId,
         studentId,
         academicYearId: input.academicYearId,
+        registrationPeriodId: period.id,
         classroomId: input.classroomId,
         campusId: input.campusId,
         gradeLevelId: input.gradeLevelId,
+        status: previousEnrollment ? "RE_ENROLLED" : "ENROLLED",
       },
     });
+
+    for (const [index, installment] of installments.entries()) {
+      await tx.studentInvoice.create({
+        data: {
+          tenantId,
+          studentId,
+          academicYearId: input.academicYearId,
+          number: `INS-${enrollment.id}-${index + 1}`,
+          status: "ISSUED",
+          totalCents: installment.amountCents,
+          dueAt: new Date(installment.dueDate),
+          issuedAt: new Date(),
+          items: {
+            create: {
+              description: `${period.name} — tranche ${index + 1}/${installments.length}`,
+              amountCents: installment.amountCents,
+            },
+          },
+        },
+      });
+    }
 
     if (student.status === "PROSPECTIVE") {
       await tx.student.update({ where: { id: studentId }, data: { status: "ACTIVE" } });

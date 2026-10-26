@@ -1,0 +1,32 @@
+/// Lookup global explicitement filtré par le parent et sa relation vérifiée.
+model ParentSubscriptionCoverage {
+  id             String       @id @default(cuid())
+  parentUserId   String
+  studentId      String
+  tenantId       String
+  subscriptionId String
+  releasedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  student        Student      @relation(fields: [studentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  // Unicité partielle des couvertures en cours (enfant, établissement) en SQL.
+
+  @@unique([subscriptionId, studentId, tenantId])
+  @@index([parentUserId])
+  @@index([tenantId])
+}
+
+model ParentContactChange {
+  id         String    @id
+  userId     String
+  channel    String
+  value      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}

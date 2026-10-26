@@ -6,12 +6,14 @@ export const createHomeworkSchema = z.object({
   classroomId: z.string().min(1),
   subjectId: z.string().min(1),
   title: z.string().min(1),
+  kind: z.enum(["HOMEWORK", "PRACTICAL", "QUIZ", "PRESENTATION", "EXERCISE"]).default("HOMEWORK"),
   instructions: z.string().min(1).optional(),
   dueAt: z.coerce.date(),
 });
 export type CreateHomeworkInput = z.infer<typeof createHomeworkSchema>;
 
 export const updateHomeworkSchema = z.object({
+  kind: z.enum(["HOMEWORK", "PRACTICAL", "QUIZ", "PRESENTATION", "EXERCISE"]).optional(),
   title: z.string().min(1).optional(),
   instructions: z.string().min(1).optional(),
   dueAt: z.coerce.date().optional(),

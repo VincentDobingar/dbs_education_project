@@ -21,6 +21,7 @@ export const updateIncidentSchema = z.object({
 export type UpdateIncidentInput = z.infer<typeof updateIncidentSchema>;
 
 export const listIncidentsQuerySchema = z.object({
+  classroomId: z.string().min(1).optional(),
   studentId: z.string().min(1).optional(),
   severity: z.enum(INCIDENT_SEVERITIES).optional(),
 });

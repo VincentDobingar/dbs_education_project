@@ -109,7 +109,7 @@ describe("rattachement parent-élève par invitation (§8)", () => {
     const redeemed = await request(app)
       .post("/api/v1/family/activation/redeem")
       .set("Authorization", `Bearer ${parentToken}`)
-      .send({ code });
+      .send({ code: `  ${code.slice(0, 5).toLowerCase()}-${code.slice(5).toLowerCase()}  ` });
     expect(redeemed.status).toBe(200);
     expect((redeemed.body as { beneficiaryCategory: string }).beneficiaryCategory).toBe("PARENT");
     expect((redeemed.body as { relationship: { status: string } }).relationship.status).toBe("VERIFIED");

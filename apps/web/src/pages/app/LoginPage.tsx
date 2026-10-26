@@ -1,5 +1,6 @@
 import { Button } from "@edumanage/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -24,6 +25,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 export function LoginPage(): ReactNode {
   const { t } = useTranslation("app");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState<string | null>(null);
   // §34 : SCHOOL_OWNER/SCHOOL_ADMIN/ACCOUNTANT/HR_MANAGER sont des rôles sensibles —
   // leur connexion passe par le second facteur (MfaStep).
@@ -56,6 +58,8 @@ export function LoginPage(): ReactNode {
       setSubmitError(t("login.error.notMember"));
       return;
     }
+    await queryClient.cancelQueries();
+    queryClient.clear();
     saveSession({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

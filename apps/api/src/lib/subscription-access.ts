@@ -9,6 +9,7 @@ import { isTenantBlocked } from "./tenant-status.js";
 const ACTIVE_SUBSCRIPTION_STATUSES = ["ACTIVE", "TRIAL", "GRACE_PERIOD"] as const;
 
 export interface SubscriptionOwnerContext {
+  subscriptionId?: string;
   tenantId?: string;
   familyAccountId?: string;
   studentId?: string;
@@ -123,14 +124,19 @@ async function licenseAssignmentStatus(subscriptionId: string): Promise<"none" |
 export async function findActiveSubscription(
   context: SubscriptionOwnerContext,
 ): Promise<Subscription | null> {
-  const owner = await prisma.subscriptionOwner.findFirst({ where: context });
+  const { subscriptionId, ...ownerContext } = context;
+  const owner = await prisma.subscriptionOwner.findFirst({ where: ownerContext });
 
   if (!owner) {
     return null;
   }
 
   const subscription = await prisma.subscription.findFirst({
-    where: { ownerId: owner.id, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] } },
+    where: {
+      ownerId: owner.id,
+      ...(subscriptionId ? { id: subscriptionId } : {}),
+      status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] },
+    },
     orderBy: { createdAt: "desc" },
   });
 

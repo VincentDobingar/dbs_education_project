@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { SidebarShell } from "../components/SidebarShell.js";
 import { clearAdminSession, loadAdminSession } from "../lib/adminSession.js";
@@ -27,10 +27,13 @@ const NAV_LINKS = [
 export function AdminLayout(): ReactNode {
   const { t } = useTranslation("app");
   const session = loadAdminSession();
+  const location = useLocation();
 
   if (!session || session.platformRoleCodes.length === 0) {
     return <Navigate to="/admin/connexion" replace />;
   }
+  const superadmin = session.platformRoleCodes.includes("SUPER_ADMIN");
+  if (!superadmin && location.pathname.startsWith("/admin/utilisateurs")) return <Navigate to="/admin" replace />;
 
   function handleLogout(): void {
     clearAdminSession();
@@ -41,7 +44,7 @@ export function AdminLayout(): ReactNode {
     <SidebarShell
       title={t("admin.layout.title")}
       subtitle={session.email}
-      links={NAV_LINKS.map((link) => ({ to: link.to, label: t(link.key), end: link.to === "/admin" }))}
+      links={[...NAV_LINKS.map((link) => ({ to: link.to, label: t(link.key), end: link.to === "/admin" })), ...(superadmin ? [{ to: "/admin/utilisateurs", label: "Utilisateurs", end: false }] : [])]}
       onLogout={handleLogout}
       toneClassName="bg-slate-950"
     >

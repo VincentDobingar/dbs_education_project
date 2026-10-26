@@ -213,9 +213,11 @@ export async function apiUpload<T>(
   fieldName: string,
   file: File,
   options: { accessToken: string; subdomain?: string; authContext?: AuthContext },
+  fields: Record<string, string> = {},
 ): Promise<T> {
   const formData = new FormData();
   formData.append(fieldName, file);
+  for (const [key, value] of Object.entries(fields)) formData.append(key, value);
 
   const response = await fetchWithAuthRetry(
     path,
@@ -267,7 +269,12 @@ export async function fetchBlob(
     options.authContext ?? inferAuthContext(),
   );
   if (!response.ok) {
-    throw new ApiError(response.status, "FILE_FETCH_FAILED", "Could not load the file");
+    const errorBody = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
+    throw new ApiError(
+      response.status,
+      errorBody?.code ?? "FILE_FETCH_FAILED",
+      errorBody?.message ?? "Could not load the file",
+    );
   }
   return response.blob();
 }

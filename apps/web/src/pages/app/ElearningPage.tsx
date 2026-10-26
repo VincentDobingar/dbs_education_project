@@ -16,6 +16,10 @@ import {
 } from "../../lib/elearningApi.js";
 import { listClassrooms, listSubjects } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
+import { CoursePdfDownload } from "../portal/FamilyCourses.js";
+
+import { CoursePublishing } from "./CoursePublishing.js";
+import { TeacherCourseNotifications } from "./TeacherCourseNotifications.js";
 
 const RESOURCE_TYPES: LearningResourceType[] = ["VIDEO", "DOCUMENT", "LINK", "TEXT"];
 
@@ -24,6 +28,9 @@ export function ElearningPage(): ReactNode {
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
+  const canWrite = session.roleCodes.some((r) =>
+    ["SCHOOL_OWNER", "ACADEMIC_DIRECTOR", "TEACHER"].includes(r),
+  );
 
   const classrooms = useQuery({
     queryKey: ["classrooms", session.subdomain],
@@ -98,13 +105,16 @@ export function ElearningPage(): ReactNode {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["elearning-resources", selectedCourseId] });
+      void queryClient.invalidateQueries({ queryKey: ["elearning-courses", session.subdomain] });
       setResourceForm({ title: "", type: "LINK", url: "", content: "" });
     },
   });
   const removeResourceMutation = useMutation({
     mutationFn: (resourceId: string) => removeResource(selectedCourseId, resourceId, creds),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["elearning-resources", selectedCourseId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["elearning-resources", selectedCourseId] });
+      void queryClient.invalidateQueries({ queryKey: ["elearning-courses", session.subdomain] });
+    },
   });
 
   const classroomName = (id: string): string => classrooms.data?.find((c) => c.id === id)?.name ?? id;
@@ -117,6 +127,7 @@ export function ElearningPage(): ReactNode {
         <p className="mt-1 text-sm text-slate-500">{t("elearning.subtitle")}</p>
       </div>
 
+      {session.roleCodes.includes("TEACHER") && <TeacherCourseNotifications />}
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("elearning.courses")}</h2>
         {courses.isError ? <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p> : null}
@@ -136,7 +147,16 @@ export function ElearningPage(): ReactNode {
               <tbody>
                 {(courses.data ?? []).map((course) => (
                   <tr key={course.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{course.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {course.title}
+                      <p className="text-xs">
+                        {course.approvalStatus === "APPROVED"
+                          ? "Validé"
+                          : course.approvalStatus === "REJECTED"
+                            ? "Refusé"
+                            : "En attente de validation"}
+                      </p>
+                    </td>
                     <td className="py-2 pr-4 text-slate-700">{classroomName(course.classroomId)}</td>
                     <td className="py-2 pr-4 text-slate-700">{subjectName(course.subjectId)}</td>
                     <td className="py-2 pr-4 flex gap-3">
@@ -150,6 +170,7 @@ export function ElearningPage(): ReactNode {
                       <button
                         type="button"
                         className="text-xs text-red-600 hover:underline"
+                        hidden={!canWrite}
                         onClick={() => cancelCourseMutation.mutate(course.id)}
                       >
                         {t("admin.common.delete")}
@@ -161,53 +182,62 @@ export function ElearningPage(): ReactNode {
             </table>
           </div>
         )}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            createCourseMutation.mutate();
-          }}
-          className="mt-4 flex flex-wrap items-end gap-3"
-        >
-          <select
-            className="input w-48"
-            value={courseForm.classroomId}
-            onChange={(event) => setCourseForm({ ...courseForm, classroomId: event.target.value })}
+        {canWrite && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              createCourseMutation.mutate();
+            }}
+            className="mt-4 flex flex-wrap items-end gap-3"
           >
-            <option value="">{t("elearning.selectClassroom")}</option>
-            {(classrooms.data ?? []).map((classroom) => (
-              <option key={classroom.id} value={classroom.id}>
-                {classroom.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="input w-48"
-            value={courseForm.subjectId}
-            onChange={(event) => setCourseForm({ ...courseForm, subjectId: event.target.value })}
-          >
-            <option value="">{t("timetable.selectSubject")}</option>
-            {(subjects.data ?? []).map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.nameFr}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder={t("elearning.courseTitle")}
-            className="input w-56"
-            value={courseForm.title}
-            onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
-          />
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={!courseForm.classroomId || !courseForm.subjectId || !courseForm.title}
-          >
-            {t("admin.common.create")}
-          </Button>
-        </form>
+            <select
+              className="input w-48"
+              value={courseForm.classroomId}
+              onChange={(event) => setCourseForm({ ...courseForm, classroomId: event.target.value })}
+            >
+              <option value="">{t("elearning.selectClassroom")}</option>
+              {(classrooms.data ?? []).map((classroom) => (
+                <option key={classroom.id} value={classroom.id}>
+                  {classroom.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input w-48"
+              value={courseForm.subjectId}
+              onChange={(event) => setCourseForm({ ...courseForm, subjectId: event.target.value })}
+            >
+              <option value="">{t("timetable.selectSubject")}</option>
+              {(subjects.data ?? []).map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.nameFr}
+                </option>
+              ))}
+            </select>
+            <input
+              placeholder={t("elearning.courseTitle")}
+              className="input w-56"
+              value={courseForm.title}
+              onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={!courseForm.classroomId || !courseForm.subjectId || !courseForm.title}
+            >
+              {t("admin.common.create")}
+            </Button>
+          </form>
+        )}
       </section>
 
+      {selectedCourseId && courses.data?.find((c) => c.id === selectedCourseId) && (
+        <CoursePublishing
+          key={selectedCourseId}
+          course={courses.data.find((c) => c.id === selectedCourseId)!}
+          creds={creds}
+        />
+      )}
       {selectedCourseId ? (
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">{t("elearning.resources")}</h2>
@@ -222,10 +252,29 @@ export function ElearningPage(): ReactNode {
               >
                 <span className="text-slate-700">
                   {resource.order}. {resource.title} ({t(`elearning.resourceType.${resource.type}`)})
+                  {resource.url && (
+                    <a
+                      className="ml-3 text-teal-700 underline"
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Ouvrir la ressource
+                    </a>
+                  )}
+                  {resource.fileKey && (
+                    <CoursePdfDownload
+                      path={`/elearning/courses/${selectedCourseId}/resources/${resource.id}/file`}
+                      accessToken={creds.accessToken}
+                      subdomain={creds.subdomain}
+                      authContext="staff"
+                    />
+                  )}
                 </span>
                 <button
                   type="button"
                   className="text-xs text-red-600 hover:underline"
+                  hidden={!canWrite}
                   onClick={() => removeResourceMutation.mutate(resource.id)}
                 >
                   {t("admin.common.delete")}
@@ -233,46 +282,48 @@ export function ElearningPage(): ReactNode {
               </li>
             ))}
           </ul>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              addResourceMutation.mutate();
-            }}
-            className="mt-3 flex flex-wrap items-end gap-3"
-          >
-            <input
-              placeholder={t("elearning.resourceTitle")}
-              className="input w-48"
-              value={resourceForm.title}
-              onChange={(event) => setResourceForm({ ...resourceForm, title: event.target.value })}
-            />
-            <select
-              className="input w-36"
-              value={resourceForm.type}
-              onChange={(event) =>
-                setResourceForm({ ...resourceForm, type: event.target.value as LearningResourceType })
-              }
+          {canWrite && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                addResourceMutation.mutate();
+              }}
+              className="mt-3 flex flex-wrap items-end gap-3"
             >
-              {RESOURCE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {t(`elearning.resourceType.${type}`)}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder={t("elearning.resourceUrl")}
-              className="input w-56"
-              value={resourceForm.url}
-              onChange={(event) => setResourceForm({ ...resourceForm, url: event.target.value })}
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={!resourceForm.title || (!resourceForm.url && !resourceForm.content)}
-            >
-              {t("admin.common.create")}
-            </Button>
-          </form>
+              <input
+                placeholder={t("elearning.resourceTitle")}
+                className="input w-48"
+                value={resourceForm.title}
+                onChange={(event) => setResourceForm({ ...resourceForm, title: event.target.value })}
+              />
+              <select
+                className="input w-36"
+                value={resourceForm.type}
+                onChange={(event) =>
+                  setResourceForm({ ...resourceForm, type: event.target.value as LearningResourceType })
+                }
+              >
+                {RESOURCE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(`elearning.resourceType.${type}`)}
+                  </option>
+                ))}
+              </select>
+              <input
+                placeholder={t("elearning.resourceUrl")}
+                className="input w-56"
+                value={resourceForm.url}
+                onChange={(event) => setResourceForm({ ...resourceForm, url: event.target.value })}
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={!resourceForm.title || (!resourceForm.url && !resourceForm.content)}
+              >
+                {t("admin.common.create")}
+              </Button>
+            </form>
+          )}
 
           <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("elearning.progress")}</h2>
           {(progress.data ?? []).length === 0 ? (

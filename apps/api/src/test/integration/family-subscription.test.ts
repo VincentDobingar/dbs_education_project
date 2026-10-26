@@ -227,7 +227,15 @@ describe("abonnement familial en libre-service (§9)", () => {
       .post("/api/v1/subscriptions/family/cash-payment")
       .set("Authorization", `Bearer ${parentToken}`)
       .send({ paymentIntentId });
-    expect(cashPayment.status).toBe(200);
+    expect(cashPayment.status).toBe(403);
+    const billingAgent = await createUser("parent-billing-agent");
+    createdUserIds.push(billingAgent.id);
+    await grantRole(billingAgent.id, "SUPER_ADMIN", null);
+    const collected = await request(app)
+      .post(`/api/v1/platform/parent-subscriptions/${subscriptionBody.id}/cash-payment`)
+      .set("Authorization", `Bearer ${signAccessToken({ sub: billingAgent.id })}`)
+      .send({ paymentIntentId, justification: "Encaissement vérifié par un agent" });
+    expect(collected.status).toBe(200);
 
     const activeSubscription = await request(app)
       .get("/api/v1/subscriptions/family")

@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 
+import { checkTeacherWrite, teacherFilter } from "./teacher-scope.js";
 import { getCurrentTenantId } from "./tenant-context.js";
 import { isTenantScopedModel } from "./tenant-scoped-models.js";
 
@@ -100,6 +101,16 @@ const tenantGuardExtension = Prisma.defineExtension((client) =>
           const tenantId = requireTenantId(model);
           const typedArgs = args as { where?: unknown; data?: unknown };
           let finalArgs = args;
+          const scope = teacherFilter(model);
+          if (scope) {
+            if (READ_MANY_OPERATIONS.has(operation) || SINGLE_RECORD_READ_OPERATIONS.has(operation) || WHERE_SCOPED_WRITE_OPERATIONS.has(operation) || operation === "upsert") {
+              const current = (typedArgs.where ?? {}) as Record<string, unknown>;
+              typedArgs.where = { ...current, AND: [current.AND ?? {}, scope] };
+            }
+            if (Array.isArray(typedArgs.data)) typedArgs.data.forEach(d => checkTeacherWrite(model, d));
+            else checkTeacherWrite(model, typedArgs.data);
+            if (operation === "upsert") checkTeacherWrite(model, (args as { create?: unknown }).create);
+          }
 
           if (READ_MANY_OPERATIONS.has(operation) || WHERE_SCOPED_WRITE_OPERATIONS.has(operation)) {
             typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);

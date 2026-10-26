@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createEnrollmentSchema = z.object({
+  registrationPeriodId: z.string().min(1),
   academicYearId: z.string().min(1),
   classroomId: z.string().min(1),
   campusId: z.string().min(1),

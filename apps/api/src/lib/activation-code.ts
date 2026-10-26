@@ -18,5 +18,5 @@ export function generateActivationCode(): { code: string; hash: string } {
 }
 
 export function hashActivationCode(code: string): string {
-  return createHash("sha256").update(code.toUpperCase()).digest("hex");
+  return createHash("sha256").update(code.replace(/[\s-]/g, "").toUpperCase()).digest("hex");
 }

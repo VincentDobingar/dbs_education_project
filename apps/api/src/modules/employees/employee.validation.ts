@@ -4,6 +4,8 @@ export const createEmployeeSchema = z.object({
   employeeNumber: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
+  email: z.string().trim().email().nullable().optional(),
+  subjectId: z.string().min(1).nullable().optional(),
   jobTitle: z.string().min(1),
   departmentId: z.string().min(1).optional(),
   hireDate: z.coerce.date().optional(),
@@ -14,6 +16,8 @@ export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 const EMPLOYEE_STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
 
 export const updateEmployeeSchema = z.object({
+  email: z.string().trim().email().nullable().optional(),
+  subjectId: z.string().min(1).nullable().optional(),
   jobTitle: z.string().min(1).optional(),
   departmentId: z.string().min(1).optional(),
   hireDate: z.coerce.date().optional(),

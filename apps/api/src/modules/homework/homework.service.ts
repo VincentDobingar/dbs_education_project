@@ -2,8 +2,10 @@ import type { Homework, HomeworkSubmission } from "@prisma/client";
 
 import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
+import { checkTeacherWrite } from "../../lib/teacher-scope.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { notifySchoolEvent } from "../communication/notification.service.js";
 import { requireCurrentEnrollment } from "../students/student.service.js";
 
 import type {
@@ -14,6 +16,7 @@ import type {
 } from "./homework.validation.js";
 
 export async function createHomework(input: CreateHomeworkInput, actingUserId: string): Promise<Homework> {
+  checkTeacherWrite("Homework", input);
   const [subject, classroom] = await Promise.all([
     prisma.subject.findUnique({ where: { id: input.subjectId } }),
     prisma.classroom.findUnique({ where: { id: input.classroomId } }),
@@ -34,16 +37,42 @@ export async function createHomework(input: CreateHomeworkInput, actingUserId: s
     );
   }
 
-  return prisma.homework.create({
-    data: {
-      tenantId: requireCurrentTenantId(),
-      classroomId: input.classroomId,
-      subjectId: input.subjectId,
-      title: input.title,
-      dueAt: input.dueAt,
-      ...(input.instructions ? { instructions: input.instructions } : {}),
-      ...(createdByEmployeeId ? { createdByEmployeeId } : {}),
-    },
+  return withTenantSession(requireCurrentTenantId(), async (tx) => {
+    const homework = await tx.homework.create({
+      data: {
+        tenantId: requireCurrentTenantId(),
+        classroomId: input.classroomId,
+        subjectId: input.subjectId,
+        title: input.title,
+        kind: input.kind,
+        dueAt: input.dueAt,
+        ...(input.instructions ? { instructions: input.instructions } : {}),
+        ...(createdByEmployeeId ? { createdByEmployeeId } : {}),
+      },
+    });
+    const roster = await tx.enrollment.findMany({
+      where: {
+        tenantId: requireCurrentTenantId(),
+        classroomId: classroom.id,
+        academicYearId: classroom.academicYearId,
+        deletedAt: null,
+        status: { in: ["ENROLLED", "RE_ENROLLED"] },
+      },
+      select: { studentId: true },
+      distinct: ["studentId"],
+    });
+    for (const { studentId } of roster)
+      await notifySchoolEvent(
+        {
+          studentId,
+          type: "homework.added",
+          title: "Nouveau travail à faire",
+          body: `« ${homework.title} » — échéance ${homework.dueAt.toISOString().slice(0, 10)}.`,
+          metadata: { homeworkId: homework.id },
+        },
+        tx,
+      );
+    return homework;
   });
 }
 
@@ -72,6 +101,7 @@ export async function updateHomework(id: string, input: UpdateHomeworkInput): Pr
   return prisma.homework.update({
     where: { id },
     data: {
+      ...(input.kind !== undefined ? { kind: input.kind } : {}),
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.instructions !== undefined ? { instructions: input.instructions } : {}),
       ...(input.dueAt !== undefined ? { dueAt: input.dueAt } : {}),

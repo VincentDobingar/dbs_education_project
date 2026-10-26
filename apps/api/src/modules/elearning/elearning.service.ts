@@ -2,7 +2,7 @@ import type { CourseResource, OnlineCourse, ResourceProgress } from "@prisma/cli
 
 import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireCurrentEnrollment } from "../students/student.service.js";
 
@@ -71,6 +71,9 @@ export async function updateCourse(id: string, input: UpdateCourseInput): Promis
   return prisma.onlineCourse.update({
     where: { id },
     data: {
+      approvalStatus: "PENDING",
+      reviewedAt: null,
+      reviewedByUserId: null,
       ...(input.title !== undefined ? { title: input.title } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
     },
@@ -82,19 +85,29 @@ export async function cancelCourse(id: string): Promise<void> {
   await prisma.onlineCourse.update({ where: { id }, data: { deletedAt: new Date() } });
 }
 
-export async function addResource(courseId: string, input: CreateResourceInput): Promise<CourseResource> {
+export async function addResource(
+  courseId: string,
+  input: CreateResourceInput,
+  fileKey?: string,
+): Promise<CourseResource> {
   const course = await requireCourse(courseId);
-
-  return prisma.courseResource.create({
-    data: {
-      tenantId: course.tenantId,
-      courseId,
-      title: input.title,
-      type: input.type,
-      ...(input.url !== undefined ? { url: input.url } : {}),
-      ...(input.content !== undefined ? { content: input.content } : {}),
-      ...(input.order !== undefined ? { order: input.order } : {}),
-    },
+  return withTenantSession(course.tenantId, async (tx) => {
+    await tx.onlineCourse.update({
+      where: { id: courseId },
+      data: { approvalStatus: "PENDING", reviewedAt: null, reviewedByUserId: null },
+    });
+    return tx.courseResource.create({
+      data: {
+        tenantId: course.tenantId,
+        courseId,
+        title: input.title,
+        type: input.type,
+        ...(fileKey ? { fileKey } : {}),
+        ...(input.url !== undefined ? { url: input.url } : {}),
+        ...(input.content !== undefined ? { content: input.content } : {}),
+        ...(input.order !== undefined ? { order: input.order } : {}),
+      },
+    });
   });
 }
 
@@ -112,8 +125,15 @@ async function requireResource(courseId: string, id: string): Promise<CourseReso
 }
 
 export async function removeResource(courseId: string, id: string): Promise<void> {
+  const course = await requireCourse(courseId);
   await requireResource(courseId, id);
-  await prisma.courseResource.delete({ where: { id } });
+  await withTenantSession(course.tenantId, async (tx) => {
+    await tx.onlineCourse.update({
+      where: { id: courseId },
+      data: { approvalStatus: "PENDING", reviewedAt: null, reviewedByUserId: null },
+    });
+    await tx.courseResource.delete({ where: { id } });
+  });
 }
 
 /** Suivi de progression (§29) : seules les consultations réelles sont renvoyées,
@@ -131,7 +151,10 @@ export async function listProgressForCourse(courseId: string): Promise<ResourceP
  * fourni par le client, même principe que le timetable/les devoirs du portail élève. */
 export async function listCoursesForStudent(studentId: string): Promise<OnlineCourse[]> {
   const enrollment = await requireCurrentEnrollment(studentId);
-  return listCourses({ classroomId: enrollment.classroomId });
+  return prisma.onlineCourse.findMany({
+    where: { classroomId: enrollment.classroomId, deletedAt: null, approvalStatus: "APPROVED" },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 /** Never confirm the existence of a course outside the student's own current
@@ -139,7 +162,7 @@ export async function listCoursesForStudent(studentId: string): Promise<OnlineCo
 async function requireCourseForStudent(studentId: string, courseId: string): Promise<OnlineCourse> {
   const enrollment = await requireCurrentEnrollment(studentId);
   const course = await requireCourse(courseId);
-  if (course.classroomId !== enrollment.classroomId) {
+  if (course.classroomId !== enrollment.classroomId || course.approvalStatus !== "APPROVED") {
     throw new AppError(404, "COURSE_NOT_FOUND", `Online course not found: ${courseId}`);
   }
   return course;

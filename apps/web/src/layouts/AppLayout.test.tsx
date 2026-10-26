@@ -68,25 +68,30 @@ describe("AppLayout — navigation filtrée par rôle", () => {
     renderLayoutFor(["TEACHER"]);
 
     expect(screen.getByText("Tableau de bord")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Espace enseignant" })).not.toBeInTheDocument();
     expect(screen.getByText("Élèves")).toBeInTheDocument();
     expect(screen.getByText("Emplois du temps")).toBeInTheDocument();
     expect(screen.getByText("Notes")).toBeInTheDocument();
     expect(screen.getByText("Support")).toBeInTheDocument();
 
     expect(screen.queryByText("Personnel")).not.toBeInTheDocument();
+    expect(screen.queryByText("Inscriptions")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bulletins")).not.toBeInTheDocument();
     expect(screen.queryByText("Finances")).not.toBeInTheDocument();
     expect(screen.queryByText("Configuration")).not.toBeInTheDocument();
     expect(screen.queryByText("Utilisateurs")).not.toBeInTheDocument();
     expect(screen.queryByText("Bibliothèque")).not.toBeInTheDocument();
   });
 
-  it("un SCHOOL_OWNER voit tous les modules", () => {
+  it("un SCHOOL_OWNER voit les modules établissement sans le menu Utilisateurs", () => {
     renderLayoutFor(["SCHOOL_OWNER"]);
+    expect(screen.queryByRole("link", { name: "Utilisateurs" })).not.toBeInTheDocument();
 
     for (const label of [
       "Tableau de bord",
       "Élèves",
-      "Utilisateurs",
+      "Parents / tuteurs",
+      "Inscriptions",
       "Personnel",
       "Finances",
       "Configuration",

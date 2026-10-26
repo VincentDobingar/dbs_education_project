@@ -40,6 +40,11 @@ const apiEnvSchema = baseEnvSchema.extend({
   // les utilisateurs dans le même compteur et `ipAddress` des journaux d'audit
   // serait faux. 0 (défaut) = aucun proxy, comportement inchangé en dev/test.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+  // Contournement temporaire local ; ignoré hors du mode développement.
+  DEV_SKIP_MFA: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 
   // §34 : MFA obligatoire pour les rôles sensibles (authorization.ts). "false" le
   // rend facultatif : un compte sensible sans MFA reçoit directement une session,

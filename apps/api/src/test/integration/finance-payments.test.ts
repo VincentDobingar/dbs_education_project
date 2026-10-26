@@ -178,6 +178,27 @@ describe("encaissement et reçus (§23)", () => {
       .get(`/api/v1/finance/receipts/${firstReceiptId}/pdf`)
       .set("Authorization", `Bearer ${agentToken}`)
       .set("X-Tenant-Slug", subdomain);
+    const invoicePdf = await request(app)
+      .get(`/api/v1/finance/student-invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(invoicePdf.status).toBe(200);
+    expect(invoicePdf.headers["content-type"]).toBe("application/pdf");
+    expect((invoicePdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
+    const deniedPdf = await request(app)
+      .get(`/api/v1/finance/student-invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(deniedPdf.status).toBe(403);
+    const other = await createTenant("InvoiceOther");
+    createdTenantIds.push(other.tenant.id);
+    await addMembership(agent.id, other.tenant.id);
+    await grantRole(agent.id, "SCHOOL_OWNER", other.tenant.id);
+    const crossPdf = await request(app)
+      .get(`/api/v1/finance/student-invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${agentToken}`)
+      .set("X-Tenant-Slug", other.subdomain);
+    expect(crossPdf.status).toBe(404);
     expect(receiptPdf.status).toBe(200);
     expect(receiptPdf.headers["content-type"]).toBe("application/pdf");
 

@@ -21,6 +21,12 @@
     "db:migrate:dev": "prisma migrate dev --schema=./prisma/schema",
     "db:seed": "tsx prisma/seed/index.ts",
     "db:seed:demo": "tsx prisma/seed/demo/demo-school.ts",
+    "db:seed:basics": "node --env-file=.env --import tsx prisma/seed/school-basics.ts",
+    "db:seed:test-families": "node --env-file=.env --import tsx prisma/seed/test-families.ts",
+    "db:seed:test-follow-up": "node --env-file=.env --import tsx prisma/seed/test-follow-up.ts",
+    "db:seed:activate-test-portals": "node --env-file=.env --import tsx prisma/seed/activate-test-portals.ts",
+    "db:seed:test-student-accounts": "node --env-file=.env --import tsx prisma/seed/test-student-accounts.ts",
+    "db:seed:test-complete-dashboard": "node --env-file=.env --import tsx prisma/seed/test-complete-dashboard.ts",
     "pricing:snapshot": "tsx prisma/seed/export-pricing-snapshot.ts && prettier --write apps/web/src/content/pricing-snapshot.json",
     "db:seed:typecheck": "tsc --noEmit -p prisma/tsconfig.json",
     "db:studio": "prisma studio --schema=./prisma/schema"

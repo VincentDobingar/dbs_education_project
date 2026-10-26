@@ -11,6 +11,8 @@ import { createIncident, listIncidents, removeIncident } from "../../lib/discipl
 import { listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { SchoolClassReview } from "./SchoolClassReview.js";
+
 const SEVERITIES = ["MINOR", "MODERATE", "SEVERE"] as const;
 
 const incidentSchema = z.object({
@@ -28,7 +30,7 @@ function severityClassName(severity: string): string {
   return "bg-slate-100 text-slate-700";
 }
 
-export function DisciplinePage(): ReactNode {
+function TeacherDisciplinePage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
@@ -203,4 +205,9 @@ export function DisciplinePage(): ReactNode {
       </section>
     </div>
   );
+}
+
+export function DisciplinePage(): ReactNode {
+  const session = useRequiredSession();
+  return session.roleCodes.includes("TEACHER") ? <TeacherDisciplinePage /> : <SchoolClassReview kind="discipline" />;
 }

@@ -13,6 +13,7 @@ import {
   fetchPayrollExportXlsx,
   listEmployees,
 } from "../../lib/employeesApi.js";
+import { listSubjects } from "../../lib/schoolConfigApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
 const employeeSchema = z.object({
@@ -20,6 +21,8 @@ const employeeSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   jobTitle: z.string().min(1),
+  email: z.union([z.string().email(), z.literal("")]).optional(),
+  subjectId: z.string().optional(),
 });
 
 export function EmployeesPage(): ReactNode {
@@ -28,6 +31,10 @@ export function EmployeesPage(): ReactNode {
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
 
+  const subjects = useQuery({
+    queryKey: ["subjects", session.subdomain],
+    queryFn: () => listSubjects(creds),
+  });
   const employees = useQuery({
     queryKey: ["employees", session.subdomain],
     queryFn: () => listEmployees(creds),
@@ -41,7 +48,8 @@ export function EmployeesPage(): ReactNode {
   } = useForm<z.infer<typeof employeeSchema>>({ resolver: zodResolver(employeeSchema) });
 
   const createMutation = useMutation({
-    mutationFn: (input: z.infer<typeof employeeSchema>) => createEmployee(input, creds),
+    mutationFn: (input: z.infer<typeof employeeSchema>) =>
+      createEmployee({ ...input, email: input.email || null, subjectId: input.subjectId || null }, creds),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["employees", session.subdomain] });
       reset();
@@ -105,13 +113,33 @@ export function EmployeesPage(): ReactNode {
             <label className="block text-xs font-medium text-slate-600">{t("employees.jobTitle")}</label>
             <input className="input mt-1 w-40" {...register("jobTitle")} />
           </div>
+          <label className="block text-sm">
+            Adresse email
+            <input type="email" className="input mt-1" {...register("email")} />
+          </label>
+          <label className="block text-sm">
+            Matière
+            <select className="input mt-1" {...register("subjectId")}>
+              <option value="">Aucune / personnel non enseignant</option>
+              {(subjects.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nameFr}
+                </option>
+              ))}
+            </select>
+          </label>
           <Button type="submit" variant="secondary">
             {t("employees.add")}
           </Button>
         </form>
-        {errors.employeeNumber || errors.firstName || errors.lastName || errors.jobTitle ? (
+        {errors.employeeNumber || errors.firstName || errors.lastName || errors.jobTitle || errors.email ? (
           <p className="mt-2 text-sm text-red-600">{t("employees.error.required")}</p>
         ) : null}
+        {createMutation.isError && (
+          <p role="alert" className="text-red-700">
+            Impossible de créer ce membre du personnel. Vérifiez les données et vos droits.
+          </p>
+        )}
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -129,6 +157,8 @@ export function EmployeesPage(): ReactNode {
                   <th className="pb-2 pr-4 font-medium">{t("employees.firstName")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("employees.lastName")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("employees.jobTitle")}</th>
+                  <th className="pb-2 pr-4 font-medium">Email</th>
+                  <th className="pb-2 pr-4 font-medium">Matière</th>
                   <th className="pb-2 pr-4 font-medium">{t("employees.status")}</th>
                 </tr>
               </thead>
@@ -146,6 +176,8 @@ export function EmployeesPage(): ReactNode {
                     </td>
                     <td className="py-2 pr-4 text-slate-700">{employee.lastName}</td>
                     <td className="py-2 pr-4 text-slate-700">{employee.jobTitle}</td>
+                    <td>{employee.email ?? "—"}</td>
+                    <td>{subjects.data?.find((s) => s.id === employee.subjectId)?.nameFr ?? "—"}</td>
                     <td className="py-2 pr-4 text-slate-700">{employee.status}</td>
                   </tr>
                 ))}

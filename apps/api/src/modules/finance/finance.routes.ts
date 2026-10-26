@@ -31,6 +31,7 @@ financeRouter.patch("/fee-structures/:id", writeFinance, feeStructureController.
 
 financeRouter.post("/student-invoices", writeFinance, studentInvoiceController.createStudentInvoice);
 financeRouter.get("/student-invoices", readFinance, studentInvoiceController.listStudentInvoices);
+financeRouter.get("/student-invoices/:id/pdf", readFinance, studentInvoiceController.getStudentInvoicePdf);
 financeRouter.get("/student-invoices/:id", readFinance, studentInvoiceController.getStudentInvoice);
 financeRouter.post("/student-invoices/:id/issue", writeFinance, studentInvoiceController.issueStudentInvoice);
 financeRouter.post(

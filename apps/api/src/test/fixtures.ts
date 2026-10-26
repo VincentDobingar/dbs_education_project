@@ -114,7 +114,7 @@ export async function createSubscription(
   const plan = await testAdminPrisma.subscriptionPlan.findUniqueOrThrow({ where: { code: planCode } });
   const owner = await testAdminPrisma.subscriptionOwner.create({ data: { ownerType, ...ownerRef } });
 
-  return testAdminPrisma.subscription.create({
+  const subscription = await testAdminPrisma.subscription.create({
     data: {
       ownerId: owner.id,
       planId: plan.id,
@@ -123,6 +123,26 @@ export async function createSubscription(
       billingPeriod: "MONTHLY",
     },
   });
+  if (ownerType === "PARENT" && ownerRef.familyAccountId) {
+    const family = await testAdminPrisma.familyAccount.findUniqueOrThrow({
+      where: { id: ownerRef.familyAccountId },
+    });
+    const children = await testAdminPrisma.parentStudentRelationship.findMany({
+      where: { parentUserId: family.primaryUserId, status: "VERIFIED", revokedAt: null },
+      orderBy: { createdAt: "asc" },
+      take: plan.childrenCovered ?? 1,
+    });
+    if (children.length)
+      await testAdminPrisma.parentSubscriptionCoverage.createMany({
+        data: children.map((child) => ({
+          parentUserId: family.primaryUserId,
+          studentId: child.studentId,
+          tenantId: child.tenantId,
+          subscriptionId: subscription.id,
+        })),
+      });
+  }
+  return subscription;
 }
 
 export async function createSponsoredLicense(

@@ -4,6 +4,7 @@ import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
+import { requireTeacherEntry } from "../../middleware/requireTeacherEntry.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
 import * as assessmentTypeController from "./assessment-type.controller.js";
@@ -17,7 +18,7 @@ gradingRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requ
 
 const manageSettings = requirePermission("tenant.settings.manage");
 const readGrades = requirePermission("grades.read");
-const writeGrades = requirePermission("grades.write");
+const writeGrades = [requirePermission("grades.write"), requireTeacherEntry];
 const publishGrades = requirePermission("grades.publish");
 
 gradingRouter.post("/assessment-types", manageSettings, assessmentTypeController.createAssessmentType);
@@ -31,11 +32,12 @@ gradingRouter.post("/assessments/:id/publish", publishGrades, assessmentControll
 gradingRouter.put("/assessments/:id/grades", writeGrades, gradeController.setGrades);
 gradingRouter.get("/assessments/:id/grades", readGrades, gradeController.listGradesForAssessment);
 
-gradingRouter.patch("/grades/:id/correct", publishGrades, gradeController.correctGrade);
+gradingRouter.patch("/grades/:id/correct", publishGrades, requireTeacherEntry, gradeController.correctGrade);
 
 gradingRouter.get("/students/:studentId/grades", readGrades, gradeController.listGradesForStudent);
 
 gradingRouter.post("/report-cards/generate", publishGrades, reportCardController.generateReportCards);
 gradingRouter.get("/report-cards", readGrades, reportCardController.listReportCards);
+gradingRouter.get("/report-cards/class/pdf", readGrades, reportCardController.getClassReportCardsPdf);
 gradingRouter.get("/report-cards/:id", readGrades, reportCardController.getReportCard);
 gradingRouter.get("/report-cards/:id/pdf", readGrades, reportCardController.getReportCardPdf);

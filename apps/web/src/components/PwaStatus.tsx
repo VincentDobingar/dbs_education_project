@@ -46,6 +46,18 @@ export function PwaStatus(): ReactNode {
   });
 
   useEffect(() => {
+    // Ancien cache partagé des API parent/élève : il pouvait survivre à une
+    // déconnexion ou à l'expiration d'une couverture. Le portail parent est
+    // désormais réseau uniquement pour revérifier les droits à chaque accès.
+    const purgeLegacyPortalCache = (): void => {
+      if ("caches" in window) void caches.delete("portal-api-cache").catch(() => undefined);
+    };
+    purgeLegacyPortalCache();
+    navigator.serviceWorker?.addEventListener("controllerchange", purgeLegacyPortalCache);
+    return () => navigator.serviceWorker?.removeEventListener("controllerchange", purgeLegacyPortalCache);
+  }, []);
+
+  useEffect(() => {
     function handleOnline(): void {
       setIsOffline(false);
     }

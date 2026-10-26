@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
+import { listGuardians } from "../../lib/registrationApi.js";
 import {
   createStudent,
   fetchStudentsExportCsv,
@@ -16,9 +17,12 @@ import {
 } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { ClassIdCardsDownload } from "./ClassIdCardsDownload.js";
+
 const PAGE_SIZE = 50;
 
 const studentSchema = z.object({
+  primaryGuardianId: z.string().min(1),
   matricule: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -29,6 +33,10 @@ export function StudentsPage(): ReactNode {
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
+  const guardians = useQuery({
+    queryKey: ["guardians", session.subdomain],
+    queryFn: () => listGuardians(creds),
+  });
   const [page, setPage] = useState(1);
 
   // Pagination réelle côté serveur (pas juste un tableau complet tronqué côté
@@ -73,6 +81,31 @@ export function StudentsPage(): ReactNode {
     },
     { key: "lastName", header: t("students.lastName"), render: (student) => student.lastName },
     { key: "status", header: t("students.status"), render: (student) => student.status },
+    {
+      key: "year",
+      header: "Année académique",
+      render: (student) => student.enrollments?.[0]?.academicYear.name ?? "Non inscrit",
+    },
+    {
+      key: "classroom",
+      header: "Classe",
+      render: (student) => student.enrollments?.[0]?.classroom.name ?? "—",
+    },
+    {
+      key: "guardian",
+      header: "Tuteur principal",
+      render: (student) => {
+        const guardian =
+          student.primaryGuardian ?? guardians.data?.find((g) => g.id === student.primaryGuardianId);
+        return guardian ? (
+          `${guardian.firstName} ${guardian.lastName}`
+        ) : (
+          <Link className="text-amber-700 underline" to={`/eleves/${student.id}`}>
+            À compléter
+          </Link>
+        );
+      },
+    },
   ];
 
   async function downloadExport(fetcher: () => Promise<Blob>, filename: string): Promise<void> {
@@ -109,8 +142,10 @@ export function StudentsPage(): ReactNode {
         </div>
       </div>
 
+      <ClassIdCardsDownload key={session.subdomain} />
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("students.add")}</h2>
+
         <form
           onSubmit={(event) => void handleSubmit((values) => createMutation.mutate(values))(event)}
           className="mt-4 flex flex-wrap items-end gap-3"
@@ -128,8 +163,21 @@ export function StudentsPage(): ReactNode {
           <Button type="submit" variant="secondary">
             {t("students.add")}
           </Button>
+          <Field label="Parent / tuteur principal">
+            <select className="input" {...register("primaryGuardianId")}>
+              <option value="">Choisir un tuteur</option>
+              {guardians.data?.map((guardian) => (
+                <option key={guardian.id} value={guardian.id}>
+                  {guardian.firstName} {guardian.lastName} · {guardian.phone}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Link className="text-teal-700 underline" to="/parents">
+            Ajouter un parent / tuteur
+          </Link>
         </form>
-        {errors.matricule || errors.firstName || errors.lastName ? (
+        {errors.matricule || errors.firstName || errors.lastName || errors.primaryGuardianId ? (
           <p className="mt-2 text-sm text-red-600">{t("students.error.required")}</p>
         ) : null}
         {createMutation.data?.possibleDuplicates && createMutation.data.possibleDuplicates.length > 0 ? (

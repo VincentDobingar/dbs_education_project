@@ -13,6 +13,7 @@ import {
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("transferts inter-établissements (§10, §19)", () => {
   const app = createApp();
@@ -23,6 +24,7 @@ describe("transferts inter-établissements (§10, §19)", () => {
     await testAdminPrisma.studentTransfer.deleteMany({
       where: { OR: [{ fromTenantId: { in: tenantIds } }, { toTenantId: { in: tenantIds } }] },
     });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -32,6 +34,7 @@ describe("transferts inter-établissements (§10, §19)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
   });
 
@@ -246,7 +249,7 @@ describe("transferts inter-établissements (§10, §19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${source.ownerToken}`)
       .set("X-Tenant-Slug", source.subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
     expect(enrolled.status).toBe(201);
     const enrollmentId = (enrolled.body as { id: string }).id;
 

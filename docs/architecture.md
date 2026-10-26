@@ -1,5 +1,7 @@
 # Architecture — EduManage Africa
 
+> **Mise à jour du portail parent (23 octobre 2026)** : le profil parent central et les couvertures explicites enfant–établissement remplacent les anciens accès familiaux implicites décrits dans les sections historiques ci-dessous. Voir [Portail parent : identité et couvertures](portail-parent-couvertures.md). Le dashboard ne retourne plus de données d'enfant non couvert ; les contacts locaux sont synchronisés uniquement après un rattachement vérifié.
+
 Ce document résume les décisions validées et l'état réel de l'implémentation. Le cahier des charges complet reste [prompt_dbs_edu_africa.txt](../prompt_dbs_edu_africa.txt) ; ce fichier documente ce qui a été _décidé et construit_, pas ce qui est _souhaité_.
 
 ## Décisions validées

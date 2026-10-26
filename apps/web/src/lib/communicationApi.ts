@@ -1,6 +1,8 @@
 import { apiRequest, type TenantCredentials } from "./apiClient.js";
 
 export interface Notification {
+  metadata?: unknown;
+  tenantId?: string | null;
   id: string;
   channel: "IN_APP" | "EMAIL" | "SMS" | "PUSH";
   type: string;

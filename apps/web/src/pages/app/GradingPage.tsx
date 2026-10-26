@@ -23,6 +23,8 @@ import { listAcademicPeriods, listClassrooms, listSubjects } from "../../lib/sch
 import { listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { SchoolClassReview } from "./SchoolClassReview.js";
+
 const assessmentSchema = z.object({
   subjectId: z.string().min(1),
   assessmentTypeId: z.string().min(1),
@@ -255,7 +257,7 @@ function GradeEntryForm({
   );
 }
 
-export function GradingPage(): ReactNode {
+function TeacherGradingPage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
@@ -395,7 +397,10 @@ export function GradingPage(): ReactNode {
                         >
                           {t("grading.enterGrades")}
                         </button>
-                        {!assessment.isPublished ? (
+                        {!assessment.isPublished &&
+                        session.roleCodes.some((r) =>
+                          ["SCHOOL_OWNER", "DIRECTOR", "ACADEMIC_DIRECTOR"].includes(r),
+                        ) ? (
                           <button
                             type="button"
                             className="text-xs text-slate-400 hover:text-brand-teal"
@@ -486,4 +491,9 @@ export function GradingPage(): ReactNode {
       ) : null}
     </div>
   );
+}
+
+export function GradingPage(): ReactNode {
+  const session = useRequiredSession();
+  return session.roleCodes.includes("TEACHER") ? <TeacherGradingPage /> : <SchoolClassReview kind="grades" />;
 }

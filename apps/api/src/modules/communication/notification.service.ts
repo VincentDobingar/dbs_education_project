@@ -8,7 +8,7 @@ import type {
 
 import { sendEmail } from "../../lib/email-provider/send-email.js";
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
 import type { ListNotificationsQuery } from "./notification.validation.js";
@@ -19,6 +19,58 @@ export interface NotifyParentsInput {
   title?: string;
   body: string;
   metadata?: Prisma.InputJsonValue;
+}
+
+/** Notifications internes aux comptes réellement rattachés au dossier de cet établissement. */
+export async function notifySchoolEvent(
+  input: NotifyParentsInput,
+  client?: Prisma.TransactionClient,
+): Promise<void> {
+  const tenantId = requireCurrentTenantId();
+  if (!client) return withTenantSession(tenantId, (tx) => notifySchoolEvent(input, tx));
+  const student = await client.student.findFirst({
+    where: {
+      id: input.studentId,
+      tenantId,
+      deletedAt: null,
+      status: { notIn: ["TRANSFERRED", "WITHDRAWN"] },
+    },
+  });
+  if (!student) return;
+  const [parents, link, tenant] = await Promise.all([
+    client.parentStudentRelationship.findMany({
+      where: { tenantId, studentId: student.id, status: "VERIFIED", revokedAt: null },
+      select: { parentUserId: true },
+    }),
+    client.studentUserLink.findFirst({
+      where: { tenantId, studentId: student.id },
+      select: { userId: true },
+    }),
+    client.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { name: true } }),
+  ]);
+  const ids = [...new Set([...parents.map((p) => p.parentUserId), ...(link ? [link.userId] : [])])];
+  const users = await client.user.findMany({
+    where: { id: { in: ids }, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!users.length) return;
+  await client.notification.createMany({
+    data: users.map((u) => ({
+      tenantId,
+      userId: u.id,
+      channel: "IN_APP",
+      type: input.type,
+      title: input.title ?? "Information scolaire",
+      body: `${student.firstName} ${student.lastName} · ${tenant.name} : ${input.body}`,
+      status: "SENT",
+      sentAt: new Date(),
+      metadata: {
+        studentId: student.id,
+        tenantId,
+        ...(input.metadata !== undefined ? { event: input.metadata } : {}),
+      },
+    })),
+  });
 }
 
 /**
@@ -82,6 +134,7 @@ function renderTemplateBody(template: MessageTemplate, locale: string, message: 
  */
 export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise<void> {
   const tenantId = requireCurrentTenantId();
+  await notifySchoolEvent(input);
 
   const relationships = await prisma.parentStudentRelationship.findMany({
     where: { studentId: input.studentId, status: "VERIFIED", revokedAt: null },
@@ -90,20 +143,6 @@ export async function notifyParentsOfStudent(input: NotifyParentsInput): Promise
   if (relationships.length === 0) {
     return;
   }
-
-  await prisma.notification.createMany({
-    data: relationships.map((relationship) => ({
-      tenantId,
-      userId: relationship.parentUserId,
-      channel: "IN_APP" as const,
-      type: input.type,
-      body: input.body,
-      status: "SENT" as const,
-      sentAt: new Date(),
-      ...(input.title ? { title: input.title } : {}),
-      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
-    })),
-  });
 
   const parents = await prisma.user.findMany({
     where: { id: { in: relationships.map((relationship) => relationship.parentUserId) } },

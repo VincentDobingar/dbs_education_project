@@ -3,6 +3,7 @@ import { z } from "zod";
 import { httpUrlSchema } from "../../lib/http-url-schema.js";
 
 export const createStudentSchema = z.object({
+  primaryGuardianId: z.string().min(1).optional(),
   matricule: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -25,13 +26,19 @@ const STUDENT_STATUSES = [
 ] as const;
 
 export const updateStudentSchema = z.object({
+  matricule: z.string().trim().min(1).max(80).optional(),
+  address: z.string().trim().max(240).nullable().optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+  birthPlace: z.string().trim().max(120).nullable().optional(),
+  nationality: z.string().trim().max(80).nullable().optional(),
+  primaryGuardianId: z.string().min(1).optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  dateOfBirth: z.coerce.date().optional(),
-  gender: z.string().min(1).optional(),
+  dateOfBirth: z.coerce.date().nullable().optional(),
+  gender: z.string().trim().max(40).nullable().optional(),
   photoUrl: httpUrlSchema.optional(),
-  emergencyContactName: z.string().min(1).optional(),
-  emergencyContactPhone: z.string().min(1).optional(),
+  emergencyContactName: z.string().trim().max(120).nullable().optional(),
+  emergencyContactPhone: z.string().trim().max(40).nullable().optional(),
   medicalNotes: z.string().min(1).optional(),
   status: z.enum(STUDENT_STATUSES).optional(),
 });

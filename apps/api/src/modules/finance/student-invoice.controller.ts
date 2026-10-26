@@ -1,8 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { AppError } from "../../lib/errors.js";
 import { resolveTenantActor } from "../../lib/tenant-actor.js";
 
 import { getStudentFinancialSituation } from "./financial-situation.service.js";
+import { generateInvoicePdf } from "./invoice-pdf.service.js";
 import * as studentInvoiceService from "./student-invoice.service.js";
 import { createStudentInvoiceSchema, listStudentInvoicesQuerySchema } from "./student-invoice.validation.js";
 
@@ -48,5 +50,18 @@ export function getStudentFinancialSituationHandler(req: Request, res: Response,
   void (async () => {
     const situation = await getStudentFinancialSituation(req.params.studentId as string);
     res.status(200).json(situation);
+  })().catch(next);
+}
+
+export function getStudentInvoicePdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (!req.tenant) throw new AppError(400, "TENANT_REQUIRED", "Tenant required");
+    const invoiceId = req.params.id as string;
+    const pdf = await generateInvoicePdf(invoiceId, req.tenant);
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `inline; filename="facture-${invoiceId}.pdf"`)
+      .send(pdf);
   })().catch(next);
 }

@@ -1,4 +1,4 @@
-import { apiRequest, ApiError, API_URL, type TenantCredentials } from "./apiClient.js";
+import { apiRequest, fetchBlob, ApiError, API_URL, type TenantCredentials } from "./apiClient.js";
 
 export interface AssessmentType {
   id: string;
@@ -162,4 +162,15 @@ export async function fetchReportCardPdf(id: string, creds: TenantCredentials): 
     throw new ApiError(response.status, "PDF_FETCH_FAILED", "Could not load the report card PDF");
   }
   return response.blob();
+}
+
+export function fetchClassReportCardsPdf(
+  classroomId: string,
+  academicPeriodId: string,
+  creds: TenantCredentials,
+): Promise<Blob> {
+  return fetchBlob(
+    `/grading/report-cards/class/pdf?${new URLSearchParams({ classroomId, academicPeriodId })}`,
+    { ...creds },
+  );
 }

@@ -9,7 +9,9 @@ import type {
 
 import { AppError } from "../../lib/errors.js";
 import type { TenantLetterhead } from "../../lib/pdf-letterhead.js";
+import { prisma } from "../../lib/prisma.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
+import { generateInvoicePdf } from "../finance/invoice-pdf.service.js";
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
 import { listReceiptsForStudent, requireReceipt } from "../finance/student-payment.service.js";
@@ -55,7 +57,24 @@ export async function getMyTimetable(studentId: string): Promise<TimetableEntry[
   const entriesByTimetable = await Promise.all(
     timetables.map((timetable) => listTimetableEntries(timetable.id)),
   );
-  return entriesByTimetable.flat();
+  const entries = entriesByTimetable.flat();
+  const subjects = await prisma.subject.findMany({
+    where: { id: { in: entries.map((entry) => entry.subjectId) } },
+    select: { id: true, nameFr: true },
+  });
+  const teachers = await prisma.employee.findMany({
+    where: { id: { in: entries.map((entry) => entry.teacherEmployeeId) } },
+    select: { id: true, firstName: true, lastName: true },
+  });
+  const subjectNames = new Map(subjects.map((subject) => [subject.id, subject.nameFr]));
+  const teacherNames = new Map(
+    teachers.map((teacher) => [teacher.id, `${teacher.firstName} ${teacher.lastName}`]),
+  );
+  return entries.map((entry) => ({
+    ...entry,
+    subjectName: subjectNames.get(entry.subjectId) ?? null,
+    teacherName: teacherNames.get(entry.teacherEmployeeId) ?? null,
+  }));
 }
 
 export async function getMyReportCards(
@@ -157,4 +176,22 @@ export async function getMyDashboard(studentId: string): Promise<StudentDashboar
   ]);
 
   return { profile, todayClasses, recentReportCards, announcements, upcomingHomework, subscription };
+}
+
+export async function getMyInvoices(studentId: string) {
+  return prisma.studentInvoice.findMany({
+    where: { studentId, deletedAt: null, status: { not: "DRAFT" } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getMyInvoicePdf(
+  studentId: string,
+  invoiceId: string,
+  tenant: TenantLetterhead,
+): Promise<Buffer> {
+  const invoice = await requireStudentInvoice(invoiceId);
+  if (invoice.studentId !== studentId || invoice.status === "DRAFT")
+    throw new AppError(404, "INVOICE_NOT_FOUND", "Invoice not found");
+  return generateInvoicePdf(invoiceId, tenant);
 }

@@ -13,6 +13,7 @@ describe("présences et discipline (§22)", () => {
   afterAll(async () => {
     await testAdminPrisma.disciplinaryIncident.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.attendance.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.teacherAssignment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -118,7 +119,35 @@ describe("présences et discipline (§22)", () => {
       studentIds.push((student.body as { id: string }).id);
     }
 
-    return { classroomId: (classroom.body as { id: string }).id, studentIds };
+    const room = await testAdminPrisma.classroom.findUniqueOrThrow({
+      where: { id: (classroom.body as { id: string }).id },
+    });
+    await testAdminPrisma.academicYear.update({ where: { id: academicYearId }, data: { isCurrent: true } });
+    const subject = await testAdminPrisma.subject.create({
+      data: { tenantId: room.tenantId, code: uniqueSuffix(), nameFr: "Mathématiques", nameEn: "Math" },
+    });
+    const employee = await testAdminPrisma.employee.findFirstOrThrow({ where: { tenantId: room.tenantId } });
+    await testAdminPrisma.teacherAssignment.create({
+      data: {
+        tenantId: room.tenantId,
+        employeeId: employee.id,
+        classroomId: room.id,
+        subjectId: subject.id,
+        academicYearId,
+      },
+    });
+    for (const studentId of studentIds)
+      await testAdminPrisma.enrollment.create({
+        data: {
+          tenantId: room.tenantId,
+          studentId,
+          classroomId: room.id,
+          academicYearId,
+          campusId: room.campusId,
+          gradeLevelId: room.gradeLevelId,
+        },
+      });
+    return { classroomId: room.id, studentIds };
   }
 
   it("records a roll call idempotently, refuses unauthorized writes, and justifies an absence", async () => {

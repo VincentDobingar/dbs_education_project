@@ -12,6 +12,7 @@ import { prisma, rawPrisma, withTenantSession } from "../../lib/prisma.js";
 import { sendSms } from "../../lib/sms-provider/send-sms.js";
 import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { linkPrincipalProfile } from "../parent-portal/parent-profile.service.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
 import type { CreateInvitationInput, ListInvitationsQuery } from "./activation-invitation.validation.js";
@@ -33,7 +34,15 @@ export async function createInvitation(
   input: CreateInvitationInput,
   actingUserId: string,
 ): Promise<CreatedInvitation> {
-  await requireStudentRecord(input.studentId);
+  const student = await requireStudentRecord(input.studentId);
+  const localGuardian =
+    input.beneficiaryCategory === "PARENT" && student.primaryGuardianId
+      ? await prisma.schoolGuardian.findUnique({ where: { id: student.primaryGuardianId } })
+      : null;
+  const bindPrincipal =
+    localGuardian &&
+    ((input.invitedEmail && localGuardian.email?.toLowerCase() === input.invitedEmail.toLowerCase()) ||
+      (!input.invitedEmail && input.invitedPhone === localGuardian.phone));
   const tenantId = requireCurrentTenantId();
   const expiresAt = new Date(Date.now() + ACTIVATION_CODE_TTL_MS);
 
@@ -41,6 +50,7 @@ export async function createInvitation(
     data: {
       tenantId,
       studentId: input.studentId,
+      ...(bindPrincipal ? { schoolGuardianId: localGuardian.id } : {}),
       beneficiaryCategory: input.beneficiaryCategory,
       createdByUserId: actingUserId,
       status: "SENT",
@@ -196,7 +206,8 @@ export async function redeemActivation(
     if (
       existingRelationship &&
       existingRelationship.status === "VERIFIED" &&
-      !existingRelationship.revokedAt
+      !existingRelationship.revokedAt &&
+      !invitation.schoolGuardianId
     ) {
       throw new AppError(
         409,
@@ -212,7 +223,8 @@ export async function redeemActivation(
     const verifiedChildrenCount = await tx.parentStudentRelationship.count({
       where: { parentUserId: actingUserId, status: "VERIFIED", revokedAt: null },
     });
-    await assertChildLimitNotReached(actingUserId, verifiedChildrenCount);
+    if (!existingRelationship || existingRelationship.status !== "VERIFIED" || existingRelationship.revokedAt)
+      await assertChildLimitNotReached(actingUserId, verifiedChildrenCount);
 
     const relationship = existingRelationship
       ? await tx.parentStudentRelationship.update({
@@ -235,6 +247,7 @@ export async function redeemActivation(
           },
         });
 
+    await linkPrincipalProfile(tx, invitation, actingUser);
     return { beneficiaryCategory: "PARENT" as const, relationship };
   });
 }

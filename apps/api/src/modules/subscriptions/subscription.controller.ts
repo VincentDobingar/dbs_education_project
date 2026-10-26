@@ -48,8 +48,10 @@ async function requireTenantSubscription(tenantId: string): Promise<Subscription
 
 /** Same reasoning as requireTenantSubscription — always resolved from the caller's
  * OWN family account, never a client-supplied id. */
-async function requireFamilySubscription(familyAccountId: string): Promise<Subscription> {
-  const subscription = await subscriptionService.findSubscriptionForOwner({ familyAccountId });
+async function requireFamilySubscription(familyAccountId: string, id?: string): Promise<Subscription> {
+  const subscription = id
+    ? await prisma.subscription.findFirst({ where: { id, deletedAt: null, owner: { familyAccountId } } })
+    : await subscriptionService.findSubscriptionForOwner({ familyAccountId });
 
   if (!subscription) {
     throw new AppError(404, "NO_SUBSCRIPTION", "This family account has no subscription yet");
@@ -209,7 +211,10 @@ export function getFamilySubscription(req: Request, res: Response, next: NextFun
   void (async () => {
     const userId = requireUserId(req);
     const familyAccount = await requireFamilyAccountForUser(userId);
-    const subscription = await requireFamilySubscription(familyAccount.id);
+    const subscription = await requireFamilySubscription(
+      familyAccount.id,
+      req.params.id as string | undefined,
+    );
     res.status(200).json(subscription);
   })().catch(next);
 }
@@ -219,7 +224,10 @@ export function cancelFamilySubscription(req: Request, res: Response, next: Next
     const userId = requireUserId(req);
     const familyAccount = await requireFamilyAccountForUser(userId);
     const input = cancelSubscriptionSchema.parse(req.body);
-    const subscription = await requireFamilySubscription(familyAccount.id);
+    const subscription = await requireFamilySubscription(
+      familyAccount.id,
+      req.params.id as string | undefined,
+    );
 
     if (subscription.id !== req.params.id) {
       res
@@ -242,7 +250,10 @@ export function createFamilyInvoice(req: Request, res: Response, next: NextFunct
     const userId = requireUserId(req);
     const familyAccount = await requireFamilyAccountForUser(userId);
     const input = createInvoiceSchema.parse(req.body);
-    const subscription = await requireFamilySubscription(familyAccount.id);
+    const subscription = await requireFamilySubscription(
+      familyAccount.id,
+      req.params.id as string | undefined,
+    );
 
     const invoice = await paymentService.createInvoiceForSubscription({
       subscriptionId: subscription.id,
@@ -261,7 +272,10 @@ export function createFamilyPaymentIntent(req: Request, res: Response, next: Nex
     const userId = requireUserId(req);
     const familyAccount = await requireFamilyAccountForUser(userId);
     const input = createPaymentIntentSchema.parse(req.body);
-    const subscription = await requireFamilySubscription(familyAccount.id);
+    const subscription = await requireFamilySubscription(
+      familyAccount.id,
+      req.params.id as string | undefined,
+    );
 
     await paymentService.assertInvoiceBelongsToSubscription(input.invoiceId, subscription.id);
 

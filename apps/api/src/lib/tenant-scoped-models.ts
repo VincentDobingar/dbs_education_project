@@ -10,8 +10,13 @@
  * Keep this list in sync with prisma/schema/*.prisma — a model added there with a
  * required tenantId must be added here too, or it will NOT be protected against
  * cross-tenant reads/writes.
+ * Exception : ParentSubscriptionCoverage est une autorisation multi-établissement.
+ * Ses services filtrent le parent authentifié et la relation vérifiée ; le cycle
+ * de paiement s'exécute sans contexte d'un établissement particulier.
  */
 export const TENANT_SCOPED_MODELS = [
+  "SchoolGuardian",
+  "RegistrationPeriod",
   "AcademicYear",
   "AcademicPeriod",
   "EducationCycle",

@@ -6,6 +6,7 @@ import { requireActiveSubscription } from "../../middleware/requireActiveSubscri
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
+import { requireTeacherEntry } from "../../middleware/requireTeacherEntry.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
 import * as homeworkController from "./homework.controller.js";
@@ -13,7 +14,7 @@ import * as homeworkController from "./homework.controller.js";
 export const homeworkRouter: Router = Router();
 
 const readHomework = requirePermission("homework.read");
-const writeHomework = requirePermission("homework.write");
+const writeHomework = [requirePermission("homework.write"), requireTeacherEntry];
 
 // §3.1/§37 : même garde d'abonnement tenant que les autres modules académiques
 // (finance, school-config...) — un établissement dont l'abonnement n'est plus

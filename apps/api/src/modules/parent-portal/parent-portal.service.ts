@@ -12,6 +12,7 @@ import type { TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { rawPrisma } from "../../lib/prisma.js";
 import { isStudentUnavailable } from "../../lib/student-status.js";
 import { runWithContext } from "../../lib/tenant-context.js";
+import { isTenantBlocked } from "../../lib/tenant-status.js";
 import * as attendanceService from "../attendance/attendance.service.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
 import { requireFamilyAccountForUser } from "../family/family-account.service.js";
@@ -21,6 +22,7 @@ import {
   getStudentFinancialSituation,
   type StudentFinancialSituation,
 } from "../finance/financial-situation.service.js";
+import { generateInvoicePdf } from "../finance/invoice-pdf.service.js";
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
 import { listReceiptsForStudent, requireReceipt } from "../finance/student-payment.service.js";
@@ -34,6 +36,7 @@ import { requireCurrentEnrollment } from "../students/student.service.js";
 import { findSubscriptionForOwner } from "../subscriptions/subscription.service.js";
 
 import type { ListChildAttendanceQuery, ListChildReportCardsQuery } from "./parent-portal.validation.js";
+import { findCoveredParentSubscription } from "./parent-subscription.service.js";
 
 export async function getChildAttendance(
   studentId: string,
@@ -157,8 +160,16 @@ export async function getParentDashboard(parentUserId: string): Promise<ParentDa
     ? await findSubscriptionForOwner({ familyAccountId: familyAccount.id })
     : null;
 
+  const coveredChildren = [];
+  for (const child of children) {
+    if (isStudentUnavailable(child.student)) continue;
+    const tenant = await rawPrisma.tenant.findUnique({ where: { id: child.student.tenantId } });
+    if (!tenant || tenant.deletedAt || isTenantBlocked(tenant.status)) continue;
+    if (await findCoveredParentSubscription(parentUserId, child.student.id, child.student.tenantId))
+      coveredChildren.push(child);
+  }
   const childDashboards = await Promise.all(
-    children.map((child) =>
+    coveredChildren.map((child) =>
       runWithContext({ tenantId: child.student.tenantId, userId: parentUserId }, async () => {
         const tenant = await rawPrisma.tenant.findUnique({ where: { id: child.student.tenantId } });
 
@@ -231,4 +242,16 @@ export async function getParentDashboard(parentUserId: string): Promise<ParentDa
   );
 
   return { children: childDashboards, subscription };
+}
+
+export async function getChildInvoicePdf(
+  studentId: string,
+  invoiceId: string,
+  tenant: TenantLetterhead,
+): Promise<Buffer> {
+  const invoice = await requireStudentInvoice(invoiceId);
+  if (invoice.studentId !== studentId || invoice.status === "DRAFT") {
+    throw new AppError(404, "INVOICE_NOT_FOUND", "Invoice not found");
+  }
+  return generateInvoicePdf(invoiceId, tenant);
 }

@@ -1,11 +1,16 @@
 import { Button } from "@edumanage/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../lib/apiClient.js";
-import { fetchReportCardPdf, generateReportCards, listReportCards } from "../../lib/gradingApi.js";
+import {
+  fetchClassReportCardsPdf,
+  fetchReportCardPdf,
+  generateReportCards,
+  listReportCards,
+} from "../../lib/gradingApi.js";
 import { listAcademicPeriods, listClassrooms } from "../../lib/schoolConfigApi.js";
 import { listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
@@ -70,6 +75,40 @@ export function ReportCardsPage(): ReactNode {
     }
   }
 
+  const [batchFile, setBatchFile] = useState<{ url: string; name: string } | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchLoading, setBatchLoading] = useState(false);
+  useEffect(
+    () => () => {
+      if (batchFile) URL.revokeObjectURL(batchFile.url);
+    },
+    [batchFile],
+  );
+  async function downloadClass() {
+    setBatchLoading(true);
+    setBatchError(null);
+    setBatchFile(null);
+    try {
+      const url = URL.createObjectURL(await fetchClassReportCardsPdf(classroomId, academicPeriodId, creds));
+      const name = `bulletins-${classroomId}-${academicPeriodId}.pdf`;
+      setBatchFile({ url, name });
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      setBatchError(
+        e instanceof ApiError && e.code === "NO_REPORT_CARDS"
+          ? "Aucun bulletin généré pour cette classe et cette période."
+          : "Le téléchargement des bulletins a échoué.",
+      );
+    } finally {
+      setBatchLoading(false);
+    }
+  }
+
   function studentName(id: string): string {
     const student = roster.data?.find((s) => s.id === id);
     return student ? `${student.firstName} ${student.lastName}` : id;
@@ -82,6 +121,29 @@ export function ReportCardsPage(): ReactNode {
         <p className="mt-1 text-sm text-slate-500">{t("reportCards.subtitle")}</p>
       </div>
 
+      <div>
+        <p className="mb-2 text-sm text-slate-600">
+          Export des bulletins déjà générés pour la classe et la période sélectionnées.
+        </p>
+        <button
+          type="button"
+          className="rounded bg-teal-600 px-4 py-2 text-white disabled:opacity-50"
+          disabled={!classroomId || !academicPeriodId || batchLoading}
+          onClick={() => void downloadClass()}
+        >
+          {batchLoading ? "Préparation…" : "Télécharger les bulletins de la classe"}
+        </button>
+        {batchError && (
+          <p role="alert" className="text-red-700">
+            {batchError}
+          </p>
+        )}
+        {batchFile && (
+          <a href={batchFile.url} download={batchFile.name} className="block text-teal-700 underline">
+            Télécharger le PDF des bulletins
+          </a>
+        )}
+      </div>
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         {classrooms.isError ? (
           <p className="mb-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
@@ -93,6 +155,8 @@ export function ReportCardsPage(): ReactNode {
               className="input mt-1 w-56"
               value={classroomId}
               onChange={(event) => {
+                setBatchFile(null);
+                setBatchError(null);
                 setClassroomId(event.target.value);
                 setAcademicPeriodId("");
               }}
@@ -110,7 +174,11 @@ export function ReportCardsPage(): ReactNode {
             <select
               className="input mt-1 w-56"
               value={academicPeriodId}
-              onChange={(event) => setAcademicPeriodId(event.target.value)}
+              onChange={(event) => {
+                setBatchFile(null);
+                setBatchError(null);
+                setAcademicPeriodId(event.target.value);
+              }}
               disabled={!classroomId}
             >
               <option value="">{t("grading.selectPeriod")}</option>

@@ -7,6 +7,8 @@ import { getDirectionDashboard } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
 import { loadSession } from "../../lib/session.js";
 
+import { TeacherDashboardPage } from "./TeacherDashboardPage.js";
+
 function StatCard({ label, value }: { label: string; value: string }): ReactNode {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -21,6 +23,16 @@ function formatAmount(cents: number): string {
 }
 
 export function DashboardPage(): ReactNode {
+  const session = loadSession();
+  return session?.roleCodes.includes("TEACHER") &&
+    !session.roleCodes.some((role) => ["SCHOOL_ADMIN", "SCHOOL_OWNER", "DIRECTOR"].includes(role)) ? (
+    <TeacherDashboardPage />
+  ) : (
+    <DirectionDashboardPage />
+  );
+}
+
+function DirectionDashboardPage(): ReactNode {
   const { t } = useTranslation("app");
   const session = loadSession();
 

@@ -1,0 +1,42 @@
+/// Contact administratif propre à l'établissement. Ne confère aucun accès au portail.
+model SchoolGuardian {
+  id                String                 @id @default(cuid())
+  tenantId          String
+  centralGuardianId String?
+  firstName         String
+  lastName          String
+  phone             String
+  email             String?
+  photoUrl          String?
+  address           String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  students          Student[]
+  centralGuardian   Guardian?              @relation(fields: [centralGuardianId], references: [id], onDelete: Restrict)
+  invitations       ActivationInvitation[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([centralGuardianId])
+}
+
+model RegistrationPeriod {
+  id             String       @id @default(cuid())
+  tenantId       String
+  academicYearId String
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  isOpen         Boolean      @default(true)
+  /// Echéancier immuable après utilisation : 1 à 3 montants en centimes et dates d'échéance.
+  installments   Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  academicYear   AcademicYear @relation(fields: [academicYearId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  enrollments    Enrollment[]
+
+  @@unique([id, tenantId, academicYearId])
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId])
+}
+

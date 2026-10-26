@@ -1,7 +1,7 @@
 import { Button } from "@edumanage/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -9,11 +9,17 @@ import { ApiError } from "../../lib/apiClient.js";
 import { getCourseForStudent, listCoursesForStudent, markResourceComplete } from "../../lib/elearningApi.js";
 import { listLinkedStudents } from "../../lib/familyApi.js";
 import { getMySubmission, listHomeworkForStudent, submitHomework } from "../../lib/homeworkApi.js";
+import { HOMEWORK_KINDS } from "../../lib/homeworkKinds.js";
 import { loadPortalSession } from "../../lib/portalSession.js";
 import {
+  fetchStudentIdCardPdf,
+  fetchStudentInvoicePdf,
+  getStudentInvoices,
   fetchStudentReceiptPdf,
   fetchStudentReportCardPdf,
   getStudentAnnouncements,
+  getStudentGrades,
+  getStudentAttendance,
   getStudentDashboard,
   getStudentReceipts,
   getStudentReportCards,
@@ -27,19 +33,24 @@ import {
   recordStudentCashPayment,
 } from "../../lib/subscriptionApi.js";
 
-const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+import { CoursePdfDownload } from "./FamilyCourses.js";
+import { PortalSchoolFollowUp } from "./PortalSchoolFollowUp.js";
+import { PortalTimetable } from "./PortalTimetable.js";
+
 const STUDENT_PLANS = ["STUDENT_BASIC", "STUDENT_PREMIUM"] as const;
 
 function HomeworkItem({
   homeworkId,
   title,
   dueAt,
+  instructions,
   studentId,
   accessToken,
 }: {
   homeworkId: string;
   title: string;
   dueAt: string;
+  instructions?: string | null;
   studentId: string;
   accessToken: string;
 }): ReactNode {
@@ -65,6 +76,7 @@ function HomeworkItem({
         <span className="font-medium text-slate-900">{title}</span>
         <span className="text-slate-500">{dueAt.slice(0, 10)}</span>
       </div>
+      {instructions && <p className="mt-2 whitespace-pre-line rounded bg-slate-50 p-3">{instructions}</p>}
       {submission.data ? (
         <p className="mt-2 text-sm text-teal-600">
           {t("portal.homework.submitted")} — {submission.data.submittedAt.slice(0, 10)}
@@ -134,7 +146,7 @@ function CourseItem({
           {course.data.resources.map((resource) => {
             const completed = course.data.completedResourceIds.includes(resource.id);
             return (
-              <li key={resource.id} className="flex items-center justify-between">
+              <li key={resource.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-slate-700">
                   {resource.title} ({t(`elearning.resourceType.${resource.type}`)})
                 </span>
@@ -149,6 +161,27 @@ function CourseItem({
                   >
                     {t("portal.course.markComplete")}
                   </button>
+                )}
+                {resource.content && (
+                  <p className="w-full whitespace-pre-line rounded bg-slate-50 p-3 text-slate-700">
+                    {resource.content}
+                  </p>
+                )}
+                {resource.fileKey && (
+                  <CoursePdfDownload
+                    path={`/elearning/student/${studentId}/courses/${courseId}/resources/${resource.id}/file`}
+                    accessToken={accessToken}
+                  />
+                )}
+                {resource.url && (
+                  <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full text-teal-700 underline"
+                  >
+                    {t("portal.course.openResource")}
+                  </a>
                 )}
               </li>
             );
@@ -236,12 +269,40 @@ export function StudentPortalPage(): ReactNode {
   const session = loadPortalSession();
   const accessToken = session?.accessToken as string;
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const [pdfDocument, setPdfDocument] = useState<{ url: string; filename: string } | null>(null);
+  const [pdfError, setPdfError] = useState(false);
+  useEffect(
+    () => () => {
+      if (pdfDocument) URL.revokeObjectURL(pdfDocument.url);
+    },
+    [pdfDocument],
+  );
+  function downloadPdf(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    setPdfDocument({ url, filename });
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
 
   const links = useQuery({
     queryKey: ["linked-students", accessToken],
     queryFn: () => listLinkedStudents(accessToken),
   });
   const studentId = links.data?.[0]?.student.id;
+  const grades = useQuery({
+    queryKey: ["student-grades", studentId, accessToken],
+    queryFn: () => getStudentGrades(studentId!, accessToken),
+    enabled: Boolean(studentId),
+  });
+  const attendance = useQuery({
+    queryKey: ["student-attendance", studentId, accessToken],
+    queryFn: () => getStudentAttendance(studentId!, accessToken),
+    enabled: Boolean(studentId),
+  });
 
   const dashboard = useQuery({
     queryKey: ["student-dashboard", studentId],
@@ -268,6 +329,14 @@ export function StudentPortalPage(): ReactNode {
     queryFn: () => listHomeworkForStudent(studentId as string, accessToken),
     enabled: Boolean(studentId),
   });
+  const invoices = useQuery({
+    queryKey: ["student-invoices", studentId, accessToken],
+    queryFn: () => getStudentInvoices(studentId as string, accessToken),
+    enabled: Boolean(studentId),
+    networkMode: "always",
+    gcTime: 0,
+    retry: false,
+  });
   const receipts = useQuery({
     queryKey: ["student-receipts", studentId],
     queryFn: () => getStudentReceipts(studentId as string, accessToken),
@@ -282,9 +351,41 @@ export function StudentPortalPage(): ReactNode {
   async function openReportCardPdf(reportCardId: string): Promise<void> {
     if (!studentId) return;
     setPdfLoadingId(reportCardId);
+    setPdfError(false);
     try {
       const blob = await fetchStudentReportCardPdf(studentId, reportCardId, accessToken);
-      window.open(URL.createObjectURL(blob), "_blank");
+      downloadPdf(blob, `bulletin-${reportCardId}.pdf`);
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
+
+  async function openIdCardPdf(): Promise<void> {
+    if (!studentId) return;
+    setPdfLoadingId("id-card");
+    setPdfError(false);
+    try {
+      downloadPdf(await fetchStudentIdCardPdf(studentId, accessToken), `carte-scolaire-${studentId}.pdf`);
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
+
+  async function openInvoicePdf(invoiceId: string): Promise<void> {
+    if (!studentId) return;
+    setPdfLoadingId(invoiceId);
+    setPdfError(false);
+    try {
+      downloadPdf(
+        await fetchStudentInvoicePdf(studentId, invoiceId, accessToken),
+        `facture-${invoiceId}.pdf`,
+      );
+    } catch {
+      setPdfError(true);
     } finally {
       setPdfLoadingId(null);
     }
@@ -293,9 +394,12 @@ export function StudentPortalPage(): ReactNode {
   async function openReceiptPdf(receiptId: string): Promise<void> {
     if (!studentId) return;
     setPdfLoadingId(receiptId);
+    setPdfError(false);
     try {
       const blob = await fetchStudentReceiptPdf(studentId, receiptId, accessToken);
-      window.open(URL.createObjectURL(blob), "_blank");
+      downloadPdf(blob, `recu-${receiptId}.pdf`);
+    } catch {
+      setPdfError(true);
     } finally {
       setPdfLoadingId(null);
     }
@@ -323,16 +427,81 @@ export function StudentPortalPage(): ReactNode {
   // Same reasoning as ParentChildPage: every route here but the dashboard itself is
   // gated behind an active individual subscription (§37) — a 402 means "subscribe to
   // unlock", not "there is nothing yet".
-  const subscriptionRequired = [timetable, reportCards, announcements, homework, receipts, courses].some(
-    (query) => query.error instanceof ApiError && query.error.status === 402,
-  );
+  const subscriptionRequired = [
+    timetable,
+    reportCards,
+    announcements,
+    homework,
+    invoices,
+    receipts,
+    courses,
+    grades,
+    attendance,
+  ].some((query) => query.error instanceof ApiError && query.error.status === 402);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+      <header className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-wide text-teal-300">Espace élève</p>
+        <h1 className="mt-2 text-3xl font-bold">Bonjour {profile?.firstName ?? ""}</h1>
+        <p className="mt-2 text-slate-300">Mes cours, mes résultats et ma vie scolaire.</p>
+        <Link
+          className="mt-4 inline-block rounded bg-teal-500 px-4 py-2 font-medium text-slate-900"
+          to="/portail/eleve/profil"
+        >
+          Mon profil et ma photo
+        </Link>
+      </header>
+      {pdfError && <p role="alert">{t("portal.child.pdfError.generic")}</p>}
+      {pdfDocument && (
+        <p role="status">
+          {t("portal.child.pdfReady")}{" "}
+          <a className="text-teal-700 underline" href={pdfDocument.url} download={pdfDocument.filename}>
+            {t("portal.child.downloadPdf")}
+          </a>
+        </p>
+      )}
+      <section className="rounded-lg border bg-white p-5">
+        <h2 className="text-lg font-semibold">{t("portal.student.grades")}</h2>
+        {grades.isPending ? (
+          <p>{t("students.loading")}</p>
+        ) : grades.isError ? (
+          <p role="alert">{t("list.error.loadFailed")}</p>
+        ) : (
+          <ul>
+            {grades.data?.map((grade) => (
+              <li className="border-b py-2" key={grade.id}>
+                {grade.assessment.subject.nameFr} · {grade.assessment.title} :{" "}
+                {grade.isAbsent
+                  ? t("attendance.status.ABSENT")
+                  : `${grade.score ?? "—"} / ${grade.assessment.maxScore}`}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="rounded-lg border bg-white p-5">
+        <h2 className="text-lg font-semibold">{t("attendance.title")}</h2>
+        {attendance.isPending ? (
+          <p>{t("students.loading")}</p>
+        ) : attendance.isError ? (
+          <p role="alert">{t("list.error.loadFailed")}</p>
+        ) : (
+          <ul>
+            {attendance.data?.map((entry) => (
+              <li className="border-b py-2" key={entry.id}>
+                {entry.date.slice(0, 10)} · {t(`attendance.status.${entry.status}`)}
+                {entry.justificationNote ? ` — ${entry.justificationNote}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <PortalSchoolFollowUp studentId={studentId} accessToken={accessToken} />
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h2 className="text-2xl font-bold text-slate-900">
           {profile ? `${profile.firstName} ${profile.lastName}` : t("portal.nav.student")}
-        </h1>
+        </h2>
         {profile ? (
           <p className="mt-1 text-sm text-slate-500">
             {t("students.matricule")} : {profile.matricule}
@@ -340,6 +509,14 @@ export function StudentPortalPage(): ReactNode {
         ) : null}
       </div>
 
+      <button
+        type="button"
+        className="text-sm text-brand-teal hover:underline disabled:opacity-50"
+        disabled={pdfLoadingId === "id-card"}
+        onClick={() => void openIdCardPdf()}
+      >
+        {pdfLoadingId === "id-card" ? t("studentDetail.loadingPdf") : t("studentDetail.downloadIdCard")}
+      </button>
       {subscriptionRequired ? (
         <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
           {t("portal.child.subscriptionRequired")}
@@ -355,23 +532,7 @@ export function StudentPortalPage(): ReactNode {
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("timetable.title")}</h2>
-        {(timetable.data ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">{t("timetable.empty")}</p>
-        ) : (
-          <ul className="mt-3 space-y-1 text-sm">
-            {(timetable.data ?? [])
-              .slice()
-              .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))
-              .map((entry) => (
-                <li key={entry.id} className="flex justify-between border-b border-slate-100 pb-1">
-                  <span className="text-slate-700">
-                    {t(`timetable.dayOfWeek.${DAY_KEYS[entry.dayOfWeek]}`)} {entry.startTime}–{entry.endTime}
-                  </span>
-                  <span className="text-slate-500">{entry.roomLabel ?? "—"}</span>
-                </li>
-              ))}
-          </ul>
-        )}
+        <PortalTimetable entries={timetable.data ?? []} studentId={studentId} accessToken={accessToken} />
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -423,7 +584,8 @@ export function StudentPortalPage(): ReactNode {
               <HomeworkItem
                 key={hw.id}
                 homeworkId={hw.id}
-                title={hw.title}
+                title={`${HOMEWORK_KINDS[hw.kind ?? "HOMEWORK"] ?? "Devoir"} · ${hw.title}`}
+                instructions={hw.instructions}
                 dueAt={hw.dueAt}
                 studentId={studentId}
                 accessToken={accessToken}
@@ -468,6 +630,35 @@ export function StudentPortalPage(): ReactNode {
         )}
       </section>
 
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">Factures</h2>
+        {invoices.isError && <p role="alert">{t("list.error.loadFailed")}</p>}
+        {invoices.isPending ? (
+          <p>Chargement des factures…</p>
+        ) : !invoices.isError && (invoices.data ?? []).length === 0 ? (
+          <p>Aucune facture disponible.</p>
+        ) : null}
+        <ul className="mt-3 space-y-2 text-sm">
+          {(invoices.data ?? []).map((invoice) => (
+            <li
+              key={invoice.id}
+              className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2"
+            >
+              <span>
+                {invoice.number} · {(invoice.totalCents / 100).toLocaleString("fr-FR")}
+              </span>
+              <button
+                type="button"
+                className="text-brand-teal hover:underline disabled:opacity-50"
+                disabled={pdfLoadingId === invoice.id}
+                onClick={() => void openInvoicePdf(invoice.id)}
+              >
+                {pdfLoadingId === invoice.id ? t("studentDetail.loadingPdf") : "Télécharger la facture"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.payments")}</h2>
         {(receipts.data ?? []).length === 0 ? (
