@@ -80,7 +80,15 @@ subscriptionRouter.post(
   requireAuth,
   subscriptionController.createFamilyPaymentIntent,
 );
-subscriptionRouter.post("/family/cash-payment", requireAuth, subscriptionController.recordFamilyCashPayment);
+// Un parent peut préparer son règlement, jamais en certifier lui-même l'encaissement.
+subscriptionRouter.post("/family/cash-payment", requireAuth, (_req, res) => {
+  res
+    .status(403)
+    .json({
+      code: "BILLING_AGENT_REQUIRED",
+      message: "L'encaissement doit être confirmé par un agent habilité",
+    });
+});
 
 // §26 : abonnement individuel de l'élève — même raisonnement que /family (jamais
 // enforceTenantScope/requireTenantMembership, l'élève n'est pas membre du tenant

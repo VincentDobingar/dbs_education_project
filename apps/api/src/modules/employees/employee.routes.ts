@@ -29,6 +29,7 @@ employeeRouter.get("/", manageStaff, employeeController.listEmployees);
 employeeRouter.get("/payroll/export.csv", manageSalaryData, payrollExportController.getPayrollExportCsv);
 employeeRouter.get("/payroll/export.xlsx", manageSalaryData, payrollExportController.getPayrollExportXlsx);
 employeeRouter.get("/:id", manageStaff, employeeController.getEmployee);
+employeeRouter.post("/:id/teacher-account", manageStaff, employeeController.linkTeacherAccount);
 employeeRouter.patch("/:id", manageStaff, employeeController.updateEmployee);
 employeeRouter.post("/:id/archive", manageStaff, employeeController.archiveEmployee);
 employeeRouter.get("/:id/workload", manageStaff, employeeController.getEmployeeWorkload);

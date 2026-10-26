@@ -82,17 +82,20 @@ export default defineConfig({
         // navigation : sans cette exclusion, le SW servait index.html à sa place.
         navigateFallbackDenylist: [/^\/api\//, /\/[^/?]+\.[a-z0-9]+$/i],
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes("/parent-portal/"),
+            handler: "NetworkOnly",
+          },
           // Lecture hors-ligne des portails parent/élève (zones à couverture réseau
           // intermittente) : uniquement les GET, jamais /auth/* ni une mutation —
           // NetworkFirst retourne le cache seulement si le réseau échoue/est lent,
           // donc les données restent fraîches dès que la connexion revient.
           {
             urlPattern: ({ url, request }) =>
-              request.method === "GET" &&
-              (url.pathname.includes("/parent-portal/") || url.pathname.includes("/student-portal/")),
+              request.method === "GET" && url.pathname.includes("/student-portal/"),
             handler: "NetworkFirst",
             options: {
-              cacheName: "portal-api-cache",
+              cacheName: "student-portal-api-v2",
               networkTimeoutSeconds: 4,
               expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 },
               cacheableResponse: { statuses: [200] },

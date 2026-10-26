@@ -1,4 +1,9 @@
-import { fetchImageSafely } from "./safe-image-fetch.js";
+import { readFile, realpath, stat } from "node:fs/promises";
+import path from "node:path";
+
+import { env } from "../env.js";
+
+import { fetchImageSafely, MAX_IMAGE_BYTES } from "./safe-image-fetch.js";
 
 export interface TenantLetterhead {
   name: string;
@@ -15,6 +20,22 @@ const LOGO_SIZE = 40; // pt (~14mm) — assez visible sans dominer un en-tête A
  * jamais un échec de génération du document.
  */
 export async function fetchTenantLogo(logoUrl: string | null): Promise<Buffer | null> {
+  if (logoUrl) {
+    try {
+      const url = new URL(logoUrl);
+      const match = /^\/uploads\/tenant-logos\/([a-f0-9]{32}\.(?:png|jpg))$/.exec(url.pathname);
+      if (url.origin === new URL(env.PUBLIC_API_URL).origin && match && !url.search && !url.hash) {
+        // Lecture du seul espace d'uploads géré par l'application, sans requête réseau.
+        // realpath empêche également une sortie via un lien symbolique.
+        const root = await realpath(path.resolve(env.UPLOAD_DIR, "tenant-logos"));
+        const filename = await realpath(path.join(root, match[1]!));
+        if (path.dirname(filename) !== root || (await stat(filename)).size > MAX_IMAGE_BYTES) return null;
+        return await readFile(filename);
+      }
+    } catch {
+      return null;
+    }
+  }
   return logoUrl ? fetchImageSafely(logoUrl) : null;
 }
 
@@ -42,4 +63,24 @@ export function drawCenteredLetterhead(
     }
   }
   doc.fontSize(nameFontSize).font("Helvetica-Bold").text(tenantName, { align: "center" });
+}
+
+export async function fetchStudentPhoto(logoUrl: string | null): Promise<Buffer | null> {
+  if (logoUrl) {
+    try {
+      const url = new URL(logoUrl);
+      const match = /^\/uploads\/student-photos\/([a-f0-9]{32}\.(?:png|jpg))$/.exec(url.pathname);
+      if (url.origin === new URL(env.PUBLIC_API_URL).origin && match && !url.search && !url.hash) {
+        // Lecture du seul espace d'uploads géré par l'application, sans requête réseau.
+        // realpath empêche également une sortie via un lien symbolique.
+        const root = await realpath(path.resolve(env.UPLOAD_DIR, "student-photos"));
+        const filename = await realpath(path.join(root, match[1]!));
+        if (path.dirname(filename) !== root || (await stat(filename)).size > MAX_IMAGE_BYTES) return null;
+        return await readFile(filename);
+      }
+    } catch {
+      return null;
+    }
+  }
+  return logoUrl ? fetchImageSafely(logoUrl) : null;
 }

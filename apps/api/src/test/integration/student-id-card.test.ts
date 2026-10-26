@@ -5,6 +5,7 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("cartes scolaires (§19)", () => {
   const app = createApp();
@@ -12,6 +13,7 @@ describe("cartes scolaires (§19)", () => {
 
   afterAll(async () => {
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -21,6 +23,7 @@ describe("cartes scolaires (§19)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -63,7 +66,12 @@ describe("cartes scolaires (§19)", () => {
       .post("/api/v1/school-config/academic-years")
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30", isCurrent: true });
+
+    await testAdminPrisma.academicYear.update({
+      where: { id: (year.body as { id: string }).id },
+      data: { isCurrent: true },
+    });
 
     const cycle = await request(app)
       .post("/api/v1/school-config/education-cycles")
@@ -115,12 +123,18 @@ describe("cartes scolaires (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
 
     const card = await request(app)
       .get(`/api/v1/students/${studentId}/id-card`)
       .set("Authorization", `Bearer ${teacherToken}`)
       .set("X-Tenant-Slug", subdomain);
+    const grouped = await request(app)
+      .get(`/api/v1/students/classrooms/${classroomId}/id-cards`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(grouped.status).toBe(200);
+    expect(grouped.headers["content-type"]).toContain("application/pdf");
     expect(card.status).toBe(200);
     expect(card.headers["content-type"]).toContain("application/pdf");
     expect(Buffer.isBuffer(card.body)).toBe(true);
@@ -154,12 +168,18 @@ describe("cartes scolaires (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
 
     const card = await request(app)
       .get(`/api/v1/students/${studentId}/id-card`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain);
+    const grouped = await request(app)
+      .get(`/api/v1/students/classrooms/${classroomId}/id-cards`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(grouped.status).toBe(200);
+    expect(grouped.headers["content-type"]).toContain("application/pdf");
     expect(card.status).toBe(200);
     expect((card.body as Buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
   });
@@ -189,12 +209,18 @@ describe("cartes scolaires (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
 
     const card = await request(app)
       .get(`/api/v1/students/${studentId}/id-card`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain);
+    const grouped = await request(app)
+      .get(`/api/v1/students/classrooms/${classroomId}/id-cards`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(grouped.status).toBe(200);
+    expect(grouped.headers["content-type"]).toContain("application/pdf");
     expect(card.status).toBe(200);
     expect((card.body as Buffer).subarray(0, 4).toString("ascii")).toBe("%PDF");
   });
@@ -239,7 +265,7 @@ describe("cartes scolaires (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
 
     await testAdminPrisma.student.update({ where: { id: studentId }, data: { status: "TRANSFERRED" } });
 

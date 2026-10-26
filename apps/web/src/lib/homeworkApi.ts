@@ -1,6 +1,7 @@
 import { apiRequest, type TenantCredentials } from "./apiClient.js";
 
 export interface Homework {
+  kind?: string;
   id: string;
   classroomId: string;
   subjectId: string;
@@ -11,6 +12,7 @@ export interface Homework {
 }
 
 export interface CreateHomeworkInput {
+  kind?: string;
   classroomId: string;
   subjectId: string;
   title: string;

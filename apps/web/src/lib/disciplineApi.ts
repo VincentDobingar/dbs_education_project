@@ -21,8 +21,11 @@ export interface CreateIncidentInput {
   correctiveAction?: string;
 }
 
-export function listIncidents(creds: TenantCredentials, studentId?: string): Promise<DisciplinaryIncident[]> {
-  const query = studentId ? `?studentId=${encodeURIComponent(studentId)}` : "";
+export function listIncidents(creds: TenantCredentials, studentId?: string, classroomId?: string): Promise<DisciplinaryIncident[]> {
+  const params = new URLSearchParams();
+  if (studentId) params.set("studentId", studentId);
+  if (classroomId) params.set("classroomId", classroomId);
+  const query = params.size ? `?${params.toString()}` : "";
   return apiRequest(`/discipline/incidents${query}`, { ...creds });
 }
 

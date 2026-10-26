@@ -26,6 +26,20 @@ interface NavLinkDef {
 
 const NAV_LINKS: readonly NavLinkDef[] = [
   { to: "/tableau-de-bord", key: "layout.nav.dashboard" },
+  { to: "/parents", key: "layout.nav.guardians", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "SECRETARY"] },
+  {
+    to: "/inscriptions",
+    key: "layout.nav.registrations",
+    roles: [
+      "SCHOOL_OWNER",
+      "SCHOOL_ADMIN",
+      "DIRECTOR",
+      "ACADEMIC_DIRECTOR",
+      "SECRETARY",
+      "TEACHER",
+      "TENANT_AUDITOR",
+    ],
+  },
   {
     to: "/eleves",
     key: "layout.nav.students",
@@ -165,7 +179,27 @@ export function AppLayout(): ReactNode {
     window.location.assign("/connexion");
   }
 
-  const links = NAV_LINKS.filter((link) => isNavLinkVisible(link.roles, session.roleCodes)).map((link) => ({
+  if (location.pathname.startsWith("/utilisateurs")) return <Navigate to="/tableau-de-bord" replace />;
+
+  const teacherOnly =
+    session.roleCodes.includes("TEACHER") &&
+    !session.roleCodes.some((r) =>
+      [
+        "SCHOOL_OWNER",
+        "SCHOOL_ADMIN",
+        "DIRECTOR",
+        "ACADEMIC_DIRECTOR",
+        "SECRETARY",
+        "TENANT_AUDITOR",
+      ].includes(r),
+    );
+  if (teacherOnly && ["/inscriptions", "/bulletins"].some((p) => location.pathname.startsWith(p)))
+    return <Navigate to="/enseignant" replace />;
+  const links = NAV_LINKS.filter(
+    (link) =>
+      (!teacherOnly || !["/inscriptions", "/bulletins"].includes(link.to)) &&
+      isNavLinkVisible(link.roles, session.roleCodes),
+  ).map((link) => ({
     to: link.to,
     label: t(link.key),
   }));

@@ -1,11 +1,12 @@
 import { Button } from "@edumanage/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import type { TenantCredentials } from "../../lib/apiClient.js";
+import { apiRequest } from "../../lib/apiClient.js";
 import {
   createInvitation,
   listInvitations,
@@ -26,15 +27,13 @@ import {
   refundStudentPayment,
   type StudentInvoiceStatus,
 } from "../../lib/financeApi.js";
+import { listGuardians, listRegistrationPeriods } from "../../lib/registrationApi.js";
 import { listAcademicYears, listClassrooms } from "../../lib/schoolConfigApi.js";
-import {
-  enrollStudent,
-  fetchIdCardPdf,
-  getStudent,
-  listEnrollments,
-  updateStudentPhoto,
-} from "../../lib/studentsApi.js";
+import { enrollStudent, fetchIdCardPdf, getStudent, listEnrollments } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
+
+import { InvoiceDownloadButton } from "./InvoiceDownloadButton.js";
+import { StudentProfileEditor } from "./StudentProfileEditor.js";
 
 function formatAmount(cents: number): string {
   return (cents / 100).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
@@ -237,6 +236,29 @@ export function StudentDetailPage(): ReactNode {
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
   const queryClient = useQueryClient();
   const [selectedClassroomId, setSelectedClassroomId] = useState("");
+  const [selectedPeriodId, setSelectedPeriodId] = useState("");
+  const [guardianId, setGuardianId] = useState("");
+  const guardians = useQuery({
+    queryKey: ["guardians", session.subdomain],
+    queryFn: () => listGuardians(creds),
+  });
+  const registrationPeriods = useQuery({
+    queryKey: ["registration-periods", session.subdomain],
+    queryFn: () => listRegistrationPeriods(creds),
+  });
+  const guardianMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(`/students/${studentId}`, {
+        ...creds,
+        method: "PATCH",
+        body: { primaryGuardianId: guardianId },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      void queryClient.invalidateQueries({ queryKey: ["students", session.subdomain] });
+      void queryClient.invalidateQueries({ queryKey: ["guardians", session.subdomain] });
+    },
+  });
 
   const student = useQuery({
     queryKey: ["student", studentId],
@@ -367,6 +389,7 @@ export function StudentDetailPage(): ReactNode {
         studentId,
         {
           classroomId: classroom.id,
+          registrationPeriodId: selectedPeriodId,
           academicYearId: classroom.academicYearId,
           campusId: classroom.campusId,
           gradeLevelId: classroom.gradeLevelId,
@@ -376,29 +399,40 @@ export function StudentDetailPage(): ReactNode {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["enrollments", studentId] });
+      void queryClient.invalidateQueries({ queryKey: ["student-invoices", session.subdomain, studentId] });
+      void queryClient.invalidateQueries({ queryKey: ["financial-situation", session.subdomain, studentId] });
+      void queryClient.invalidateQueries({ queryKey: ["registrations", session.subdomain] });
+      void queryClient.invalidateQueries({ queryKey: ["students", session.subdomain] });
       void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
       setSelectedClassroomId("");
     },
   });
 
-  // §19 : photo sur la carte scolaire — édition simple d'un seul champ, pas de
-  // formulaire complet d'édition du profil (qui n'existe pas encore ailleurs
-  // dans cette page non plus).
-  const [photoUrlDraft, setPhotoUrlDraft] = useState("");
-  const updatePhotoMutation = useMutation({
-    mutationFn: () => updateStudentPhoto(studentId, photoUrlDraft, creds),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
-      setPhotoUrlDraft("");
+  const [idCardUrl, setIdCardUrl] = useState<string | null>(null);
+  useEffect(() => setIdCardUrl(null), [student.data?.updatedAt]);
+  const [idCardError, setIdCardError] = useState(false);
+  useEffect(
+    () => () => {
+      if (idCardUrl) URL.revokeObjectURL(idCardUrl);
     },
-  });
-
+    [idCardUrl],
+  );
   const [idCardLoading, setIdCardLoading] = useState(false);
   async function downloadIdCard(): Promise<void> {
     setIdCardLoading(true);
+    setIdCardError(false);
     try {
       const blob = await fetchIdCardPdf(studentId, creds);
-      window.open(URL.createObjectURL(blob), "_blank");
+      const url = URL.createObjectURL(blob);
+      setIdCardUrl(url);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `carte-scolaire-${studentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      setIdCardError(true);
     } finally {
       setIdCardLoading(false);
     }
@@ -416,6 +450,20 @@ export function StudentDetailPage(): ReactNode {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+      {idCardError && (
+        <p role="alert" className="text-sm text-red-700">
+          Le téléchargement de la carte scolaire a échoué. Vérifiez l'inscription de l'élève puis réessayez.
+        </p>
+      )}
+      {idCardUrl && (
+        <a
+          className="block text-sm text-teal-700 underline"
+          href={idCardUrl}
+          download={`carte-scolaire-${studentId}.pdf`}
+        >
+          Télécharger la carte scolaire PDF
+        </a>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           {student.data.photoUrl ? (
@@ -444,33 +492,58 @@ export function StudentDetailPage(): ReactNode {
         </button>
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.photo")}</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            updatePhotoMutation.mutate();
-          }}
-          className="mt-3 flex flex-wrap items-end gap-3"
-        >
-          <input
-            placeholder={t("studentDetail.photoUrlPlaceholder")}
-            className="input w-72"
-            value={photoUrlDraft}
-            onChange={(event) => setPhotoUrlDraft(event.target.value)}
-          />
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={!photoUrlDraft || updatePhotoMutation.isPending}
-          >
-            {t("studentDetail.savePhoto")}
-          </Button>
-        </form>
-      </section>
+      <StudentProfileEditor key={session.subdomain + studentId} student={student.data} creds={creds} />
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.enrollments")}</h2>
+        <Link className="text-teal-700 underline" to="/inscriptions">
+          Gérer les périodes et les inscriptions
+        </Link>
+        <div className="my-4 space-y-2 border-b pb-4">
+          <h3 className="font-semibold">Parent / tuteur principal</h3>
+          <p>
+            {guardians.data?.find((g) => g.id === student.data?.primaryGuardianId)
+              ? (() => {
+                  const g = guardians.data.find((item) => item.id === student.data?.primaryGuardianId)!;
+                  return `${g.firstName} ${g.lastName} · ${g.phone}`;
+                })()
+              : "Dossier incomplet : aucun tuteur principal renseigné."}
+          </p>
+          {session.roleCodes.some((role) => ["SCHOOL_OWNER", "SCHOOL_ADMIN", "SECRETARY"].includes(role)) && (
+            <form
+              className="flex flex-wrap gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                guardianMutation.mutate();
+              }}
+            >
+              <select
+                aria-label="Tuteur principal"
+                className="input"
+                value={guardianId}
+                onChange={(event) => setGuardianId(event.target.value)}
+              >
+                <option value="">Choisir un tuteur</option>
+                {guardians.data?.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.firstName} {g.lastName} · {g.phone}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" disabled={!guardianId || guardianMutation.isPending}>
+                Rattacher ce tuteur
+              </Button>
+              <Link to="/parents" className="underline">
+                Créer un tuteur
+              </Link>
+            </form>
+          )}
+          {guardianMutation.isError && (
+            <p role="alert" className="text-red-600">
+              {guardianMutation.error.message}
+            </p>
+          )}
+        </div>
 
         {enrollments.isError || classrooms.isError ? (
           <p className="mt-2 text-sm text-red-600">{t("list.error.loadFailed")}</p>
@@ -481,7 +554,10 @@ export function StudentDetailPage(): ReactNode {
               const classroom = classrooms.data?.find((c) => c.id === enrollment.classroomId);
               return (
                 <li key={enrollment.id} className="flex justify-between border-b border-slate-100 pb-2">
-                  <span>{classroom?.name ?? enrollment.classroomId}</span>
+                  <span>
+                    {years.data?.find((year) => year.id === enrollment.academicYearId)?.name} ·{" "}
+                    {classroom?.name ?? enrollment.classroomId}
+                  </span>
                   <span className="text-slate-500">{enrollment.status}</span>
                 </li>
               );
@@ -499,18 +575,54 @@ export function StudentDetailPage(): ReactNode {
           className="mt-4 flex flex-wrap items-end gap-3"
         >
           <select
+            aria-label="Période d'inscription"
+            className="input"
+            required
+            value={selectedPeriodId}
+            onChange={(event) => {
+              setSelectedPeriodId(event.target.value);
+              setSelectedClassroomId("");
+            }}
+          >
+            <option value="">Période d'inscription</option>
+            {registrationPeriods.data
+              ?.filter(
+                (p) => p.isOpen && new Date(p.startDate) <= new Date() && new Date(p.endDate) >= new Date(),
+              )
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.academicYear.name}
+                </option>
+              ))}
+          </select>
+          <select
             className="input w-56"
             value={selectedClassroomId}
             onChange={(event) => setSelectedClassroomId(event.target.value)}
           >
             <option value="">{t("studentDetail.selectClassroom")}</option>
-            {(classrooms.data ?? []).map((classroom) => (
-              <option key={classroom.id} value={classroom.id}>
-                {classroom.name}
-              </option>
-            ))}
+            {(classrooms.data ?? [])
+              .filter(
+                (classroom) =>
+                  classroom.academicYearId ===
+                  registrationPeriods.data?.find((p) => p.id === selectedPeriodId)?.academicYearId,
+              )
+              .map((classroom) => (
+                <option key={classroom.id} value={classroom.id}>
+                  {classroom.name}
+                </option>
+              ))}
           </select>
-          <Button type="submit" variant="secondary" disabled={!selectedClassroomId}>
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={
+              !selectedClassroomId ||
+              !selectedPeriodId ||
+              !student.data?.primaryGuardianId ||
+              enrollMutation.isPending
+            }
+          >
             {t("studentDetail.enroll")}
           </Button>
         </form>
@@ -582,6 +694,13 @@ export function StudentDetailPage(): ReactNode {
                             ? t("studentDetail.hidePayments")
                             : t("studentDetail.showPayments")}
                         </button>
+                        {invoice.status !== "DRAFT" && (
+                          <InvoiceDownloadButton
+                            key={session.subdomain + invoice.id}
+                            invoiceId={invoice.id}
+                            creds={creds}
+                          />
+                        )}
                         {invoice.status === "DRAFT" ? (
                           <button
                             type="button"

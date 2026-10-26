@@ -322,6 +322,10 @@ export async function login(email: string, password: string, meta: SessionMeta):
 
   // §34 : mot de passe correct mais un second facteur reste à vérifier — pas de session
   // tant que verifyMfaChallenge n'a pas validé un code TOTP ou de secours.
+  if (env.NODE_ENV === "development" && env.DEV_SKIP_MFA) {
+    return createSession(user.id, meta);
+  }
+
   if (user.mfaEnabled) {
     return { mfaRequired: true, challengeToken: signMfaChallengeToken(user.id) };
   }

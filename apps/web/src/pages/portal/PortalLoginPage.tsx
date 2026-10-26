@@ -12,6 +12,7 @@ import { InstallAppButton } from "../../components/InstallAppButton.js";
 import { PasswordInput } from "../../components/PasswordInput.js";
 import { login, registerAccount, verifyEmail } from "../../lib/api.js";
 import { ApiError } from "../../lib/apiClient.js";
+import { getPortalHome } from "../../lib/portalHome.js";
 import { savePortalSession } from "../../lib/portalSession.js";
 
 const loginSchema = z.object({
@@ -38,7 +39,7 @@ export function PortalLoginPage(): ReactNode {
   async function completeLogin(email: string, password: string): Promise<void> {
     const tokens = await login(email, password);
     savePortalSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, email });
-    void navigate("/portail/activation");
+    void navigate(await getPortalHome(tokens.accessToken));
   }
 
   const onLogin = loginForm.handleSubmit(async (values) => {

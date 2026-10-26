@@ -231,6 +231,12 @@ export async function createPaymentIntent(input: CreatePaymentIntentInput): Prom
 
   const existing = await prisma.paymentIntent.findUnique({ where: { idempotencyKey } });
   if (existing) {
+    if (existing.invoiceId !== input.invoiceId)
+      throw new AppError(
+        409,
+        "PAYMENT_IDEMPOTENCY_CONFLICT",
+        "Cette référence appartient à un autre règlement",
+      );
     return existing;
   }
 

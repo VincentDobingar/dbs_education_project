@@ -10,6 +10,8 @@ import { listClassrooms } from "../../lib/schoolConfigApi.js";
 import { listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { SchoolClassReview } from "./SchoolClassReview.js";
+
 const STATUSES: AttendanceStatus[] = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
 
 function todayIso(): string {
@@ -133,7 +135,7 @@ function RollCallForm({
   );
 }
 
-export function AttendancePage(): ReactNode {
+function TeacherAttendancePage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
@@ -198,4 +200,9 @@ export function AttendancePage(): ReactNode {
       ) : null}
     </div>
   );
+}
+
+export function AttendancePage(): ReactNode {
+  const session = useRequiredSession();
+  return session.roleCodes.includes("TEACHER") ? <TeacherAttendancePage /> : <SchoolClassReview kind="attendance" />;
 }

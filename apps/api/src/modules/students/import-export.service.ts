@@ -62,6 +62,7 @@ export async function importStudentsFromCsv(csv: string): Promise<ImportStudents
         matricule: record.matricule,
         firstName: record.firstName,
         lastName: record.lastName,
+        ...(record.primaryGuardianId ? { primaryGuardianId: record.primaryGuardianId } : {}),
         ...(record.dateOfBirth ? { dateOfBirth: record.dateOfBirth } : {}),
         ...(record.gender ? { gender: record.gender } : {}),
         ...(record.emergencyContactName ? { emergencyContactName: record.emergencyContactName } : {}),

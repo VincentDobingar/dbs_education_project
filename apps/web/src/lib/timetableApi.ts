@@ -29,6 +29,8 @@ export function createTimetable(input: CreateTimetableInput, creds: TenantCreden
 }
 
 export interface TimetableEntry {
+  subjectName?: string | null;
+  teacherName?: string | null;
   id: string;
   timetableId: string;
   subjectId: string;

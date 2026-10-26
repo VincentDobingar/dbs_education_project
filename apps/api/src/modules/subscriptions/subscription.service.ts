@@ -343,6 +343,29 @@ export async function applySubscriptionTransition(
   }
 
   const updated = await tx.subscription.update({ where: { id: subscriptionId }, data });
+  if (["EXPIRED", "CANCELLED", "REFUNDED"].includes(toStatus)) {
+    await tx.parentSubscriptionCoverage.updateMany({
+      where: { subscriptionId, releasedAt: null },
+      data: { releasedAt: now },
+    });
+  } else if (toStatus === "ACTIVE") {
+    // Réactiver un abonnement expiré doit également respecter l'unicité de couverture.
+    try {
+      await tx.parentSubscriptionCoverage.updateMany({
+        where: { subscriptionId },
+        data: { releasedAt: null },
+      });
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+        throw new AppError(
+          409,
+          "CHILD_COVERAGE_CONFLICT",
+          "Cet enfant dispose déjà d'une autre couverture dans cet établissement",
+        );
+      }
+      throw error;
+    }
+  }
 
   await tx.subscriptionEvent.create({
     data: {

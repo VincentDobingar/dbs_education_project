@@ -107,3 +107,15 @@ export function fetchChildReceiptPdf(
 ): Promise<Blob> {
   return fetchBlob(`/parent-portal/children/${studentId}/receipts/${receiptId}/pdf`, { accessToken });
 }
+
+export function fetchChildInvoicePdf(
+  studentId: string,
+  invoiceId: string,
+  accessToken: string,
+): Promise<Blob> {
+  return fetchBlob(`/parent-portal/children/${studentId}/invoices/${invoiceId}/pdf`, { accessToken });
+}
+
+export function fetchChildIdCardPdf(studentId: string, accessToken: string): Promise<Blob> {
+  return fetchBlob(`/parent-portal/children/${studentId}/id-card`, { accessToken });
+}

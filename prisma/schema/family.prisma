@@ -49,11 +49,14 @@ model Guardian {
   lastName  String
   phone     String?
   email     String?
+  photoUrl  String?
+  address   String?
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   familyMemberships FamilyMember[]
+  schoolRecords     SchoolGuardian[]
 
   @@index([userId])
 }
@@ -121,6 +124,7 @@ model ActivationInvitation {
   id                  String                        @id @default(cuid())
   tenantId            String
   studentId           String
+  schoolGuardianId    String?
   beneficiaryCategory ActivationBeneficiaryCategory
   invitedEmail        String?
   invitedPhone        String?
@@ -130,8 +134,9 @@ model ActivationInvitation {
   createdAt           DateTime                      @default(now())
   updatedAt           DateTime                      @updatedAt
 
-  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  codes   ActivationCode[]
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  schoolGuardian SchoolGuardian?  @relation(fields: [schoolGuardianId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  codes          ActivationCode[]
 
   @@index([tenantId])
   @@index([studentId])
@@ -152,3 +157,4 @@ model ActivationCode {
 
   @@index([invitationId])
 }
+

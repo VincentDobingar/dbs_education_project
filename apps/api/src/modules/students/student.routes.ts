@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { imageUpload } from "../../lib/upload-middleware.js";
 import { enforceTenantScope } from "../../middleware/enforceTenantScope.js";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
@@ -28,8 +29,15 @@ studentRouter.post("/import", manageStudents, importExportController.importStude
 studentRouter.get("/export", readStudents, importExportController.exportStudents);
 studentRouter.get("/export.xlsx", readStudents, importExportController.exportStudentsXlsx);
 studentRouter.get("/:id", readStudents, studentController.getStudent);
+studentRouter.post(
+  "/:id/photo",
+  manageStudents,
+  imageUpload.single("photo"),
+  studentController.uploadStudentPhoto,
+);
 studentRouter.patch("/:id", manageStudents, studentController.updateStudent);
 studentRouter.post("/:id/archive", manageStudents, studentController.archiveStudent);
+studentRouter.get("/classrooms/:classroomId/id-cards", readStudents, idCardController.generateClassIdCards);
 studentRouter.get("/:id/id-card", readStudents, idCardController.generateIdCard);
 
 studentRouter.post("/:studentId/enrollments", manageStudents, enrollmentController.enrollStudent);

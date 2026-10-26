@@ -12,7 +12,10 @@ import { listClassrooms, listSubjects } from "../../lib/schoolConfigApi.js";
 import { listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { SchoolClassReview } from "./SchoolClassReview.js";
+
 const homeworkSchema = z.object({
+  kind: z.string().default("HOMEWORK"),
   classroomId: z.string().min(1),
   subjectId: z.string().min(1),
   title: z.string().min(1),
@@ -20,7 +23,7 @@ const homeworkSchema = z.object({
   dueAt: z.string().min(1),
 });
 
-export function HomeworkPage(): ReactNode {
+function TeacherHomeworkPage(): ReactNode {
   const { t } = useTranslation("app");
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
@@ -108,7 +111,20 @@ export function HomeworkPage(): ReactNode {
               <tbody>
                 {(homework.data ?? []).map((hw) => (
                   <tr key={hw.id} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-4 text-slate-700">{hw.title}</td>
+                    <td className="py-2 pr-4 text-slate-700">
+                      {
+                        (
+                          {
+                            HOMEWORK: "Devoir",
+                            PRACTICAL: "Travaux pratiques",
+                            QUIZ: "Interrogation",
+                            PRESENTATION: "Sujet d’exposé",
+                            EXERCISE: "Exercice",
+                          } as Record<string, string>
+                        )[hw.kind ?? "HOMEWORK"]
+                      }{" "}
+                      · {hw.title}
+                    </td>
                     <td className="py-2 pr-4 text-slate-700">{classroomName(hw.classroomId)}</td>
                     <td className="py-2 pr-4 text-slate-700">{subjectName(hw.subjectId)}</td>
                     <td className="py-2 pr-4 text-slate-700">{hw.dueAt.slice(0, 10)}</td>
@@ -135,6 +151,16 @@ export function HomeworkPage(): ReactNode {
           </div>
         )}
 
+        <label className="block mt-3">
+          Type de travail
+          <select className="input ml-3" {...form.register("kind")}>
+            <option value="HOMEWORK">Devoir</option>
+            <option value="PRACTICAL">Travaux pratiques</option>
+            <option value="QUIZ">Interrogation</option>
+            <option value="PRESENTATION">Sujet d'exposé</option>
+            <option value="EXERCISE">Exercice</option>
+          </select>
+        </label>
         <form
           onSubmit={(event) => void form.handleSubmit((values) => createMutation.mutate(values))(event)}
           className="mt-4 flex flex-wrap items-end gap-3"
@@ -170,6 +196,8 @@ export function HomeworkPage(): ReactNode {
             {t("homework.assign")}
           </Button>
         </form>
+        {createMutation.isError && <p role="alert" className="text-red-700">Publication impossible. Vérifiez la classe, la matière et l'échéance.</p>}
+        {createMutation.isSuccess && <p role="status" className="text-teal-700">Travail publié pour les élèves de cette classe et leurs parents.</p>}
       </section>
 
       {selectedHomework ? (
@@ -199,4 +227,9 @@ export function HomeworkPage(): ReactNode {
       ) : null}
     </div>
   );
+}
+
+export function HomeworkPage(): ReactNode {
+  const session = useRequiredSession();
+  return session.roleCodes.includes("TEACHER") ? <TeacherHomeworkPage /> : <SchoolClassReview kind="homework" />;
 }

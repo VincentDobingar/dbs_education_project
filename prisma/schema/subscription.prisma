@@ -258,6 +258,7 @@ model Subscription {
   invoices             Invoice[]
   promotionRedemptions PromotionRedemption[]
   licenseAssignments   LicenseAssignment[]
+  parentCoverages      ParentSubscriptionCoverage[]
 
   @@index([ownerId])
   @@index([status])

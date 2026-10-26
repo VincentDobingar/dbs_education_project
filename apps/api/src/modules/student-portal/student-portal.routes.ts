@@ -1,12 +1,15 @@
 import { Router } from "express";
 
 import { studentOwnerContext } from "../../lib/subscription-access.js";
+import { imageUpload } from "../../lib/upload-middleware.js";
 import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireEntitlement } from "../../middleware/requireEntitlement.js";
 import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
+import { getTimetableBreaks } from "../school-config/timetable-breaks.service.js";
 
 import * as studentPortalController from "./student-portal.controller.js";
+import { updateMyProfile, uploadMyPhoto } from "./student-profile.controller.js";
 
 export const studentPortalRouter: Router = Router();
 
@@ -20,6 +23,38 @@ const linkedStudent = requireLinkedStudent();
 // sans lien vérifié reste bloqué par le 403 de vérification de lien, jamais un 402
 // d'abonnement qui confirmerait au passage l'existence d'un abonnement pour ce compte.
 const requireStudentSubscription = requireActiveSubscription(studentOwnerContext);
+studentPortalRouter.get(
+  "/students/:studentId/incidents",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getIncidents,
+);
+studentPortalRouter.get(
+  "/students/:studentId/timetable-breaks",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  (_req, res, next) => {
+    void getTimetableBreaks()
+      .then((data) => res.json(data))
+      .catch(next);
+  },
+);
+studentPortalRouter.get(
+  "/students/:studentId/attendance",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getAttendance,
+);
+studentPortalRouter.get(
+  "/students/:studentId/grades",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getGrades,
+);
 
 studentPortalRouter.get(
   // Volontairement JAMAIS derrière requireStudentSubscription : ce tableau de bord
@@ -88,4 +123,43 @@ studentPortalRouter.get(
   linkedStudent,
   requireStudentSubscription,
   studentPortalController.getReceiptPdf,
+);
+
+studentPortalRouter.get(
+  "/students/:studentId/invoices",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getInvoices,
+);
+studentPortalRouter.get(
+  "/students/:studentId/invoices/:invoiceId/pdf",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getInvoicePdf,
+);
+
+studentPortalRouter.get(
+  "/students/:studentId/id-card",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  studentPortalController.getIdCardPdf,
+);
+
+studentPortalRouter.patch(
+  "/students/:studentId/profile",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  updateMyProfile,
+);
+studentPortalRouter.post(
+  "/students/:studentId/photo",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  imageUpload.single("photo"),
+  uploadMyPhoto,
 );

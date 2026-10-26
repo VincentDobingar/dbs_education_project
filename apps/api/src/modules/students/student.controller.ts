@@ -1,5 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { AppError } from "../../lib/errors.js";
+import { saveUploadedImage } from "../../lib/file-storage.js";
+
 import * as studentService from "./student.service.js";
 import {
   checkDuplicateStudentsQuerySchema,
@@ -66,5 +69,17 @@ export function archiveStudent(req: Request, res: Response, next: NextFunction):
   void (async () => {
     const student = await studentService.archiveStudent(req.params.id as string);
     res.status(200).json(student);
+  })().catch(next);
+}
+
+export function uploadStudentPhoto(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const id = req.params.id as string;
+    await studentService.requireStudentRecord(id);
+    if (!req.file)
+      throw new AppError(400, "PHOTO_REQUIRED", "Choisissez une photo JPEG ou PNG de 3 Mo maximum.");
+    const photoUrl = await saveUploadedImage(req.file.buffer, req.file.mimetype, "student-photos");
+    const student = await studentService.updateStudent(id, { photoUrl });
+    res.json({ photoUrl: student.photoUrl });
   })().catch(next);
 }

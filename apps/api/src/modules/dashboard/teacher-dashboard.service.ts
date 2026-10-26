@@ -119,16 +119,14 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
     })
     .filter((entry): entry is ClassroomToRollCall => entry !== null);
 
-  const assignedClassroomIds = [...new Set(classAssignments.map((assignment) => assignment.classroomId))];
-  const assignedSubjectIds = [...new Set(classAssignments.map((assignment) => assignment.subjectId))];
+  const assignedPairs = classAssignments.map((a) => ({ classroomId: a.classroomId, subjectId: a.subjectId }));
 
   const [upcomingAssessments, upcomingHomework, announcements] = await Promise.all([
     prisma.assessment.findMany({
       where: {
         deletedAt: null,
         isPublished: false,
-        classroomId: { in: assignedClassroomIds },
-        subjectId: { in: assignedSubjectIds },
+        OR: assignedPairs.length ? assignedPairs : [{ id: "__no_assignment__" }],
         scheduledAt: { gte: new Date() },
       },
       orderBy: { scheduledAt: "asc" },
@@ -137,8 +135,7 @@ export async function getTeacherDashboard(userId: string): Promise<TeacherDashbo
     prisma.homework.findMany({
       where: {
         deletedAt: null,
-        classroomId: { in: assignedClassroomIds },
-        subjectId: { in: assignedSubjectIds },
+        OR: assignedPairs.length ? assignedPairs : [{ id: "__no_assignment__" }],
         dueAt: { gte: new Date() },
       },
       orderBy: { dueAt: "asc" },

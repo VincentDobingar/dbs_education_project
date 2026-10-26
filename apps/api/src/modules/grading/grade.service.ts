@@ -3,6 +3,7 @@ import type { Grade } from "@prisma/client";
 import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma, withTenantSession } from "../../lib/prisma.js";
+import { requireTeacherRoster } from "../../lib/teacher-roster.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { requireStudentRecord } from "../students/student.service.js";
 
@@ -35,6 +36,7 @@ export async function setGrades(
   const maxScore = assessment.maxScore.toNumber();
 
   const results: Grade[] = [];
+  await requireTeacherRoster(assessment.classroomId, input.grades.map(g => g.studentId));
   for (const entry of input.grades) {
     await requireStudentRecord(entry.studentId);
     if (!entry.isAbsent && entry.score !== undefined && entry.score > maxScore) {

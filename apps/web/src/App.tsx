@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { PwaStatus } from "./components/PwaStatus.js";
 import { AdminLayout } from "./layouts/AdminLayout.js";
@@ -64,6 +64,10 @@ const AttendancePage = lazyImport(() => import("./pages/app/AttendancePage.js"),
 const BoardingPage = lazyImport(() => import("./pages/app/BoardingPage.js"), "BoardingPage");
 const CafeteriaPage = lazyImport(() => import("./pages/app/CafeteriaPage.js"), "CafeteriaPage");
 const ConfigurationPage = lazyImport(() => import("./pages/app/ConfigurationPage.js"), "ConfigurationPage");
+const TeacherDashboardPage = lazyImport(
+  () => import("./pages/app/TeacherDashboardPage.js"),
+  "TeacherDashboardPage",
+);
 const DashboardPage = lazyImport(() => import("./pages/app/DashboardPage.js"), "DashboardPage");
 const DisciplinePage = lazyImport(() => import("./pages/app/DisciplinePage.js"), "DisciplinePage");
 const ElearningPage = lazyImport(() => import("./pages/app/ElearningPage.js"), "ElearningPage");
@@ -87,6 +91,16 @@ const ReportCardsPage = lazyImport(() => import("./pages/app/ReportCardsPage.js"
 const StudentDetailPage = lazyImport(() => import("./pages/app/StudentDetailPage.js"), "StudentDetailPage");
 const SubscriptionPage = lazyImport(() => import("./pages/app/SubscriptionPage.js"), "SubscriptionPage");
 const StudentsPage = lazyImport(() => import("./pages/app/StudentsPage.js"), "StudentsPage");
+const GuardiansPage = lazyImport(() => import("./pages/app/GuardiansPage.js"), "GuardiansPage");
+const ParentProfilePage = lazyImport(
+  () => import("./pages/portal/ParentProfilePage.js"),
+  "ParentProfilePage",
+);
+const ParentSubscriptionsPage = lazyImport(
+  () => import("./pages/portal/ParentSubscriptionsPage.js"),
+  "ParentSubscriptionsPage",
+);
+const RegistrationsPage = lazyImport(() => import("./pages/app/RegistrationsPage.js"), "RegistrationsPage");
 const SupportTicketsPage = lazyImport(
   () => import("./pages/app/SupportTicketsPage.js"),
   "SupportTicketsPage",
@@ -100,6 +114,10 @@ const ParentDashboardPage = lazyImport(
 );
 const PortalLoginPage = lazyImport(() => import("./pages/portal/PortalLoginPage.js"), "PortalLoginPage");
 const PortalRedeemPage = lazyImport(() => import("./pages/portal/PortalRedeemPage.js"), "PortalRedeemPage");
+const StudentProfilePage = lazyImport(
+  () => import("./pages/portal/StudentProfilePage.js"),
+  "StudentProfilePage",
+);
 const StudentPortalPage = lazyImport(
   () => import("./pages/portal/StudentPortalPage.js"),
   "StudentPortalPage",
@@ -147,10 +165,14 @@ export function App(): ReactNode {
 
             <Route element={<AppLayout />}>
               <Route path="/tableau-de-bord" element={<DashboardPage />} />
+              <Route path="/enseignant" element={<TeacherDashboardPage />} />
               <Route path="/configuration" element={<ConfigurationPage />} />
               <Route path="/abonnement" element={<SubscriptionPage />} />
               <Route path="/eleves" element={<StudentsPage />} />
+              <Route path="/parents" element={<GuardiansPage />} />
+              <Route path="/inscriptions" element={<RegistrationsPage />} />
               <Route path="/eleves/:id" element={<StudentDetailPage />} />
+              <Route path="/utilisateurs" element={<Navigate to="/tableau-de-bord" replace />} />
               <Route path="/personnel" element={<EmployeesPage />} />
               <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
               <Route path="/discipline" element={<DisciplinePage />} />
@@ -172,8 +194,11 @@ export function App(): ReactNode {
 
             <Route element={<PortalLayout />}>
               <Route path="/portail/parent" element={<ParentDashboardPage />} />
+              <Route path="/portail/profil" element={<ParentProfilePage />} />
+              <Route path="/portail/abonnements" element={<ParentSubscriptionsPage />} />
               <Route path="/portail/parent/enfants/:studentId" element={<ParentChildPage />} />
               <Route path="/portail/eleve" element={<StudentPortalPage />} />
+              <Route path="/portail/eleve/profil" element={<StudentProfilePage />} />
               <Route path="/portail/activation" element={<PortalRedeemPage />} />
               <Route path="/portail/aide" element={<HelpPage />} />
             </Route>

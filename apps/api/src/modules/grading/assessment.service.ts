@@ -1,8 +1,9 @@
 import type { Assessment } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma, withTenantSession } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
+import { notifySchoolEvent } from "../communication/notification.service.js";
 
 import { requireAssessmentType } from "./assessment-type.service.js";
 import type {
@@ -102,6 +103,30 @@ export async function publishAssessment(id: string): Promise<Assessment> {
     throw new AppError(409, "ASSESSMENT_ALREADY_PUBLISHED", "Assessment is already published");
   }
 
-  await prisma.grade.updateMany({ where: { assessmentId: id }, data: { isLocked: true } });
-  return prisma.assessment.update({ where: { id }, data: { isPublished: true } });
+  const tenantId = requireCurrentTenantId();
+  return withTenantSession(tenantId, async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Assessment" WHERE id = ${id} AND "tenantId" = ${tenantId} FOR UPDATE`;
+    const current = await tx.assessment.findFirstOrThrow({ where: { id, tenantId } });
+    if (current.isPublished)
+      throw new AppError(409, "ASSESSMENT_ALREADY_PUBLISHED", "Assessment is already published");
+    await tx.grade.updateMany({ where: { assessmentId: id, tenantId }, data: { isLocked: true } });
+    const published = await tx.assessment.update({ where: { id }, data: { isPublished: true } });
+    const grades = await tx.grade.findMany({
+      where: { assessmentId: id, tenantId },
+      select: { studentId: true },
+      distinct: ["studentId"],
+    });
+    for (const { studentId } of grades)
+      await notifySchoolEvent(
+        {
+          studentId,
+          type: "grade.published",
+          title: "Nouvelle note publiée",
+          body: `Les résultats de « ${published.title} » sont disponibles dans votre espace.`,
+          metadata: { assessmentId: id },
+        },
+        tx,
+      );
+    return published;
+  });
 }

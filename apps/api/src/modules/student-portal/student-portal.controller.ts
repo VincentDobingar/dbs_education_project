@@ -1,9 +1,57 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { prisma } from "../../lib/prisma.js";
+import { listAttendance } from "../attendance/attendance.service.js";
+import { generateIdCardPdf } from "../students/id-card.service.js";
 
 import * as studentPortalService from "./student-portal.service.js";
 import { listMyReportCardsQuerySchema } from "./student-portal.validation.js";
+
+export function getAttendance(req: Request, res: Response, next: NextFunction): void {
+  void listAttendance({ studentId: req.params.studentId as string })
+    .then((rows) => res.json(rows))
+    .catch(next);
+}
+export function getIncidents(req: Request, res: Response, next: NextFunction): void {
+  void prisma.disciplinaryIncident
+    .findMany({
+      where: { studentId: req.params.studentId as string, deletedAt: null },
+      select: {
+        id: true,
+        occurredAt: true,
+        description: true,
+        severity: true,
+        sanction: true,
+        correctiveAction: true,
+      },
+      orderBy: { occurredAt: "desc" },
+    })
+    .then((rows) => res.json(rows))
+    .catch(next);
+}
+export function getGrades(req: Request, res: Response, next: NextFunction): void {
+  void prisma.grade
+    .findMany({
+      where: {
+        studentId: req.params.studentId as string,
+        assessment: { isPublished: true, deletedAt: null },
+      },
+      include: {
+        assessment: {
+          select: {
+            title: true,
+            maxScore: true,
+            scheduledAt: true,
+            subject: { select: { nameFr: true, nameEn: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+    .then((rows) => res.json(rows))
+    .catch(next);
+}
 
 function requireTenant(req: Request): NonNullable<Request["tenant"]> {
   if (!req.tenant) {
@@ -91,6 +139,40 @@ export function getReceiptPdf(req: Request, res: Response, next: NextFunction): 
       .status(200)
       .set("Content-Type", "application/pdf")
       .set("Content-Disposition", `inline; filename="recu-${receiptId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}
+
+export function getInvoices(req: Request, res: Response, next: NextFunction): void {
+  void studentPortalService
+    .getMyInvoices(req.params.studentId as string)
+    .then((invoices) => res.json(invoices))
+    .catch(next);
+}
+export function getInvoicePdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const invoiceId = req.params.invoiceId as string;
+    const pdf = await studentPortalService.getMyInvoicePdf(
+      req.params.studentId as string,
+      invoiceId,
+      requireTenant(req),
+    );
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `inline; filename="facture-${invoiceId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}
+
+export function getIdCardPdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const pdf = await generateIdCardPdf(studentId, requireTenant(req));
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `inline; filename="carte-scolaire-${studentId}.pdf"`)
       .send(pdf);
   })().catch(next);
 }

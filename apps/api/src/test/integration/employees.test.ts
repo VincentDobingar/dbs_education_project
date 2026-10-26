@@ -2,7 +2,7 @@ import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
-import { signAccessToken } from "../../lib/jwt.js";
+import { signAccessToken, verifyAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
 
@@ -78,6 +78,42 @@ describe("staff / personnel (§27)", () => {
     const employees = listed.body as Record<string, unknown>[];
     expect(employees.length).toBe(1);
     expect(employees[0]).not.toHaveProperty("salaryCents");
+
+    const tenant = await testAdminPrisma.tenantDomain.findFirstOrThrow({ where: { subdomain } });
+    const subject = await testAdminPrisma.subject.create({
+      data: { tenantId: tenant.tenantId, code: uniqueSuffix(), nameFr: "Mathématiques", nameEn: "Math" },
+    });
+    const updated = await request(app)
+      .patch(`/api/v1/employees/${body.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ email: "teacher@example.test", subjectId: subject.id });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ email: "teacher@example.test", subjectId: subject.id });
+    const badSubject = await request(app)
+      .patch(`/api/v1/employees/${body.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ subjectId: "unavailable-subject" });
+    expect(badSubject.status).toBe(404);
+    const teacher = await testAdminPrisma.user.findUniqueOrThrow({
+      where: { id: verifyAccessToken(teacherToken).sub },
+    });
+    const linked = await request(app)
+      .post(`/api/v1/employees/${body.id}/teacher-account`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ email: teacher.email });
+    expect(linked.status).toBe(200);
+    expect(linked.body).toMatchObject({ userId: teacher.id });
+    const foreign = await request(app)
+      .post(`/api/v1/employees/${body.id}/teacher-account`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ email: "unknown@example.test" });
+    expect(foreign.status).toBe(400);
+    await testAdminPrisma.employee.update({ where: { id: body.id }, data: { subjectId: null } });
+    await testAdminPrisma.subject.delete({ where: { id: subject.id } });
   });
 
   it("rejects a duplicate employee number within the same tenant", async () => {

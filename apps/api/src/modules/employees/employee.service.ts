@@ -31,6 +31,8 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
     );
   }
 
+  if (input.subjectId && !(await prisma.subject.findUnique({ where: { id: input.subjectId } })))
+    throw new AppError(404, "SUBJECT_NOT_FOUND", "Matière introuvable dans cet établissement");
   if (input.departmentId) {
     await assertDepartmentExists(input.departmentId);
   }
@@ -45,6 +47,8 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       firstName: input.firstName,
       lastName: input.lastName,
       jobTitle: input.jobTitle,
+      email: input.email ?? null,
+      subjectId: input.subjectId ?? null,
       ...(input.departmentId ? { departmentId: input.departmentId } : {}),
       ...(input.hireDate ? { hireDate: input.hireDate } : {}),
       ...(input.userId ? { userId: input.userId } : {}),
@@ -71,6 +75,8 @@ export async function getEmployee(id: string): Promise<Employee> {
 export async function updateEmployee(id: string, input: UpdateEmployeeInput): Promise<Employee> {
   await getEmployee(id);
 
+  if (input.subjectId && !(await prisma.subject.findUnique({ where: { id: input.subjectId } })))
+    throw new AppError(404, "SUBJECT_NOT_FOUND", "Matière introuvable dans cet établissement");
   if (input.departmentId) {
     await assertDepartmentExists(input.departmentId);
   }
@@ -78,6 +84,8 @@ export async function updateEmployee(id: string, input: UpdateEmployeeInput): Pr
   return prisma.employee.update({
     where: { id },
     data: {
+      ...(input.email !== undefined ? { email: input.email } : {}),
+      ...(input.subjectId !== undefined ? { subjectId: input.subjectId } : {}),
       ...(input.jobTitle !== undefined ? { jobTitle: input.jobTitle } : {}),
       ...(input.departmentId !== undefined ? { departmentId: input.departmentId } : {}),
       ...(input.hireDate !== undefined ? { hireDate: input.hireDate } : {}),
@@ -119,4 +127,43 @@ export async function getEmployeeWorkload(
   );
 
   return { assignments, totalHoursPerWeek };
+}
+
+export async function linkTeacherAccount(employeeId: string, email: string) {
+  const employee = await getEmployee(employeeId);
+  if (employee.status === "TERMINATED")
+    throw new AppError(409, "EMPLOYEE_TERMINATED", "Cette fiche personnel est inactive.");
+  const tenantId = requireCurrentTenantId();
+  const user = await rawPrisma.user.findFirst({
+    where: { email: { equals: email.trim().toLowerCase(), mode: "insensitive" }, status: "ACTIVE" },
+  });
+  const member = user
+    ? await prisma.tenantMembership.findFirst({ where: { userId: user.id, tenantId, status: "ACTIVE" } })
+    : null;
+  const teacherRole = user
+    ? await rawPrisma.userRole.findFirst({
+        where: {
+          userId: user.id,
+          tenantId,
+          role: { code: "TEACHER" },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+      })
+    : null;
+  if (!user || !member || !teacherRole)
+    throw new AppError(
+      400,
+      "TEACHER_ACCOUNT_REQUIRED",
+      "Choisissez un compte enseignant actif de cet établissement, créé dans Utilisateurs.",
+    );
+  const duplicate = await prisma.employee.findFirst({
+    where: { userId: user.id, id: { not: employeeId }, deletedAt: null, status: { not: "TERMINATED" } },
+  });
+  if (duplicate)
+    throw new AppError(
+      409,
+      "EMPLOYEE_ACCOUNT_ALREADY_LINKED",
+      "Ce compte est déjà lié à une fiche personnel active.",
+    );
+  return prisma.employee.update({ where: { id: employeeId }, data: { userId: user.id } });
 }

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../../lib/errors.js";
+import { generateIdCardPdf } from "../students/id-card.service.js";
 
 import * as parentPortalService from "./parent-portal.service.js";
 import {
@@ -116,6 +117,34 @@ export function getChildReceiptPdf(req: Request, res: Response, next: NextFuncti
       .status(200)
       .set("Content-Type", "application/pdf")
       .set("Content-Disposition", `inline; filename="recu-${receiptId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}
+
+export function getChildInvoicePdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const invoiceId = req.params.invoiceId as string;
+    const pdf = await parentPortalService.getChildInvoicePdf(
+      req.params.studentId as string,
+      invoiceId,
+      requireTenant(req),
+    );
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `inline; filename="facture-${invoiceId}.pdf"`)
+      .send(pdf);
+  })().catch(next);
+}
+
+export function getIdCardPdf(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    const studentId = req.params.studentId as string;
+    const pdf = await generateIdCardPdf(studentId, requireTenant(req));
+    res
+      .status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `inline; filename="carte-scolaire-${studentId}.pdf"`)
       .send(pdf);
   })().catch(next);
 }

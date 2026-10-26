@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
+import { env } from "../../env.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole } from "../fixtures.js";
 
@@ -12,6 +13,33 @@ describe("MFA obligatoire pour rôles sensibles (§34)", () => {
   const app = createApp();
   const createdTenantIds: string[] = [];
   const createdUserIds: string[] = [];
+
+  it("autorise le contournement temporaire uniquement en développement", async () => {
+    const user = await createUser("mfa-local-bypass");
+    createdUserIds.push(user.id);
+    await testAdminPrisma.user.update({ where: { id: user.id }, data: { mfaEnabled: true } });
+    const previous = { nodeEnv: env.NODE_ENV, skip: env.DEV_SKIP_MFA };
+    try {
+      env.DEV_SKIP_MFA = true;
+      env.NODE_ENV = "development";
+      const local = await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: user.email, password: PASSWORD });
+      const localBody = local.body as { accessToken?: string; mfaRequired?: boolean };
+      expect(localBody.accessToken).toBeTruthy();
+      expect(localBody.mfaRequired).toBeUndefined();
+      env.NODE_ENV = "production";
+      const production = await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: user.email, password: PASSWORD });
+      const productionBody = production.body as { accessToken?: string; mfaRequired?: boolean };
+      expect(productionBody.mfaRequired).toBe(true);
+      expect(productionBody.accessToken).toBeUndefined();
+    } finally {
+      env.NODE_ENV = previous.nodeEnv;
+      env.DEV_SKIP_MFA = previous.skip;
+    }
+  });
 
   afterAll(async () => {
     await testAdminPrisma.mfaRecoveryCode.deleteMany({ where: { userId: { in: createdUserIds } } });

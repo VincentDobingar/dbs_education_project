@@ -33,6 +33,8 @@ describe("tenant users / membership management (§17)", () => {
     createdUserIds.push(owner.id);
     await addMembership(owner.id, tenant.id);
     await grantRole(owner.id, "SCHOOL_OWNER", tenant.id);
+    // La gestion des utilisateurs exige désormais aussi le rôle plateforme SUPER_ADMIN.
+    await grantRole(owner.id, "SUPER_ADMIN", null);
 
     const teacher = await createUser("tu-teacher");
     createdUserIds.push(teacher.id);
@@ -47,6 +49,7 @@ describe("tenant users / membership management (§17)", () => {
     createdUserIds.push(admin.id);
     await addMembership(admin.id, tenant.id);
     await grantRole(admin.id, "SCHOOL_ADMIN", tenant.id);
+    await grantRole(admin.id, "SUPER_ADMIN", null);
 
     return {
       tenantId: tenant.id,
@@ -57,7 +60,7 @@ describe("tenant users / membership management (§17)", () => {
     };
   }
 
-  it("lets a SCHOOL_OWNER invite and list members, but refuses a TEACHER without tenant.settings.manage", async () => {
+  it("lets a SUPER_ADMIN with tenant management rights invite and list members, but refuses a TEACHER", async () => {
     const { subdomain, ownerToken, teacherToken } = await setUpTenantWithOwner();
     const email = `invitee-${uniqueSuffix()}@example.test`;
 

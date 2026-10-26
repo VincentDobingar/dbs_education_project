@@ -33,13 +33,13 @@ function rateLimitedResponse(_req: Request, res: Response): void {
  * d'atteindre le store, donc ouvrir une connexion Redis par processus de test
  * n'apporterait rien (voir lib/redis.ts, création paresseuse).
  */
-function buildStore(): Store | undefined {
+function buildStore(namespace: string): Store | undefined {
   if (env.NODE_ENV === "test") return undefined;
 
   return new RedisStore({
     sendCommand: (command: string, ...args: string[]) =>
       getRedisClient().call(command, ...args) as Promise<RedisReply>,
-    prefix: "rl:",
+    prefix: `rl:${namespace}:`,
   });
 }
 
@@ -47,12 +47,15 @@ function buildStore(): Store | undefined {
  * "engaged" path of `apiRateLimiter`/`authRateLimiter` themselves (skip is always
  * true there), so the regression test builds its own instance with `skip` overridden. */
 export function buildRateLimiter(options: {
+  namespace?: string;
   windowMs: number;
   limit: number;
   skip?: () => boolean;
   keyGenerator?: (req: Request) => string;
 }): ReturnType<typeof rateLimit> {
-  const store = buildStore();
+  // Compteurs indépendants entre connexion et navigation, partagés entre instances
+  // uniquement pour une même politique. Aucun identifiant de processus dans le préfixe.
+  const store = buildStore(options.namespace ?? `${options.windowMs}:${options.limit}`);
   return rateLimit({
     windowMs: options.windowMs,
     limit: options.limit,

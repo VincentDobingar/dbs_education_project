@@ -1,10 +1,12 @@
 import { Router } from "express";
 
-import { familyAccountOwnerContext } from "../../lib/subscription-access.js";
-import { requireActiveSubscription } from "../../middleware/requireActiveSubscription.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 import { requireEntitlement } from "../../middleware/requireEntitlement.js";
+import { parentCoverageOwnerContext, requireParentCoverage } from "../../middleware/requireParentCoverage.js";
 import { requireVerifiedStudentRelationship } from "../../middleware/requireVerifiedStudentRelationship.js";
+import * as publication from "../elearning/course-publication.controller.js";
+import { getTimetableBreaks } from "../school-config/timetable-breaks.service.js";
+import { getGrades, getIncidents } from "../student-portal/student-portal.controller.js";
 
 import * as parentPortalController from "./parent-portal.controller.js";
 
@@ -15,21 +17,69 @@ export const parentPortalRouter: Router = Router();
 // verrouille le tenant à celui de l'enfant, jamais enforceTenantScope/requireTenantMembership.
 const verifiedChild = requireVerifiedStudentRelationship();
 
-// §37 : « un parent non abonné ne peut pas consulter les fonctions protégées ». Une
-// seule inscription familiale couvre tous les enfants (§9, plafonné par
-// FamilyAccount.maxChildren) — un seul gardien, jamais un par enfant. Placé APRÈS
-// verifiedChild sur chaque route ci-dessous (jamais avant) : un étranger sans
-// relation vérifiée reste bloqué par le 403 de vérification de relation, jamais un
-// 402 d'abonnement qui confirmerait au passage l'existence d'un compte familial.
-const requireFamilySubscription = requireActiveSubscription(familyAccountOwnerContext);
+// Relation vérifiée d'abord, couverture explicite enfant/établissement ensuite.
+// Un abonnement familial couvre uniquement ses enfants sélectionnés ; le quota
+// PDF est décompté sur l'abonnement exact qui couvre l'enfant demandé.
+const requireFamilySubscription = requireParentCoverage;
+parentPortalRouter.get(
+  "/children/:studentId/timetable-breaks",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  (_req, res, next) => {
+    void getTimetableBreaks()
+      .then((data) => res.json(data))
+      .catch(next);
+  },
+);
+parentPortalRouter.get(
+  "/children/:studentId/courses",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  publication.familyCourses,
+);
+parentPortalRouter.get(
+  "/children/:studentId/courses/:courseId",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  publication.familyCourse,
+);
+parentPortalRouter.get(
+  "/children/:studentId/courses/:courseId/resources/:resourceId/file",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  publication.familyPdf,
+);
 
-// Pas de :studentId ici — agrège tous les enfants vérifiés du parent, chacun sous
-// son propre verrouillage de tenant (voir parent-portal.service.ts#getParentDashboard).
-// Volontairement JAMAIS derrière requireFamilySubscription : ce tableau de bord doit
-// rester consultable même sans abonnement (il affiche justement `subscription: null`
-// dans ce cas, jamais un abonnement fabriqué) — c'est un aperçu, pas une fonction
-// protégée au sens de §37.
+// La coque reste accessible pour souscrire ; le service exclut tout enfant sans
+// couverture ACTIVE avant de charger ses données scolaires ou financières.
 parentPortalRouter.get("/dashboard", requireAuth, parentPortalController.getDashboard);
+parentPortalRouter.get(
+  "/children/:studentId/grades",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  getGrades,
+);
+parentPortalRouter.get(
+  "/children/:studentId/incidents",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  getIncidents,
+);
+parentPortalRouter.get(
+  "/children/:studentId/access",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  (_req, res) => {
+    res.json({ allowed: true });
+  },
+);
 
 parentPortalRouter.get(
   "/children/:studentId/attendance",
@@ -59,7 +109,8 @@ parentPortalRouter.get(
   // §37 quotas : entitlement dédié plutôt que requireFamilySubscription seul — le
   // téléchargement d'un bulletin en PDF est la seule action de ce module déjà
   // dimensionnée avec un quota au seed (plan-features.ts, "report_card.download").
-  requireEntitlement("report_card.download", familyAccountOwnerContext),
+  requireFamilySubscription,
+  requireEntitlement("report_card.download", parentCoverageOwnerContext),
   parentPortalController.getChildReportCardPdf,
 );
 parentPortalRouter.get(
@@ -103,4 +154,20 @@ parentPortalRouter.get(
   verifiedChild,
   requireFamilySubscription,
   parentPortalController.getChildReceiptPdf,
+);
+
+parentPortalRouter.get(
+  "/children/:studentId/invoices/:invoiceId/pdf",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  parentPortalController.getChildInvoicePdf,
+);
+
+parentPortalRouter.get(
+  "/children/:studentId/id-card",
+  requireAuth,
+  verifiedChild,
+  requireFamilySubscription,
+  parentPortalController.getIdCardPdf,
 );

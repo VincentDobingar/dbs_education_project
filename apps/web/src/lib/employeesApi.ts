@@ -3,11 +3,14 @@ import { apiRequest, fetchBlob, type TenantCredentials } from "./apiClient.js";
 export type EmployeeStatus = "ACTIVE" | "ON_LEAVE" | "TERMINATED";
 
 export interface Employee {
+  userId?: string | null;
   id: string;
   employeeNumber: string;
   firstName: string;
   lastName: string;
   jobTitle: string;
+  email?: string | null;
+  subjectId?: string | null;
   hireDate: string | null;
   status: EmployeeStatus;
   deletedAt: string | null;
@@ -18,6 +21,8 @@ export interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   jobTitle: string;
+  email?: string | null;
+  subjectId?: string | null;
 }
 
 export function listEmployees(creds: TenantCredentials): Promise<Employee[]> {
@@ -206,4 +211,12 @@ export function fetchPayrollExportCsv(creds: TenantCredentials): Promise<Blob> {
 
 export function fetchPayrollExportXlsx(creds: TenantCredentials): Promise<Blob> {
   return fetchBlob("/employees/payroll/export.xlsx", creds);
+}
+
+export function updateEmployeeContact(
+  id: string,
+  input: { email: string | null; subjectId: string | null },
+  creds: TenantCredentials,
+): Promise<Employee> {
+  return apiRequest(`/employees/${id}`, { method: "PATCH", body: input, ...creds });
 }

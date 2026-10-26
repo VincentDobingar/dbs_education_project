@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../lib/apiClient.js";
 import { redeemActivation } from "../../lib/familyApi.js";
@@ -38,6 +38,12 @@ export function PortalRedeemPage(): ReactNode {
     <div className="mx-auto max-w-md px-6 py-16">
       <h1 className="text-2xl font-bold text-slate-900">{t("portal.redeem.title")}</h1>
       <p className="mt-2 text-sm text-slate-600">{t("portal.redeem.subtitle")}</p>
+      <p className="mt-3 text-sm text-slate-600">
+        {t("portal.redeem.promotionHint")}{" "}
+        <Link className="text-teal-700 underline" to="/portail/abonnements">
+          {t("portal.redeem.subscriptionsLink")}
+        </Link>
+      </p>
 
       <form
         onSubmit={(event) => {
@@ -47,6 +53,7 @@ export function PortalRedeemPage(): ReactNode {
         className="mt-6 space-y-4"
       >
         <input
+          aria-label={t("portal.redeem.codePlaceholder")}
           placeholder={t("portal.redeem.codePlaceholder")}
           className="input w-full"
           value={code}

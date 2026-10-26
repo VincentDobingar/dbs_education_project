@@ -1,6 +1,8 @@
 import { apiRequest, type TenantCredentials } from "./apiClient.js";
 
 export interface OnlineCourse {
+  approvalStatus?: string;
+  reviewComment?: string | null;
   id: string;
   classroomId: string;
   subjectId: string;
@@ -35,6 +37,7 @@ export function cancelCourse(id: string, creds: TenantCredentials): Promise<void
 export type LearningResourceType = "VIDEO" | "DOCUMENT" | "LINK" | "TEXT";
 
 export interface CourseResource {
+  fileKey?: string | null;
   id: string;
   courseId: string;
   title: string;

@@ -5,6 +5,7 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("bulletins et moyennes (§21)", () => {
   const app = createApp();
@@ -19,6 +20,7 @@ describe("bulletins et moyennes (§21)", () => {
     await testAdminPrisma.assessment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.assessmentType.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.subjectCoefficient.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -31,6 +33,7 @@ describe("bulletins et moyennes (§21)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -153,7 +156,14 @@ describe("bulletins et moyennes (§21)", () => {
         .post(`/api/v1/students/${studentId}/enrollments`)
         .set("Authorization", `Bearer ${adminToken}`)
         .set("X-Tenant-Slug", subdomain)
-        .send({ classroomId, academicYearId, campusId: (campus.body as { id: string }).id, gradeLevelId });
+        .send(
+          await prepareEnrollmentInput(studentId, {
+            classroomId,
+            academicYearId,
+            campusId: (campus.body as { id: string }).id,
+            gradeLevelId,
+          }),
+        );
       studentIds.push(studentId);
     }
     const [studentA, studentB] = studentIds;
@@ -246,6 +256,20 @@ describe("bulletins et moyennes (§21)", () => {
     expect(reportCardB?.classRank).toBe(2);
     expect(reportCardB?.mention).toBe("Passable");
 
+    const batchPdf = await request(app)
+      .get(
+        `/api/v1/grading/report-cards/class/pdf?classroomId=${classroomId}&academicPeriodId=${academicPeriodId}`,
+      )
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    const foreignClass = await request(app)
+      .get(`/api/v1/grading/report-cards/class/pdf?classroomId=unknown&academicPeriodId=${academicPeriodId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain);
+    expect(foreignClass.status).toBe(404);
+    expect(batchPdf.status).toBe(200);
+    expect(batchPdf.headers["content-type"]).toContain("application/pdf");
+    expect((batchPdf.body as Buffer).toString("latin1").match(/\/Type \/Page\b/g)).toHaveLength(2);
     const listed = await request(app)
       .get(`/api/v1/grading/report-cards?classroomId=${classroomId}&academicPeriodId=${academicPeriodId}`)
       .set("Authorization", `Bearer ${adminToken}`)

@@ -44,6 +44,7 @@ export async function createIncident(
     studentId: input.studentId,
     type: "discipline.incident",
     title: "Incident disciplinaire",
+    metadata: { incidentId: incident.id },
     body: `Un incident disciplinaire (${input.severity}) a été enregistré.`,
   });
 
@@ -54,6 +55,7 @@ export async function listIncidents(query: ListIncidentsQuery): Promise<Discipli
   return prisma.disciplinaryIncident.findMany({
     where: {
       deletedAt: null,
+      ...(query.classroomId ? { student: { enrollments: { some: { classroomId: query.classroomId, deletedAt: null, status: { in: ["ENROLLED" as const, "RE_ENROLLED" as const] }, academicYear: { isCurrent: true } } } } } : {}),
       ...(query.studentId ? { studentId: query.studentId } : {}),
       ...(query.severity ? { severity: query.severity } : {}),
     },

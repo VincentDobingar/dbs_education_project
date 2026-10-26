@@ -12,6 +12,7 @@ import {
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
   const app = createApp();
@@ -31,6 +32,8 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
     await testAdminPrisma.courseResource.deleteMany({
       where: { course: { tenantId: { in: createdTenantIds } } },
     });
+    await testAdminPrisma.auditLog.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.notification.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.onlineCourse.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.studentUserLink.deleteMany({
       where: { student: { tenantId: { in: createdTenantIds } } },
@@ -40,7 +43,10 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
     });
     await testAdminPrisma.activationInvitation.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.teacherAssignment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.timetableEntry.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.timetable.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -52,6 +58,7 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -102,6 +109,11 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .set("X-Tenant-Slug", subdomain)
       .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
     const academicYearId = (year.body as { id: string }).id;
+    await request(app)
+      .post(`/api/v1/school-config/academic-years/${academicYearId}/set-current`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send();
 
     const cycle = await request(app)
       .post("/api/v1/school-config/education-cycles")
@@ -146,7 +158,7 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, classroomId, campusId, gradeLevelId }));
 
     const studentUser = await createUser("el-student");
     const studentToken = signAccessToken({ sub: studentUser.id });
@@ -213,6 +225,11 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .send({ classroomId, subjectId, title: "Les décimaux" });
     expect(blockedCourse.status).toBe(403);
     expect((blockedCourse.body as { code: string }).code).toBe("EMPLOYEE_RECORD_REQUIRED");
+    await request(app)
+      .patch(`/api/v1/employees/${teacherEmployeeId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "ACTIVE" });
 
     const invalidResource = await request(app)
       .post(`/api/v1/elearning/courses/${courseId}/resources`)
@@ -228,7 +245,7 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .send({
         title: "Vidéo introductive",
         type: "VIDEO",
-        url: "https://videos.example.test/fractions.mp4",
+        url: "https://www.youtube.com/watch?v=fractions-test",
         order: 1,
       });
     expect(videoResource.status).toBe(201);
@@ -297,7 +314,7 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
   }, 30000);
 
   it("lets a linked student browse their classroom's courses and mark resources complete, never reaching another classroom's course", async () => {
-    const { subdomain, teacherToken, classroomId, subjectId, studentId, studentToken } =
+    const { subdomain, adminToken, teacherToken, classroomId, subjectId, studentId, studentToken } =
       await setUpClassroom();
 
     const course = await request(app)
@@ -332,6 +349,71 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
     createdSubscribedStudentIds.push(studentId);
     await createSubscription({ studentId }, "STUDENT", "STUDENT_BASIC", "ACTIVE");
 
+    const pending = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(pending.status).toBe(200);
+    expect(pending.body).toEqual([]);
+    const teacherReview = await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/review`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "APPROVED" });
+    expect(teacherReview.status).toBe(403);
+    for (const comment of [undefined, "", "   "]) {
+      const invalid = await request(app)
+        .post(`/api/v1/elearning/courses/${courseId}/review`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .set("X-Tenant-Slug", subdomain)
+        .send({ status: "REJECTED", ...(comment !== undefined ? { comment } : {}) });
+      expect(invalid.status).toBe(400);
+    }
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/communication/notifications")
+          .set("Authorization", `Bearer ${teacherToken}`)
+      ).body,
+    ).toEqual([]);
+    const reviewed = await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "APPROVED" });
+    expect(reviewed.status).toBe(200);
+    const approvedNotice = await request(app)
+      .get("/api/v1/communication/notifications")
+      .set("Authorization", `Bearer ${teacherToken}`);
+    expect(approvedNotice.body).toEqual([
+      expect.objectContaining({ type: "course.review.approved", title: "Cours validé" }),
+    ]);
+    await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "APPROVED" });
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/communication/notifications")
+          .set("Authorization", `Bearer ${teacherToken}`)
+      ).body,
+    ).toHaveLength(1);
+    const noticeId = (approvedNotice.body as { id: string }[])[0]!.id;
+    expect(
+      (
+        await request(app)
+          .patch(`/api/v1/communication/notifications/${noticeId}/read`)
+          .set("Authorization", `Bearer ${studentToken}`)
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(app)
+          .patch(`/api/v1/communication/notifications/${noticeId}/read`)
+          .set("Authorization", `Bearer ${teacherToken}`)
+      ).status,
+    ).toBe(200);
     const listedForStudent = await request(app)
       .get(`/api/v1/elearning/student/${studentId}/courses`)
       .set("Authorization", `Bearer ${studentToken}`);
@@ -391,5 +473,156 @@ describe("e-learning — cours en ligne et suivi de progression (§29)", () => {
       .get(`/api/v1/elearning/student/${studentId}/courses/${(otherCourse.body as { id: string }).id}`)
       .set("Authorization", `Bearer ${studentToken}`);
     expect(crossClassroomAttempt.status).toBe(404);
+    const pdf = await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/pdf`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .field("title", "Support PDF")
+      .attach("file", Buffer.from("%PDF-1.4\n%%EOF"), {
+        filename: "cours.pdf",
+        contentType: "application/pdf",
+      });
+    expect(pdf.status).toBe(201);
+    const pdfId = (pdf.body as { id: string }).id;
+    const hiddenAfterEdit = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(hiddenAfterEdit.body).toEqual([]);
+    const hiddenFile = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses/${courseId}/resources/${pdfId}/file`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(hiddenFile.status).toBe(404);
+    await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "APPROVED" });
+    const visibleFile = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses/${courseId}/resources/${pdfId}/file`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(visibleFile.status).toBe(200);
+    expect(visibleFile.headers["content-type"]).toContain("application/pdf");
+    const rejected = await request(app)
+      .post(`/api/v1/elearning/courses/${courseId}/review`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ status: "REJECTED", comment: "  Préciser les exemples et les consignes.  " });
+    expect(rejected.status).toBe(200);
+    expect(rejected.body).toMatchObject({ reviewComment: "Préciser les exemples et les consignes." });
+    const refusedNotices = await request(app)
+      .get("/api/v1/communication/notifications")
+      .set("Authorization", `Bearer ${teacherToken}`);
+    expect(
+      (refusedNotices.body as { type: string; body: string }[]).find(
+        (n) => n.type === "course.review.rejected",
+      )?.body,
+    ).toContain("Préciser les exemples et les consignes.");
+    const adminNotices = await request(app)
+      .get("/api/v1/communication/notifications")
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(adminNotices.body).toEqual([]);
+    const rejectedList = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(rejectedList.body).toEqual([]);
+    const rejectedFile = await request(app)
+      .get(`/api/v1/elearning/student/${studentId}/courses/${courseId}/resources/${pdfId}/file`)
+      .set("Authorization", `Bearer ${studentToken}`);
+    expect(rejectedFile.status).toBe(404);
+  }, 30000);
+
+  it("isole aussi les listes et identifiants directs d'une autre classe du même établissement", async () => {
+    const setup = await setUpClassroom();
+    const { subdomain, teacherToken, classroomId, subjectId, studentId } = setup;
+    const own = await testAdminPrisma.classroom.findUniqueOrThrow({ where: { id: classroomId } });
+    const foreign = await testAdminPrisma.classroom.create({
+      data: {
+        tenantId: own.tenantId,
+        academicYearId: own.academicYearId,
+        campusId: own.campusId,
+        gradeLevelId: own.gradeLevelId,
+        name: "Classe non affectée",
+      },
+    });
+    const student = await testAdminPrisma.student.create({
+      data: {
+        tenantId: own.tenantId,
+        matricule: uniqueSuffix(),
+        firstName: "Autre",
+        lastName: "Classe",
+        status: "ACTIVE",
+      },
+    });
+    const hiddenCourse = await testAdminPrisma.onlineCourse.create({
+      data: { tenantId: own.tenantId, classroomId: foreign.id, subjectId, title: "Cours privé autre classe" },
+    });
+    const anotherTeacher = await testAdminPrisma.employee.create({
+      data: {
+        tenantId: own.tenantId,
+        employeeNumber: uniqueSuffix(),
+        firstName: "Autre",
+        lastName: "Professeur",
+        jobTitle: "Enseignant",
+      },
+    });
+    const timetable = await testAdminPrisma.timetable.create({
+      data: { tenantId: own.tenantId, classroomId, academicYearId: own.academicYearId },
+    });
+    const ownSlot = await testAdminPrisma.timetableEntry.create({
+      data: {
+        tenantId: own.tenantId,
+        timetableId: timetable.id,
+        subjectId,
+        teacherEmployeeId: setup.teacherEmployeeId,
+        dayOfWeek: 0,
+        startTime: "08:00",
+        endTime: "09:00",
+      },
+    });
+    await testAdminPrisma.timetableEntry.create({
+      data: {
+        tenantId: own.tenantId,
+        timetableId: timetable.id,
+        subjectId,
+        teacherEmployeeId: anotherTeacher.id,
+        dayOfWeek: 0,
+        startTime: "10:00",
+        endTime: "11:00",
+      },
+    });
+    const headers = { Authorization: `Bearer ${teacherToken}`, "X-Tenant-Slug": subdomain };
+    const personalTimetable = await request(app).get("/api/v1/school-config/my-timetable").set(headers);
+    expect(personalTimetable.status).toBe(200);
+    expect((personalTimetable.body as { id: string }[]).map((e) => e.id)).toEqual([ownSlot.id]);
+    const classes = await request(app).get("/api/v1/school-config/classrooms").set(headers);
+    expect(classes.status).toBe(200);
+    expect((classes.body as { id: string }[]).map((c) => c.id)).toEqual([classroomId]);
+    const students = await request(app).get("/api/v1/students").set(headers);
+    expect(students.status).toBe(200);
+    expect((students.body as { id: string }[]).map((s) => s.id)).toEqual([studentId]);
+    expect((await request(app).get(`/api/v1/students/${student.id}`).set(headers)).status).toBe(404);
+    expect((await request(app).get(`/api/v1/elearning/courses/${hiddenCourse.id}`).set(headers)).status).toBe(
+      404,
+    );
+    expect(
+      (
+        await request(app)
+          .post("/api/v1/homework")
+          .set(headers)
+          .send({ classroomId: foreign.id, subjectId, title: "Interdit", dueAt: "2026-11-01" })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(app).post("/api/v1/discipline/incidents").set(headers).send({
+          studentId: student.id,
+          occurredAt: "2026-10-24",
+          description: "Interdit",
+          severity: "MINOR",
+        })
+      ).status,
+    ).toBe(404);
+    expect((await request(app).get("/api/v1/registrations/enrollments").set(headers)).status).toBe(403);
+    expect((await request(app).get("/api/v1/grading/report-cards").set(headers)).status).toBe(403);
   }, 30000);
 });

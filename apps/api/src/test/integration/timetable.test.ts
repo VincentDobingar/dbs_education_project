@@ -126,6 +126,23 @@ describe("emplois du temps (§20)", () => {
     return (employee.body as { id: string }).id;
   }
 
+  it("enregistre les récréations et refuse les chevauchements dans les deux sens", async () => {
+    const { subdomain, adminToken, teacherToken } = await setUpTenantWithAdmin();
+    const { academicYearId, classroomId, subjectId } = await setUpAcademicStructure(subdomain, adminToken);
+    const employeeId = await createTeacherEmployee(subdomain, adminToken);
+    const headers = { Authorization: `Bearer ${adminToken}`, "X-Tenant-Slug": subdomain };
+    await request(app).post(`/api/v1/school-config/academic-years/${academicYearId}/set-current`).set(headers).send();
+    const timetable = await request(app).post("/api/v1/school-config/timetables").set(headers).send({ academicYearId, classroomId });
+    const id = (timetable.body as { id: string }).id;
+    const body = { breaks: [{ label: "Récréation", startTime: "10:00", endTime: "10:15", days: [0,1,2,3,4] }] };
+    expect((await request(app).put("/api/v1/school-config/timetable-breaks").set(headers).send(body)).status).toBe(200);
+    expect((await request(app).get("/api/v1/school-config/timetable-breaks").set(headers)).body).toEqual(body.breaks);
+    expect((await request(app).put("/api/v1/school-config/timetable-breaks").set("Authorization", `Bearer ${teacherToken}`).set("X-Tenant-Slug", subdomain).send(body)).status).toBe(403);
+    expect((await request(app).post(`/api/v1/school-config/timetables/${id}/entries`).set(headers).send({ subjectId, teacherEmployeeId: employeeId, dayOfWeek: 0, startTime: "09:45", endTime: "10:05" })).status).toBe(409);
+    expect((await request(app).post(`/api/v1/school-config/timetables/${id}/entries`).set(headers).send({ subjectId, teacherEmployeeId: employeeId, dayOfWeek: 0, startTime: "11:00", endTime: "12:00" })).status).toBe(201);
+    expect((await request(app).put("/api/v1/school-config/timetable-breaks").set(headers).send({ breaks: [{ label: "Pause", startTime: "11:30", endTime: "11:45", days: [0] }] })).status).toBe(409);
+  });
+
   it("lets a SCHOOL_OWNER assign a teacher, but refuses a TEACHER; guards duplicates and year mismatches", async () => {
     const { subdomain, adminToken, teacherToken } = await setUpTenantWithAdmin();
     const { academicYearId, classroomId, subjectId } = await setUpAcademicStructure(subdomain, adminToken);

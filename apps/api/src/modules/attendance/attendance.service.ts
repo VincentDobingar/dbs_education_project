@@ -3,6 +3,7 @@ import type { Attendance } from "@prisma/client";
 import { resolveActingEmployeeId } from "../../lib/acting-employee.js";
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
+import { requireTeacherRoster } from "../../lib/teacher-roster.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { notifyParentsOfStudent } from "../communication/notification.service.js";
 import { requireStudentRecord } from "../students/student.service.js";
@@ -52,6 +53,10 @@ export async function recordRollCall(
   const subjectId = input.subjectId ?? null;
 
   const results: Attendance[] = [];
+  await requireTeacherRoster(
+    input.classroomId,
+    input.entries.map((e) => e.studentId),
+  );
   for (const entry of input.entries) {
     await requireStudentRecord(entry.studentId);
 
@@ -84,11 +89,12 @@ export async function recordRollCall(
         });
     results.push(attendance);
 
-    if (attendance.status === "ABSENT") {
+    if (attendance.status === "ABSENT" && existing?.status !== "ABSENT") {
       await notifyParentsOfStudent({
         studentId: attendance.studentId,
         type: "attendance.absence",
         title: "Absence enregistrée",
+        metadata: { attendanceId: attendance.id },
         body: `Une absence a été enregistrée le ${date.toISOString().slice(0, 10)}.`,
       });
     }

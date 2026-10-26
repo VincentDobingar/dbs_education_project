@@ -14,6 +14,7 @@ import {
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("portail parent — lecture (§25)", () => {
   const app = createApp();
@@ -21,6 +22,7 @@ describe("portail parent — lecture (§25)", () => {
   const createdParentUserIds: string[] = [];
 
   afterAll(async () => {
+    await testAdminPrisma.teacherAssignment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.entitlement.deleteMany({
       where: { subscription: { owner: { familyAccount: { primaryUserId: { in: createdParentUserIds } } } } },
     });
@@ -65,6 +67,7 @@ describe("portail parent — lecture (§25)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -124,8 +127,9 @@ describe("portail parent — lecture (§25)", () => {
       .post("/api/v1/school-config/academic-years")
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
+      .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30", isCurrent: true });
     const academicYearId = (year.body as { id: string }).id;
+    await testAdminPrisma.academicYear.update({ where: { id: academicYearId }, data: { isCurrent: true } });
 
     const period = await request(app)
       .post(`/api/v1/school-config/academic-years/${academicYearId}/periods`)
@@ -166,6 +170,9 @@ describe("portail parent — lecture (§25)", () => {
       .set("X-Tenant-Slug", subdomain)
       .send({ code: `MATH-${uniqueSuffix()}`, nameFr: "Mathématiques", nameEn: "Mathematics" });
     const subjectId = (subject.body as { id: string }).id;
+    await testAdminPrisma.teacherAssignment.create({
+      data: { tenantId: tenant.id, employeeId: teacherEmployeeId, classroomId, academicYearId, subjectId },
+    });
 
     const student = await request(app)
       .post("/api/v1/students")
@@ -178,7 +185,7 @@ describe("portail parent — lecture (§25)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, classroomId, campusId, gradeLevelId }));
 
     await createVerifiedRelationship(parent.id, studentId, tenant.id);
 
@@ -200,11 +207,12 @@ describe("portail parent — lecture (§25)", () => {
         roomLabel: "Salle 3",
       });
 
-    await request(app)
+    const rollCall = await request(app)
       .put("/api/v1/attendance/roll-call")
       .set("Authorization", `Bearer ${teacherToken}`)
       .set("X-Tenant-Slug", subdomain)
       .send({ classroomId, date: "2025-10-01", entries: [{ studentId, status: "ABSENT" }] });
+    expect(rollCall.status).toBe(200);
 
     const reportCard = await testAdminPrisma.reportCard.create({
       data: { tenantId: tenant.id, studentId, academicPeriodId, averageScore: 15.5, classRank: 1 },
@@ -268,6 +276,15 @@ describe("portail parent — lecture (§25)", () => {
       .set("Authorization", `Bearer ${parentToken}`);
     expect(deniedNoSubscription.status).toBe(402);
     expect((deniedNoSubscription.body as { code: string }).code).toBe("SUBSCRIPTION_INACTIVE");
+    for (const section of ["grades", "incidents"]) {
+      expect(
+        (
+          await request(app)
+            .get(`/api/v1/parent-portal/children/${studentId}/${section}`)
+            .set("Authorization", `Bearer ${parentToken}`)
+        ).status,
+      ).toBe(402);
+    }
 
     // §18 "Parent" : agrège tous les enfants vérifiés en un seul appel, chacun sous
     // son propre verrouillage de tenant — un étranger n'a bien sûr aucun enfant ni
@@ -287,10 +304,7 @@ describe("portail parent — lecture (§25)", () => {
       subscription: unknown;
     };
     expect(dashboardBody.subscription).toBeNull();
-    const childDashboard = dashboardBody.children.find((c) => c.student.id === studentId);
-    expect(childDashboard).toBeTruthy();
-    expect(childDashboard?.tenantName).toBe(tenant.name);
-    expect(childDashboard?.recentAttendance.some((a) => a.status === "ABSENT")).toBe(true);
+    expect(dashboardBody.children).toEqual([]);
 
     // §9/§37 : abonnement familial actif — débloque désormais les fonctions protégées.
     const familyAccount = await testAdminPrisma.familyAccount.create({ data: { primaryUserId: parent.id } });
@@ -301,7 +315,36 @@ describe("portail parent — lecture (§25)", () => {
       "ACTIVE",
     );
     await grantEntitlement(familySubscription.id, "report_card.download", { quotaLimit: 12 });
+    const coveredDashboard = await request(app)
+      .get("/api/v1/parent-portal/dashboard")
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(
+      (coveredDashboard.body as { children: { student: { id: string } }[] }).children.some(
+        (child) => child.student.id === studentId,
+      ),
+    ).toBe(true);
 
+    const incident = await testAdminPrisma.disciplinaryIncident.create({
+      data: {
+        tenantId: tenant.id,
+        studentId,
+        occurredAt: new Date(),
+        description: "Incident parent",
+        severity: "MINOR",
+      },
+    });
+    for (const section of ["grades", "incidents"]) {
+      const denied = await request(app)
+        .get(`/api/v1/parent-portal/children/${studentId}/${section}`)
+        .set("Authorization", `Bearer ${strangerToken}`);
+      expect(denied.status).toBe(403);
+      const visible = await request(app)
+        .get(`/api/v1/parent-portal/children/${studentId}/${section}`)
+        .set("Authorization", `Bearer ${parentToken}`);
+      expect(visible.status).toBe(200);
+      if (section === "incidents")
+        expect(visible.body).toEqual([expect.objectContaining({ id: incident.id })]);
+    }
     const attendance = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/attendance`)
       .set("Authorization", `Bearer ${parentToken}`);
@@ -348,7 +391,8 @@ describe("portail parent — lecture (§25)", () => {
       .get(`/api/v1/parent-portal/children/${studentId}/finance/situation`)
       .set("Authorization", `Bearer ${parentToken}`);
     expect(financialSituation.status).toBe(200);
-    expect((financialSituation.body as { outstandingCents: number }).outstandingCents).toBe(60_000);
+    // Solde scolarité (60 000) + tranche d'inscription créée par la fixture (100).
+    expect((financialSituation.body as { outstandingCents: number }).outstandingCents).toBe(60_100);
 
     const receipts = await request(app)
       .get(`/api/v1/parent-portal/children/${studentId}/receipts`)
@@ -362,6 +406,23 @@ describe("portail parent — lecture (§25)", () => {
     expect(receiptPdf.status).toBe(200);
     expect(receiptPdf.headers["content-type"]).toBe("application/pdf");
 
+    const invoicePdf = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    const cardPdf = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(cardPdf.status).toBe(200);
+    expect(cardPdf.headers["content-type"]).toBe("application/pdf");
+    expect((cardPdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
+    const deniedCard = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/id-card`)
+      .set("Authorization", `Bearer ${strangerToken}`);
+    expect(deniedCard.status).toBe(403);
+    expect(invoicePdf.status).toBe(200);
+    expect(invoicePdf.headers["content-type"]).toBe("application/pdf");
+    expect((invoicePdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
+
     // Un autre élève, sans lien avec ce reçu/bulletin, ne doit jamais les exposer via ce studentId.
     const otherStudent = await request(app)
       .post("/api/v1/students")
@@ -370,6 +431,25 @@ describe("portail parent — lecture (§25)", () => {
       .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Boris", lastName: "Ekani" });
     const otherStudentId = (otherStudent.body as { id: string }).id;
     await createVerifiedRelationship(parent.id, otherStudentId, tenant.id);
+    // Une deuxième formule individuelle couvre cet autre enfant : le test
+    // vérifie ensuite l'appartenance du document, pas le refus d'abonnement.
+    const otherSubscription = await testAdminPrisma.subscription.create({
+      data: {
+        ownerId: familySubscription.ownerId,
+        planId: familySubscription.planId,
+        status: "ACTIVE",
+        fundingSource: "SELF_PAID",
+        billingPeriod: "MONTHLY",
+      },
+    });
+    await testAdminPrisma.parentSubscriptionCoverage.create({
+      data: {
+        parentUserId: parent.id,
+        studentId: otherStudentId,
+        tenantId: tenant.id,
+        subscriptionId: otherSubscription.id,
+      },
+    });
 
     const crossStudentReportCard = await request(app)
       .get(`/api/v1/parent-portal/children/${otherStudentId}/report-cards/${reportCard.id}`)
@@ -380,6 +460,14 @@ describe("portail parent — lecture (§25)", () => {
       .get(`/api/v1/parent-portal/children/${otherStudentId}/receipts/${receiptId}/pdf`)
       .set("Authorization", `Bearer ${parentToken}`);
     expect(crossStudentReceipt.status).toBe(404);
+    const crossInvoice = await request(app)
+      .get(`/api/v1/parent-portal/children/${otherStudentId}/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${parentToken}`);
+    expect(crossInvoice.status).toBe(404);
+    const uncoveredInvoice = await request(app)
+      .get(`/api/v1/parent-portal/children/${studentId}/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${strangerToken}`);
+    expect([402, 403]).toContain(uncoveredInvoice.status);
 
     // completeTransfer()/withdrawStudent() (transfer.service.ts) posent Student.status
     // sans jamais toucher l'Enrollment courant -- le tableau de bord agrégé (sans
@@ -410,11 +498,6 @@ describe("portail parent — lecture (§25)", () => {
         }[];
       }
     ).children.find((c) => c.student.id === studentId);
-    expect(childAfterTransfer).toBeTruthy();
-    expect(childAfterTransfer?.recentAttendance).toEqual([]);
-    expect(childAfterTransfer?.latestReportCard).toBeNull();
-    expect(childAfterTransfer?.announcements).toEqual([]);
-    expect(childAfterTransfer?.financialSituation.outstandingCents).toBe(0);
-    expect(childAfterTransfer?.financialSituation.invoices).toEqual([]);
+    expect(childAfterTransfer).toBeUndefined();
   }, 30000);
 });

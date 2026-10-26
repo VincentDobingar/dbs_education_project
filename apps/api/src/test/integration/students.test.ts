@@ -5,6 +5,7 @@ import { createApp } from "../../app.js";
 import { signAccessToken } from "../../lib/jwt.js";
 import { testAdminPrisma } from "../admin-client.js";
 import { addMembership, createTenant, createUser, grantRole, uniqueSuffix } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("élèves et inscriptions (§19)", () => {
   const app = createApp();
@@ -13,6 +14,7 @@ describe("élèves et inscriptions (§19)", () => {
   afterAll(async () => {
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.studentDocument.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -22,6 +24,7 @@ describe("élèves et inscriptions (§19)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -211,7 +214,7 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
     expect(enrolled.status).toBe(201);
     expect((enrolled.body as { status: string }).status).toBe("ENROLLED");
 
@@ -225,7 +228,7 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
     expect(secondEnrollment.status).toBe(409);
     expect((secondEnrollment.body as { code: string }).code).toBe("ALREADY_ENROLLED_THIS_YEAR");
 
@@ -240,7 +243,14 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${secondStudentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId: "non-existent-classroom" });
+      .send(
+        await prepareEnrollmentInput(secondStudentId, {
+          academicYearId,
+          campusId,
+          gradeLevelId,
+          classroomId: "non-existent-classroom",
+        }),
+      );
     expect(unknownClassroom.status).toBe(404);
     expect((unknownClassroom.body as { code: string }).code).toBe("CLASSROOM_NOT_FOUND");
   });
@@ -266,7 +276,14 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${enrolledStudentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(
+        await prepareEnrollmentInput(enrolledStudentId, {
+          academicYearId,
+          campusId,
+          gradeLevelId,
+          classroomId,
+        }),
+      );
 
     const unenrolledStudent = await request(app)
       .post("/api/v1/students")
@@ -353,7 +370,14 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId: (otherYear.body as { id: string }).id, campusId, gradeLevelId, classroomId });
+      .send(
+        await prepareEnrollmentInput(studentId, {
+          academicYearId: (otherYear.body as { id: string }).id,
+          campusId,
+          gradeLevelId,
+          classroomId,
+        }),
+      );
     expect(mismatched.status).toBe(400);
     expect((mismatched.body as { code: string }).code).toBe("CLASSROOM_YEAR_MISMATCH");
   });
@@ -376,7 +400,7 @@ describe("élèves et inscriptions (§19)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, campusId, gradeLevelId, classroomId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, campusId, gradeLevelId, classroomId }));
     const enrollmentId = (enrolled.body as { id: string }).id;
 
     const withdrawn = await request(app)
@@ -518,5 +542,94 @@ describe("élèves et inscriptions (§19)", () => {
       .set("X-Tenant-Slug", subdomain);
     expect(unrelated.status).toBe(200);
     expect((unrelated.body as unknown[]).length).toBe(0);
+  });
+  it("modifie le profil complet et téléverse une photo uniquement pour un gestionnaire du bon établissement", async () => {
+    const { subdomain, ownerToken, teacherToken } = await setUpTenantWithOwner();
+    const created = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `MAT-${uniqueSuffix()}`, firstName: "Sara", lastName: "Test" });
+    const id = (created.body as { id: string }).id;
+    const input = {
+      matricule: `CORR-${uniqueSuffix()}`,
+      firstName: "Sara corrigée",
+      lastName: "Test complet",
+      dateOfBirth: "2017-03-12",
+      gender: "F",
+      address: "24 avenue Test",
+      phone: "+237600222333",
+      birthPlace: "Douala",
+      nationality: "Camerounaise",
+      emergencyContactName: "Amina",
+      emergencyContactPhone: "+237600001001",
+    };
+    const updated = await request(app)
+      .patch(`/api/v1/students/${id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send(input);
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({
+      matricule: input.matricule,
+      address: input.address,
+      phone: input.phone,
+      firstName: input.firstName,
+    });
+    expect(updated.body).not.toHaveProperty("medicalNotes");
+    const denied = await request(app)
+      .patch(`/api/v1/students/${id}`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ address: "Intrus" });
+    expect(denied.status).toBe(403);
+    const image = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aU1sAAAAASUVORK5CYII=",
+      "base64",
+    );
+    const upload = await request(app)
+      .post(`/api/v1/students/${id}/photo`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .attach("photo", image, { filename: "photo.png", contentType: "image/png" });
+    expect(upload.status).toBe(200);
+    expect((upload.body as { photoUrl: string }).photoUrl).toContain("/uploads/student-photos/");
+    const deniedUpload = await request(app)
+      .post(`/api/v1/students/${id}/photo`)
+      .set("Authorization", `Bearer ${teacherToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .attach("photo", image, { filename: "photo.png", contentType: "image/png" });
+    expect(deniedUpload.status).toBe(403);
+    const invalid = await request(app)
+      .post(`/api/v1/students/${id}/photo`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .attach("photo", Buffer.from("faux"), { filename: "photo.png", contentType: "image/png" });
+    expect(invalid.status).toBe(400);
+    const other = await setUpTenantWithOwner();
+    const cross = await request(app)
+      .post(`/api/v1/students/${id}/photo`)
+      .set("Authorization", `Bearer ${other.ownerToken}`)
+      .set("X-Tenant-Slug", other.subdomain)
+      .attach("photo", image, { filename: "photo.png", contentType: "image/png" });
+    expect(cross.status).toBe(404);
+    const duplicateStudent = await request(app)
+      .post("/api/v1/students")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: `DUP-${uniqueSuffix()}`, firstName: "Autre", lastName: "Test" });
+    const duplicateChange = await request(app)
+      .patch(`/api/v1/students/${id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ matricule: (duplicateStudent.body as { matricule: string }).matricule });
+    expect(duplicateChange.status).toBe(409);
+    const cleared = await request(app)
+      .patch(`/api/v1/students/${id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Tenant-Slug", subdomain)
+      .send({ dateOfBirth: null, address: null, phone: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body).toMatchObject({ dateOfBirth: null, address: null, phone: null });
   });
 });

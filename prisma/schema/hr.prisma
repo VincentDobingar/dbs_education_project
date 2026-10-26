@@ -36,6 +36,9 @@ model Employee {
   employeeNumber String
   firstName      String
   lastName       String
+  email          String?
+  subjectId      String?
+  subject        Subject? @relation("EmployeeSpecialty",fields:[subjectId],references:[id],onDelete:SetNull)
   jobTitle       String
   departmentId   String?
   hireDate       DateTime?
@@ -152,3 +155,4 @@ model EmployeeDocument {
   @@index([tenantId])
   @@index([employeeId])
 }
+

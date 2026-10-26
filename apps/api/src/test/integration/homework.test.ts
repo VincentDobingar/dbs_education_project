@@ -12,6 +12,7 @@ import {
   grantRole,
   uniqueSuffix,
 } from "../fixtures.js";
+import { prepareEnrollmentInput } from "../registration-fixtures.js";
 
 describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
   const app = createApp();
@@ -57,6 +58,7 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
     await testAdminPrisma.activationInvitation.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.teacherAssignment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.enrollment.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.studentInvoice.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.student.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.classroom.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.gradeLevel.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
@@ -68,6 +70,7 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
     await testAdminPrisma.userRole.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantMembership.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenantDomain.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
+    await testAdminPrisma.schoolGuardian.deleteMany({ where: { tenantId: { in: createdTenantIds } } });
     await testAdminPrisma.tenant.deleteMany({ where: { id: { in: createdTenantIds } } });
   });
 
@@ -118,6 +121,7 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
       .set("X-Tenant-Slug", subdomain)
       .send({ name: `Y-${uniqueSuffix()}`, startDate: "2025-09-01", endDate: "2026-06-30" });
     const academicYearId = (year.body as { id: string }).id;
+    await request(app).post(`/api/v1/school-config/academic-years/${academicYearId}/set-current`).set("Authorization", `Bearer ${adminToken}`).set("X-Tenant-Slug", subdomain).send();
 
     const cycle = await request(app)
       .post("/api/v1/school-config/education-cycles")
@@ -162,7 +166,7 @@ describe("devoirs et dépôt de travaux (§18/§21/§25/§26)", () => {
       .post(`/api/v1/students/${studentId}/enrollments`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("X-Tenant-Slug", subdomain)
-      .send({ academicYearId, classroomId, campusId, gradeLevelId });
+      .send(await prepareEnrollmentInput(studentId, { academicYearId, classroomId, campusId, gradeLevelId }));
 
     const studentUser = await createUser("hw-student");
     const studentToken = signAccessToken({ sub: studentUser.id });

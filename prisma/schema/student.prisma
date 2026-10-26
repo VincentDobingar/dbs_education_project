@@ -50,16 +50,22 @@ model Student {
   lastName              String
   dateOfBirth           DateTime?
   gender                String?
+  address               String?
+  phone                 String?
+  birthPlace            String?
+  nationality           String?
   photoUrl              String?
   emergencyContactName  String?
   emergencyContactPhone String?
   medicalNotes          String? // acces restreint, voir commentaire en tete de fichier
   status                StudentStatus @default(PROSPECTIVE)
+  primaryGuardianId     String?
   deletedAt             DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  primaryGuardian SchoolGuardian? @relation(fields: [primaryGuardianId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
   enrollments           Enrollment[]
   documents             StudentDocument[]
@@ -73,6 +79,7 @@ model Student {
   grades                Grade[]
   reportCards           ReportCard[]
   invoices              StudentInvoice[]
+  parentCoverages       ParentSubscriptionCoverage[]
   libraryLoans          LibraryLoan[]
   homeworkSubmissions   HomeworkSubmission[]
   resourceProgress      ResourceProgress[]
@@ -82,30 +89,33 @@ model Student {
   bedAssignment         StudentBedAssignment?
 
   @@unique([tenantId, matricule])
+  @@unique([id, tenantId])
   @@index([tenantId])
   @@index([status])
 }
 
 model Enrollment {
-  id             String           @id @default(cuid())
-  tenantId       String
-  studentId      String
-  academicYearId String
-  classroomId    String
-  campusId       String
-  gradeLevelId   String
-  status         EnrollmentStatus @default(ENROLLED)
-  enrolledAt     DateTime         @default(now())
-  withdrawnAt    DateTime?
-  deletedAt      DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                   String           @id @default(cuid())
+  tenantId             String
+  studentId            String
+  academicYearId       String
+  registrationPeriodId String?
+  classroomId          String
+  campusId             String
+  gradeLevelId         String
+  status               EnrollmentStatus @default(ENROLLED)
+  enrolledAt           DateTime         @default(now())
+  withdrawnAt          DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
-  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
-  classroom    Classroom    @relation(fields: [classroomId], references: [id])
-  campus       Campus       @relation(fields: [campusId], references: [id])
-  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id])
+  student            Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id])
+  classroom          Classroom           @relation(fields: [classroomId], references: [id])
+  campus             Campus              @relation(fields: [campusId], references: [id])
+  gradeLevel         GradeLevel          @relation(fields: [gradeLevelId], references: [id])
+  registrationPeriod RegistrationPeriod? @relation(fields: [registrationPeriodId, tenantId, academicYearId], references: [id, tenantId, academicYearId], onDelete: Restrict)
 
   @@unique([studentId, academicYearId])
   @@index([tenantId])
@@ -190,3 +200,4 @@ model DisciplinaryIncident {
   @@index([tenantId])
   @@index([studentId])
 }
+

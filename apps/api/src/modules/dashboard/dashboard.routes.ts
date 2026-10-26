@@ -7,6 +7,7 @@ import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
 import * as dashboardController from "./dashboard.controller.js";
+import * as teacherWorkspace from "./teacher-workspace.controller.js";
 
 export const dashboardRouter: Router = Router();
 
@@ -36,4 +37,41 @@ dashboardRouter.get(
   "/enseignant",
   requirePermission("attendance.read"),
   dashboardController.getTeacherDashboard,
+);
+
+dashboardRouter.get(
+  "/enseignant/workspace",
+  requirePermission("attendance.read"),
+  teacherWorkspace.workspace,
+);
+dashboardRouter.get(
+  "/enseignant/assignments/:assignmentId",
+  requirePermission("attendance.read"),
+  teacherWorkspace.classroomWorkspace,
+);
+dashboardRouter.post(
+  "/enseignant/assignments/:assignmentId/attendance",
+  requirePermission("attendance.write"),
+  teacherWorkspace.saveAttendance,
+);
+dashboardRouter.get(
+  "/enseignant/assignments/:assignmentId/assessments/:assessmentId/grades",
+  requirePermission("grades.read"),
+  teacherWorkspace.assessmentGrades,
+);
+dashboardRouter.put(
+  "/enseignant/assignments/:assignmentId/assessments/:assessmentId/grades",
+  requirePermission("grades.write"),
+  teacherWorkspace.saveGrades,
+);
+dashboardRouter.post(
+  "/enseignant/assignments/:assignmentId/assessments",
+  requirePermission("grades.write"),
+  teacherWorkspace.newAssessment,
+);
+
+dashboardRouter.get(
+  "/enseignant/assignments/:assignmentId/attendance",
+  requirePermission("attendance.read"),
+  teacherWorkspace.getAttendanceForAssignment,
 );

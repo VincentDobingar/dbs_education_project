@@ -27,6 +27,8 @@ import {
 } from "../../lib/employeesApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+import { EmployeeContactEditor } from "./EmployeeContactEditor.js";
+
 const STATUSES: EmployeeStatus[] = ["ACTIVE", "ON_LEAVE", "TERMINATED"];
 const LEAVE_TYPES: LeaveType[] = ["ANNUAL", "SICK", "MATERNITY", "UNPAID", "OTHER"];
 const ATTENDANCE_STATUSES: EmployeeAttendanceStatus[] = ["PRESENT", "ABSENT", "LATE"];
@@ -187,6 +189,7 @@ export function EmployeeDetailPage(): ReactNode {
         </p>
       </div>
 
+      <EmployeeContactEditor employee={employee.data} creds={creds} />
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("employeeDetail.status")}</h2>
 

@@ -413,3 +413,7 @@ export function fetchExpenseReportPdf(
 ): Promise<Blob> {
   return fetchBlob(`/finance/reports/expenses/pdf${reportQuery(range)}`, creds);
 }
+
+export function fetchStudentInvoicePdf(invoiceId: string, creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob(`/finance/student-invoices/${invoiceId}/pdf`, { ...creds });
+}

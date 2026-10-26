@@ -74,9 +74,15 @@ export interface CurrentEnrollment {
  * classroom" the same way).
  */
 export async function requireCurrentEnrollment(studentId: string): Promise<CurrentEnrollment> {
+  const currentYear = await prisma.academicYear.findFirst({ where: { isCurrent: true, deletedAt: null } });
   const enrollment = await prisma.enrollment.findFirst({
-    where: { studentId, deletedAt: null, status: { in: ["ENROLLED", "RE_ENROLLED"] } },
-    orderBy: { enrolledAt: "desc" },
+    where: {
+      studentId,
+      ...(currentYear ? { academicYearId: currentYear.id } : {}),
+      deletedAt: null,
+      status: { in: ["ENROLLED", "RE_ENROLLED"] },
+    },
+    orderBy: { academicYear: { startDate: "desc" } },
     include: { classroom: true, academicYear: true },
   });
   if (!enrollment) {
@@ -95,6 +101,12 @@ export async function createStudent(
   input: CreateStudentInput,
 ): Promise<Omit<Student, "medicalNotes"> & { possibleDuplicates: PossibleDuplicateStudent[] }> {
   await assertMatriculeAvailable(input.matricule);
+  if (
+    input.primaryGuardianId &&
+    !(await prisma.schoolGuardian.findUnique({ where: { id: input.primaryGuardianId } }))
+  ) {
+    throw new AppError(404, "GUARDIAN_NOT_FOUND", "Tuteur principal introuvable");
+  }
 
   const possibleDuplicates = await checkDuplicateStudents(input.firstName, input.lastName, input.dateOfBirth);
 
@@ -102,6 +114,7 @@ export async function createStudent(
     data: {
       tenantId: requireCurrentTenantId(),
       matricule: input.matricule,
+      ...(input.primaryGuardianId ? { primaryGuardianId: input.primaryGuardianId } : {}),
       firstName: input.firstName,
       lastName: input.lastName,
       ...(input.dateOfBirth ? { dateOfBirth: input.dateOfBirth } : {}),
@@ -185,6 +198,15 @@ export async function listStudentsPaginated(query: ListStudentsQuery): Promise<P
       omit: { medicalNotes: true },
       take: query.pageSize,
       skip: (page - 1) * query.pageSize,
+      include: {
+        primaryGuardian: { select: { firstName: true, lastName: true } },
+        enrollments: {
+          where: { deletedAt: null, status: { in: ["ENROLLED", "RE_ENROLLED"] } },
+          orderBy: { academicYear: { startDate: "desc" } },
+          take: 1,
+          select: { classroom: { select: { name: true } }, academicYear: { select: { name: true } } },
+        },
+      },
     }),
     prisma.student.count({ where }),
   ]);
@@ -205,11 +227,30 @@ export async function updateStudent(
   input: UpdateStudentInput,
 ): Promise<Omit<Student, "medicalNotes">> {
   await requireStudentRecord(id);
+  if (input.matricule !== undefined) {
+    const duplicate = await prisma.student.findFirst({
+      where: { matricule: input.matricule, id: { not: id } },
+    });
+    if (duplicate)
+      throw new AppError(409, "MATRICULE_TAKEN", "Ce matricule est déjà utilisé dans l'établissement.");
+  }
+  if (
+    input.primaryGuardianId &&
+    !(await prisma.schoolGuardian.findUnique({ where: { id: input.primaryGuardianId } }))
+  ) {
+    throw new AppError(404, "GUARDIAN_NOT_FOUND", "Tuteur principal introuvable");
+  }
 
   return prisma.student.update({
     where: { id },
     data: {
+      ...(input.matricule !== undefined ? { matricule: input.matricule } : {}),
+      ...(input.address !== undefined ? { address: input.address } : {}),
+      ...(input.phone !== undefined ? { phone: input.phone } : {}),
+      ...(input.birthPlace !== undefined ? { birthPlace: input.birthPlace } : {}),
+      ...(input.nationality !== undefined ? { nationality: input.nationality } : {}),
       ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+      ...(input.primaryGuardianId ? { primaryGuardianId: input.primaryGuardianId } : {}),
       ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
       ...(input.dateOfBirth !== undefined ? { dateOfBirth: input.dateOfBirth } : {}),
       ...(input.gender !== undefined ? { gender: input.gender } : {}),
@@ -229,6 +270,7 @@ export async function updateStudent(
 
 export async function archiveStudent(id: string): Promise<Omit<Student, "medicalNotes">> {
   await requireStudentRecord(id);
+
   return prisma.student.update({
     where: { id },
     data: { deletedAt: new Date(), status: "ARCHIVED" },

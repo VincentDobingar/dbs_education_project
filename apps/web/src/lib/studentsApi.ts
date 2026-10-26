@@ -1,6 +1,9 @@
-import { apiRequest, fetchBlob, type TenantCredentials } from "./apiClient.js";
+import { apiRequest, apiUpload, fetchBlob, type TenantCredentials } from "./apiClient.js";
 
 export interface Student {
+  primaryGuardianId?: string | null;
+  primaryGuardian?: { firstName: string; lastName: string } | null;
+  enrollments?: { classroom: { name: string }; academicYear: { name: string } }[];
   id: string;
   matricule: string;
   firstName: string;
@@ -8,11 +11,19 @@ export interface Student {
   dateOfBirth: string | null;
   gender: string | null;
   photoUrl: string | null;
+  address?: string | null;
+  phone?: string | null;
+  birthPlace?: string | null;
+  nationality?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
   status: string;
+  updatedAt?: string;
   possibleDuplicates?: { id: string; matricule: string; firstName: string; lastName: string }[];
 }
 
 export interface CreateStudentInput {
+  primaryGuardianId?: string;
   matricule: string;
   firstName: string;
   lastName: string;
@@ -80,6 +91,7 @@ export interface Enrollment {
 }
 
 export interface CreateEnrollmentInput {
+  registrationPeriodId: string;
   academicYearId: string;
   classroomId: string;
   campusId: string;
@@ -96,4 +108,36 @@ export function enrollStudent(
   creds: TenantCredentials,
 ): Promise<Enrollment> {
   return apiRequest(`/students/${studentId}/enrollments`, { method: "POST", body: input, ...creds });
+}
+
+export function fetchClassIdCardsPdf(classroomId: string, creds: TenantCredentials): Promise<Blob> {
+  return fetchBlob(`/students/classrooms/${classroomId}/id-cards`, { ...creds });
+}
+
+export interface UpdateStudentProfileInput {
+  matricule: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  gender: string | null;
+  address: string | null;
+  phone: string | null;
+  birthPlace: string | null;
+  nationality: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+}
+export function updateStudentProfile(
+  id: string,
+  input: UpdateStudentProfileInput,
+  creds: TenantCredentials,
+): Promise<Student> {
+  return apiRequest(`/students/${id}`, { method: "PATCH", body: input, ...creds });
+}
+export function uploadStudentPhoto(
+  id: string,
+  file: File,
+  creds: TenantCredentials,
+): Promise<{ photoUrl: string }> {
+  return apiUpload(`/students/${id}/photo`, "photo", file, { ...creds });
 }

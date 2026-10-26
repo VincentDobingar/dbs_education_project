@@ -19,15 +19,17 @@ model AcademicYear {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  periods            AcademicPeriod[]
-  classrooms         Classroom[]
-  timetables         Timetable[]
-  enrollments        Enrollment[]
-  teacherAssignments TeacherAssignment[]
-  calendarEvents     CalendarEvent[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  periods             AcademicPeriod[]
+  classrooms          Classroom[]
+  timetables          Timetable[]
+  enrollments         Enrollment[]
+  registrationPeriods RegistrationPeriod[]
+  teacherAssignments  TeacherAssignment[]
+  calendarEvents      CalendarEvent[]
 
   @@unique([tenantId, name])
+  @@unique([id, tenantId])
   @@index([tenantId])
 }
 
@@ -176,6 +178,7 @@ model Subject {
   reportCardItems    ReportCardItem[]
   homeworks          Homework[]
   onlineCourses      OnlineCourse[]
+  specialtyEmployees Employee[] @relation("EmployeeSpecialty")
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -317,3 +320,4 @@ model CalendarEvent {
   @@index([academicYearId])
   @@index([startDate])
 }
+

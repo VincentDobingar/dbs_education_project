@@ -8,6 +8,7 @@ import { requireLinkedStudent } from "../../middleware/requireLinkedStudent.js";
 import { requirePermission } from "../../middleware/requirePermission.js";
 import { requireTenantMembership } from "../../middleware/requireTenantMembership.js";
 
+import * as publication from "./course-publication.controller.js";
 import * as elearningController from "./elearning.controller.js";
 
 export const elearningRouter: Router = Router();
@@ -19,6 +20,34 @@ const writeElearning = requirePermission("elearning.write");
 // (finance, school-config...) — un établissement dont l'abonnement n'est plus
 // actif ne peut pas gérer ou consulter les cours en ligne de son côté staff.
 const requireTenantSubscription = requireActiveSubscription();
+elearningRouter.post(
+  "/courses/:id/review",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  requireTenantSubscription,
+  readElearning,
+  publication.reviewCourse,
+);
+elearningRouter.post(
+  "/courses/:id/pdf",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  requireTenantSubscription,
+  writeElearning,
+  publication.pdfUpload.single("file"),
+  publication.uploadPdf,
+);
+elearningRouter.get(
+  "/courses/:id/resources/:resourceId/file",
+  requireAuth,
+  enforceTenantScope,
+  requireTenantMembership,
+  requireTenantSubscription,
+  readElearning,
+  publication.staffPdf,
+);
 
 elearningRouter.post(
   "/courses",
@@ -113,6 +142,13 @@ const linkedStudent = requireLinkedStudent();
 // §37 : « un élève non abonné ne peut pas consulter les fonctions protégées » —
 // toujours après linkedStudent (jamais avant), même raisonnement que le portail élève.
 const requireStudentSubscription = requireActiveSubscription(studentOwnerContext);
+elearningRouter.get(
+  "/student/:studentId/courses/:courseId/resources/:resourceId/file",
+  requireAuth,
+  linkedStudent,
+  requireStudentSubscription,
+  publication.familyPdf,
+);
 
 elearningRouter.get(
   "/student/:studentId/courses",
