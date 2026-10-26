@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { InstallAppButton } from "../../components/InstallAppButton.js";
+import { SchoolShowcase } from "../../components/SchoolShowcase.js";
 
 const AUDIENCE_CARDS = [
   {
@@ -156,6 +157,9 @@ export function HomePage(): ReactNode {
           </Link>
         </div>
       </section>
+
+      {/* Ils nous font confiance */}
+      <SchoolShowcase />
 
       {/* Trois espaces */}
       <section className="mx-auto max-w-6xl px-6 py-16">

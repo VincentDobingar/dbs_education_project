@@ -16,6 +16,16 @@ Sur la même page : **Prolonger l'essai**, **Forcer la transition** vers un autr
 
 **Données de référence → Catalogue établissements** gère les listes proposées en Configuration : cycles, niveaux, matières, types d'évaluation, catégories de frais, campus, salles et jours fériés par pays. On peut ajouter, **Modifier**, **Désactiver** ou **Réactiver** un élément. Désactiver le retire des listes sans toucher aux établissements qui l'ont déjà ajouté. Les autres onglets gèrent les pays, les devises et les moyens de paiement.
 
+### Gérer les comptes des établissements
+
+Les établissements ne gèrent plus leurs comptes : tout passe par **Utilisateurs**.
+
+1. Choisir l'établissement. La justification est préremplie ; la modifier si besoin.
+2. **Ajouter une personne** : e-mail, prénom, nom (requis pour une nouvelle adresse) et rôle. Laisser cochée « Envoyer le lien d'accès par e-mail » : la personne choisit elle-même son mot de passe.
+3. Dans la liste : attribuer ou retirer un rôle, suspendre ou retirer l'accès, **Renvoyer le lien d'accès** si le premier a expiré (30 minutes).
+
+Chaque action est enregistrée dans les **Journaux d'audit**.
+
 ### Autres pages
 
 | Page                | Usage                                                                                                                       |
@@ -43,6 +53,19 @@ AuriGeo School contient un jeu de démonstration complet, du CP1 à la Terminale
 
 Pour la même chose sur un autre établissement, un développeur lance `pnpm db:seed:demo --tenant=<sous-domaine>` (ajouter `--dry-run` pour vérifier sans rien écrire). `--cleanup` retire uniquement les données marquées DEMO, sans toucher au reste.
 
+### Établissement et comptes de test
+
+La variable `SEED_TEST_ACCOUNTS_EMAIL` du service api (Railway), par exemple `prenom.nom@gmail.com`, crée au déploiement suivant, une seule fois, **Collège Horizon de Moundou** (identifiant `college-horizon`, données de démonstration incluses, abonnement Professionnel actif) et quatre comptes sur des alias de cette adresse :
+
+| Compte     | Adresse                   | Espace                                     |
+| ---------- | ------------------------- | ------------------------------------------ |
+| Direction  | `prenom.nom+directeur@…`  | Espace établissement (propriétaire)        |
+| Enseignant | `prenom.nom+enseignant@…` | Espace établissement (lié à une fiche ENS) |
+| Élève      | `prenom.nom+eleve@…`      | Portail famille (élève de 3e A, abonné)    |
+| Parent     | `prenom.nom+parent@…`     | Portail famille (parent vérifié, abonné)   |
+
+Aucun mot de passe n'est défini : chaque compte choisit le sien avec **Mot de passe oublié ?**. L'établissement apparaît dans le carrousel de l'accueil ; décocher « Afficher mon établissement sur la page d'accueil » dans sa Configuration pour l'en retirer.
+
 ## Dépannage
 
 | Message ou symptôme                              | Cause                                                       | Que faire                                                                                                                               |
@@ -56,6 +79,7 @@ Pour la même chose sur un autre établissement, un développeur lance `pnpm db:
 
 | Nouveauté                                                                                                 |
 | --------------------------------------------------------------------------------------------------------- |
+| Page **Utilisateurs** : comptes et rôles de tous les établissements (retirée de l'espace établissement)   |
 | Boutons « Démarrer l'essai gratuit » et « Activer l'abonnement » dans **Abonnements**                     |
 | Onglet « Catalogue établissements » dans **Données de référence**                                         |
 | Données de démonstration dans AuriGeo School : 100 élèves, 19 enseignants, 13 emplois du temps            |

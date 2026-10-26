@@ -83,14 +83,10 @@ describe("AppLayout — navigation filtrée par rôle", () => {
   it("un SCHOOL_OWNER voit tous les modules", () => {
     renderLayoutFor(["SCHOOL_OWNER"]);
 
-    for (const label of [
-      "Tableau de bord",
-      "Élèves",
-      "Utilisateurs",
-      "Personnel",
-      "Finances",
-      "Configuration",
-    ]) {
+    // Les comptes se gèrent depuis la super-administration, plus depuis l'établissement.
+    expect(screen.queryByText("Utilisateurs")).not.toBeInTheDocument();
+
+    for (const label of ["Tableau de bord", "Élèves", "Personnel", "Finances", "Configuration"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

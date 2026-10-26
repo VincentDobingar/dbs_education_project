@@ -277,6 +277,25 @@ export function uploadTenantLogo(file: File, creds: TenantCredentials): Promise<
   return apiUpload("/school-config/tenant-logo/upload", "logo", file, creds);
 }
 
+/** Présentation sur la page d'accueil (« Ils nous font confiance »). */
+export interface TenantShowcase {
+  publicDescription: string | null;
+  showOnHomepage: boolean;
+}
+
+export const PUBLIC_DESCRIPTION_MAX_LENGTH = 220;
+
+export function getTenantShowcase(creds: TenantCredentials): Promise<TenantShowcase> {
+  return apiRequest("/school-config/showcase", { ...creds });
+}
+
+export function updateTenantShowcase(
+  input: { publicDescription: string; showOnHomepage: boolean },
+  creds: TenantCredentials,
+): Promise<TenantShowcase> {
+  return apiRequest("/school-config/showcase", { method: "PUT", body: input, ...creds });
+}
+
 // §17 : catalogue de référence global — listes de choix de Configuration.
 export type CatalogKind =
   | "EDUCATION_CYCLE"

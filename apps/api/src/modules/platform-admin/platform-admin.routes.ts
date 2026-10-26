@@ -15,6 +15,7 @@ import * as subscriptionAdminController from "./subscription-admin.controller.js
 import * as supportTicketAdminController from "./support-ticket-admin.controller.js";
 import * as tenantAdminController from "./tenant-admin.controller.js";
 import * as tenantElevationAdminController from "./tenant-elevation-admin.controller.js";
+import * as tenantUserAdminController from "./tenant-user-admin.controller.js";
 
 export const platformAdminRouter: Router = Router();
 
@@ -84,6 +85,44 @@ platformAdminRouter.post(
   requireAuth,
   managePlatform,
   tenantElevationAdminController.revokeElevation,
+);
+
+// Comptes des établissements : gérés uniquement depuis la super-administration.
+platformAdminRouter.get(
+  "/tenants/:id/users",
+  requireAuth,
+  readPlatform,
+  tenantUserAdminController.listTenantUsers,
+);
+platformAdminRouter.post(
+  "/tenants/:id/users",
+  requireAuth,
+  managePlatform,
+  tenantUserAdminController.inviteTenantUser,
+);
+platformAdminRouter.post(
+  "/tenants/:id/users/:userId/roles",
+  requireAuth,
+  managePlatform,
+  tenantUserAdminController.grantRole,
+);
+platformAdminRouter.delete(
+  "/tenants/:id/users/:userId/roles/:roleCode",
+  requireAuth,
+  managePlatform,
+  tenantUserAdminController.revokeRole,
+);
+platformAdminRouter.patch(
+  "/tenants/:id/users/:userId/status",
+  requireAuth,
+  managePlatform,
+  tenantUserAdminController.updateMembershipStatus,
+);
+platformAdminRouter.post(
+  "/tenants/:id/users/:userId/access-email",
+  requireAuth,
+  managePlatform,
+  tenantUserAdminController.sendAccessEmail,
 );
 
 platformAdminRouter.get("/audit-logs", requireAuth, readPlatform, auditLogController.listAuditLogs);

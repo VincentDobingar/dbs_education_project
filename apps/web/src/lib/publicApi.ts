@@ -142,3 +142,20 @@ export async function getPublicPricingOrSnapshot(): Promise<PublicPricing> {
     return (await loadSnapshot()).pricing;
   }
 }
+
+/** Établissement présenté dans la vitrine « Ils nous font confiance » de la page d'accueil. */
+export interface ShowcaseSchool {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  publicDescription: string | null;
+  ownershipType: "PUBLIC" | "PRIVATE";
+  city: string | null;
+  countryIsoCode: string;
+  countryNameFr: string;
+  countryNameEn: string;
+}
+
+export function listShowcaseSchools(): Promise<ShowcaseSchool[]> {
+  return apiRequest("/public/schools");
+}

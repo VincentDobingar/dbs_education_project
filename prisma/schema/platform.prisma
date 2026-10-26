@@ -66,29 +66,33 @@ model Currency {
 }
 
 model Tenant {
-  id              String              @id @default(cuid())
-  name            String
-  legalName       String?
-  logoUrl         String?
-  colorPrimary    String?
-  colorSecondary  String?
-  ownershipType   TenantOwnershipType
-  licenseNumber   String? // numero d'agrement / autorisation
-  countryId       String
-  region          String?
-  city            String?
-  address         String?
-  phone           String?
-  email           String?
-  timezone        String              @default("Africa/Douala")
-  currencyId      String
-  status          TenantStatus        @default(DRAFT)
-  verifiedAt      DateTime?
-  suspendedAt     DateTime?
-  suspendedReason String?
-  deletedAt       DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id                String              @id @default(cuid())
+  name              String
+  legalName         String?
+  logoUrl           String?
+  // Vitrine de la page d'accueil (« Ils nous font confiance ») : courte
+  // présentation rédigée par l'établissement, et son accord pour y figurer.
+  publicDescription String?
+  showOnHomepage    Boolean             @default(true)
+  colorPrimary      String?
+  colorSecondary    String?
+  ownershipType     TenantOwnershipType
+  licenseNumber     String? // numero d'agrement / autorisation
+  countryId         String
+  region            String?
+  city              String?
+  address           String?
+  phone             String?
+  email             String?
+  timezone          String              @default("Africa/Douala")
+  currencyId        String
+  status            TenantStatus        @default(DRAFT)
+  verifiedAt        DateTime?
+  suspendedAt       DateTime?
+  suspendedReason   String?
+  deletedAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   country  Country  @relation(fields: [countryId], references: [id])
   currency Currency @relation(fields: [currencyId], references: [id])

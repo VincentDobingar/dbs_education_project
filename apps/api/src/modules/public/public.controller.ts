@@ -22,3 +22,12 @@ export function getPricing(_req: Request, res: Response, next: NextFunction): vo
       .json(await publicService.getPublicPricing());
   })().catch(next);
 }
+
+export function listSchools(_req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    res
+      .set("Cache-Control", "public, max-age=300")
+      .status(200)
+      .json(await publicService.listShowcaseSchools());
+  })().catch(next);
+}

@@ -58,6 +58,7 @@ const AdminSupportTicketsPage = lazyImport(
   "AdminSupportTicketsPage",
 );
 const AdminTenantsPage = lazyImport(() => import("./pages/admin/AdminTenantsPage.js"), "AdminTenantsPage");
+const AdminUsersPage = lazyImport(() => import("./pages/admin/AdminUsersPage.js"), "AdminUsersPage");
 const AnnouncementsPage = lazyImport(() => import("./pages/app/AnnouncementsPage.js"), "AnnouncementsPage");
 const AttendancePage = lazyImport(() => import("./pages/app/AttendancePage.js"), "AttendancePage");
 const BoardingPage = lazyImport(() => import("./pages/app/BoardingPage.js"), "BoardingPage");
@@ -92,7 +93,6 @@ const SupportTicketsPage = lazyImport(
 );
 const TimetablePage = lazyImport(() => import("./pages/app/TimetablePage.js"), "TimetablePage");
 const TransportPage = lazyImport(() => import("./pages/app/TransportPage.js"), "TransportPage");
-const UsersPage = lazyImport(() => import("./pages/app/UsersPage.js"), "UsersPage");
 const ParentChildPage = lazyImport(() => import("./pages/portal/ParentChildPage.js"), "ParentChildPage");
 const ParentDashboardPage = lazyImport(
   () => import("./pages/portal/ParentDashboardPage.js"),
@@ -151,7 +151,6 @@ export function App(): ReactNode {
               <Route path="/abonnement" element={<SubscriptionPage />} />
               <Route path="/eleves" element={<StudentsPage />} />
               <Route path="/eleves/:id" element={<StudentDetailPage />} />
-              <Route path="/utilisateurs" element={<UsersPage />} />
               <Route path="/personnel" element={<EmployeesPage />} />
               <Route path="/personnel/:id" element={<EmployeeDetailPage />} />
               <Route path="/discipline" element={<DisciplinePage />} />
@@ -184,6 +183,7 @@ export function App(): ReactNode {
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
+              <Route path="/admin/utilisateurs" element={<AdminUsersPage />} />
               <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
               <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
               <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />

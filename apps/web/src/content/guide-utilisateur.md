@@ -36,7 +36,7 @@ Toutes les formules incluent 30 jours d'essai gratuit. La page Abonnement affich
 
 ## Rôles et menus
 
-Le menu se trouve dans une barre latérale à gauche, dans chaque espace. Sur téléphone, il s'ouvre avec le bouton « Ouvrir le menu » en haut de l'écran. Chaque membre ne voit que les modules autorisés par ses rôles. Le propriétaire attribue les rôles depuis **Utilisateurs**.
+Le menu se trouve dans une barre latérale à gauche, dans chaque espace. Sur téléphone, il s'ouvre avec le bouton « Ouvrir le menu » en haut de l'écran. Chaque membre ne voit que les modules autorisés par ses rôles. Les comptes et les rôles sont créés par l'équipe DBS Africa (super-administration) : adressez-lui vos demandes depuis **Support**.
 
 | Module                                     | Rôles qui le voient                                                                              |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
@@ -46,7 +46,7 @@ Le menu se trouve dans une barre latérale à gauche, dans chaque espace. Sur t�
 | Notes, Bulletins, Devoirs, E-learning      | Propriétaire, Administrateur, Directeur, Directeur académique, Enseignant, Auditeur              |
 | Finances                                   | Propriétaire, Administrateur, Directeur, Comptable, Auditeur                                     |
 | Personnel                                  | Propriétaire, Responsable RH                                                                     |
-| Utilisateurs, Configuration                | Propriétaire, Administrateur                                                                     |
+| Configuration                              | Propriétaire, Administrateur                                                                     |
 | Annonces                                   | Propriétaire, Administrateur, Directeur                                                          |
 | Abonnement                                 | Propriétaire, Administrateur, Directeur (seul le propriétaire peut souscrire)                    |
 | Bibliothèque                               | Propriétaire, Administrateur, Bibliothécaire, Auditeur                                           |
@@ -64,21 +64,21 @@ La page **Configuration** pose les fondations sans lesquelles on ne peut pas ins
 
 Remplissez les sections dans cet ordre, car chacune dépend des précédentes :
 
-| N°  | Section               | Aide à la saisie                                                                          | À savoir                                                                                              |
-| --- | --------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| 1   | Logo                  | —                                                                                         | JPEG ou PNG, 3 Mo max ; apparaît sur bulletins, reçus et rapports                                     |
-| 2   | Années scolaires      | Années suggérées selon le calendrier scolaire du pays                                     | Ajustez les dates avant de créer ; la première année créée devient l'année en cours                   |
-| 3   | Campus                | Liste : Campus principal, Annexe, Site primaire…                                          | Requis pour créer des classes                                                                         |
-| 4   | Salles                | Liste (laboratoire, salle informatique, bibliothèque…) + générateur « Salle 1 à Salle N » | Choisissez le campus et la capacité avant d'ajouter                                                   |
-| 5   | Calendrier            | Jours fériés à date fixe du pays de l'établissement + rentrée et fin d'année              | Choisissez d'abord l'année scolaire ; les fêtes mobiles (Pâques, Aïd…) se saisissent à la main        |
-| 6   | Cycles d'enseignement | Liste : préscolaire, primaire, collège, lycée…                                            | Requis pour les niveaux                                                                               |
-| 7   | Niveaux               | Liste par cycle : CP1 à CM2, 6e à Terminale…                                              | Le cycle parent doit exister                                                                          |
-| 8   | Classes               | Générateur à partir des niveaux                                                           | Indiquez le nombre de divisions par niveau (A, B, C…) et le format du nom : « Sixième A » ou « 6E A » |
-| 9   | Matières              | Liste : français, mathématiques, SVT…                                                     | Utilisées par les emplois du temps et les notes                                                       |
-| 10  | Périodes académiques  | —                                                                                         | Trimestres, semestres ou périodes personnalisées                                                      |
-| 11  | Types d'évaluation    | Liste : interrogation écrite, devoir surveillé, composition, examen blanc…                | Choisis lors de la création d'une évaluation                                                          |
-| 12  | Catégories de frais   | Liste : inscription, scolarité, cantine…                                                  | Réservé aux rôles ayant les droits Finances                                                           |
-| 13  | Grilles tarifaires    | —                                                                                         | Montant par catégorie et par niveau (ou tous niveaux), obligatoire ou non                             |
+| N°  | Section               | Aide à la saisie                                                                          | À savoir                                                                                                                                                                                                                              |
+| --- | --------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Logo                  | —                                                                                         | JPEG ou PNG, 3 Mo max ; apparaît sur bulletins, reçus et rapports, et dans le carrousel « Ils nous font confiance » de l'accueil avec la présentation saisie dans **Page d'accueil du site** (décochez la case pour ne pas y figurer) |
+| 2   | Années scolaires      | Années suggérées selon le calendrier scolaire du pays                                     | Ajustez les dates avant de créer ; la première année créée devient l'année en cours                                                                                                                                                   |
+| 3   | Campus                | Liste : Campus principal, Annexe, Site primaire…                                          | Requis pour créer des classes                                                                                                                                                                                                         |
+| 4   | Salles                | Liste (laboratoire, salle informatique, bibliothèque…) + générateur « Salle 1 à Salle N » | Choisissez le campus et la capacité avant d'ajouter                                                                                                                                                                                   |
+| 5   | Calendrier            | Jours fériés à date fixe du pays de l'établissement + rentrée et fin d'année              | Choisissez d'abord l'année scolaire ; les fêtes mobiles (Pâques, Aïd…) se saisissent à la main                                                                                                                                        |
+| 6   | Cycles d'enseignement | Liste : préscolaire, primaire, collège, lycée…                                            | Requis pour les niveaux                                                                                                                                                                                                               |
+| 7   | Niveaux               | Liste par cycle : CP1 à CM2, 6e à Terminale…                                              | Le cycle parent doit exister                                                                                                                                                                                                          |
+| 8   | Classes               | Générateur à partir des niveaux                                                           | Indiquez le nombre de divisions par niveau (A, B, C…) et le format du nom : « Sixième A » ou « 6E A »                                                                                                                                 |
+| 9   | Matières              | Liste : français, mathématiques, SVT…                                                     | Utilisées par les emplois du temps et les notes                                                                                                                                                                                       |
+| 10  | Périodes académiques  | —                                                                                         | Trimestres, semestres ou périodes personnalisées                                                                                                                                                                                      |
+| 11  | Types d'évaluation    | Liste : interrogation écrite, devoir surveillé, composition, examen blanc…                | Choisis lors de la création d'une évaluation                                                                                                                                                                                          |
+| 12  | Catégories de frais   | Liste : inscription, scolarité, cantine…                                                  | Réservé aux rôles ayant les droits Finances                                                                                                                                                                                           |
+| 13  | Grilles tarifaires    | —                                                                                         | Montant par catégorie et par niveau (ou tous niveaux), obligatoire ou non                                                                                                                                                             |
 
 Les listes sont tenues par l'équipe DBS Africa. Un élément ajouté est copié dans votre établissement : si DBS Africa le retire plus tard de la liste, vous le gardez. Les jours fériés couvrent pour l'instant le Tchad, le Cameroun, le Gabon, le Congo, la Côte d'Ivoire, le Sénégal, le Kenya, la Tanzanie et l'Ouganda.
 
@@ -99,9 +99,9 @@ Vue d'ensemble : nombre d'élèves et de personnel, taux de présence, solde imp
 
 La fiche permet aussi d'ajouter une photo et de **Télécharger la carte scolaire**. La liste s'exporte en CSV ou Excel.
 
-### Utilisateurs et Personnel
+### Comptes et Personnel
 
-- **Utilisateurs** : **Inviter** une personne par email avec un rôle (prénom et nom requis si elle n'a pas encore de compte), puis attribuer ou retirer des rôles.
+- **Comptes** : l'équipe DBS Africa crée les comptes (enseignants, secrétariat, comptabilité…) et attribue les rôles. Chaque personne ajoutée reçoit par e-mail un lien pour choisir son mot de passe. Demandez un nouveau compte ou un changement de rôle depuis **Support**.
 - **Personnel** : **Ajouter un employé** (matricule, prénom, nom, poste). Sa fiche gère les contrats, les demandes de congé à approuver ou rejeter, les évaluations, les documents et la présence du jour. La paie s'exporte en CSV ou Excel.
 - Les enseignants proposés dans les emplois du temps viennent de la liste Personnel : créez leur fiche employé d'abord. Pour signaler un incident, un compte doit en plus être lié à sa fiche ; cette liaison ne se fait pas encore à l'écran, demandez-la au support.
 
@@ -179,7 +179,7 @@ Avec une connexion faible, l'application attend au plus 4 secondes la réponse d
 | Message ou symptôme                                            | Cause                                                     | Que faire                                                                                                                                                       |
 | -------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | « Votre établissement n'a pas d'abonnement actif »             | Aucun abonnement, ou demande pas encore activée           | Faire la demande dans **Abonnement**, puis attendre l'activation par l'équipe DBS Africa                                                                        |
-| « Ce compte n'est pas membre de cet établissement »            | Mauvais identifiant d'établissement, ou compte non invité | Vérifier le sous-domaine ; demander au propriétaire une invitation depuis **Utilisateurs**                                                                      |
+| « Ce compte n'est pas membre de cet établissement »            | Mauvais identifiant d'établissement, ou compte non invité | Vérifier le sous-domaine ; demander l'ajout du compte à l'équipe DBS Africa via **Support**                                                                     |
 | « Email ou mot de passe incorrect »                            | Identifiants erronés                                      | Vérifier l'email et le mot de passe                                                                                                                             |
 | Mot de passe oublié                                            | —                                                         | Sous le formulaire de connexion, cliquer sur **Mot de passe oublié ?**, saisir son adresse e-mail puis ouvrir le lien reçu (valable 30 minutes, une seule fois) |
 | « Trop de tentatives échouées »                                | Compte bloqué temporairement                              | Patienter quelques minutes avant de réessayer                                                                                                                   |
@@ -196,14 +196,16 @@ Si le problème persiste, ouvrez un ticket dans **Support** en décrivant la pag
 
 Ces nouveautés sont en ligne depuis le 20 octobre 2026, sauf les trois dernières, ajoutées le 22 octobre.
 
-| Nouveauté                                                                                                                                                                  | Pour qui                     |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Menu en barre latérale dans tous les espaces                                                                                                                               | Tous                         |
-| Page Abonnement : choix de la formule, code promo, suivi de l'état ; bandeau d'alerte sans abonnement actif                                                                | Propriétaire, direction      |
-| Listes de choix et assistants en Configuration : années scolaires, campus, salles, calendrier, classes, cycles, niveaux, matières, types d'évaluation, catégories de frais | Propriétaire, administrateur |
-| Tableau de bord plus rapide en cas d'erreur ; sans abonnement, il mène à la page Abonnement                                                                                | Tous                         |
-| Double authentification désactivée : connexion par email et mot de passe                                                                                                   | Tous                         |
-| Rechargement automatique après une mise à jour de l'application                                                                                                            | Tous                         |
-| Menu ☰ sur téléphone pour le site public (Accueil, Tarifs, Guide, Contact, Portail famille)                                                                               | Tous                         |
-| Bouton « Installer l'application » : invite d'installation sur Android et ordinateur, mode d'emploi sur iPhone                                                             | Tous                         |
-| Guide d'utilisation en ligne et en PDF, avec une section sur l'utilisation hors connexion                                                                                  | Tous                         |
+| Nouveauté                                                                                                                                                                         | Pour qui                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Menu en barre latérale dans tous les espaces                                                                                                                                      | Tous                         |
+| Page Abonnement : choix de la formule, code promo, suivi de l'état ; bandeau d'alerte sans abonnement actif                                                                       | Propriétaire, direction      |
+| Listes de choix et assistants en Configuration : années scolaires, campus, salles, calendrier, classes, cycles, niveaux, matières, types d'évaluation, catégories de frais        | Propriétaire, administrateur |
+| Tableau de bord plus rapide en cas d'erreur ; sans abonnement, il mène à la page Abonnement                                                                                       | Tous                         |
+| Double authentification désactivée : connexion par email et mot de passe                                                                                                          | Tous                         |
+| Rechargement automatique après une mise à jour de l'application                                                                                                                   | Tous                         |
+| Menu ☰ sur téléphone pour le site public (Accueil, Tarifs, Guide, Contact, Portail famille)                                                                                      | Tous                         |
+| Bouton « Installer l'application » : invite d'installation sur Android et ordinateur, mode d'emploi sur iPhone                                                                    | Tous                         |
+| Guide d'utilisation en ligne et en PDF, avec une section sur l'utilisation hors connexion                                                                                         | Tous                         |
+| Carrousel « Ils nous font confiance » sur la page d'accueil : logo et présentation de chaque établissement validé ; réglage dans Configuration → Page d'accueil du site           | Propriétaire, administrateur |
+| Comptes et rôles créés par l'équipe DBS Africa : le menu Utilisateurs n'est plus dans l'espace établissement ; chaque nouveau compte reçoit un lien pour choisir son mot de passe | Tous                         |

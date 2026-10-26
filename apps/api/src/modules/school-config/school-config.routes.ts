@@ -20,6 +20,7 @@ import * as subjectCoefficientController from "./subject-coefficient.controller.
 import * as subjectController from "./subject.controller.js";
 import * as teacherAssignmentController from "./teacher-assignment.controller.js";
 import * as tenantLogoController from "./tenant-logo.controller.js";
+import * as tenantShowcaseController from "./tenant-showcase.controller.js";
 import * as timetableController from "./timetable.controller.js";
 
 export const schoolConfigRouter: Router = Router();
@@ -145,6 +146,9 @@ schoolConfigRouter.put(
 // financiers générés en PDF (lib/pdf-letterhead.ts).
 schoolConfigRouter.get("/tenant-logo", tenantLogoController.getTenantLogo);
 schoolConfigRouter.put("/tenant-logo", manageSettings, tenantLogoController.setTenantLogo);
+// Présentation publique sur la page d'accueil (« Ils nous font confiance »).
+schoolConfigRouter.get("/showcase", tenantShowcaseController.getTenantShowcase);
+schoolConfigRouter.put("/showcase", manageSettings, tenantShowcaseController.updateTenantShowcase);
 // logoUploadRateLimiter (même limite que POST /tenants/logo-upload, §14) : sans
 // elle, seul apiRateLimiter générique (600 req/15 min par IP) borne cet endpoint,
 // qui écrit ~3 Mo par appel (MAX_IMAGE_BYTES) sur le disque partagé sans job de

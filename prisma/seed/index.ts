@@ -13,6 +13,7 @@ import {
   TENANT_ROLES,
 } from "./data/roles-permissions.js";
 import { SUBSCRIPTION_PLANS } from "./data/subscription-plans.js";
+import { seedTestAccounts } from "./test-accounts.js";
 
 // Plain, unextended client on purpose: every table seeded here is global
 // (Country/Currency/Role/Permission/SubscriptionPlan/PaymentProvider), never
@@ -231,6 +232,20 @@ async function main(): Promise<void> {
   await seedPlanPricesAndFeatures();
   await seedPaymentProviders();
   await seedCatalogItems();
+
+  // Comptes de test (établissement + direction, enseignant, élève, parent) :
+  // uniquement si la variable est définie, et une seule fois (voir test-accounts.ts).
+  const testAccountsEmail = process.env.SEED_TEST_ACCOUNTS_EMAIL?.trim();
+  if (testAccountsEmail) {
+    // Jamais bloquant : un échec ici ne doit pas empêcher le déploiement de l'API
+    // (le seed tourne avant chaque déploiement). Tout est dans une transaction,
+    // donc rien n'est conservé en cas d'erreur et le prochain déploiement réessaie.
+    try {
+      await seedTestAccounts(prisma, testAccountsEmail);
+    } catch (error) {
+      console.error("Test accounts: creation failed, nothing was kept", error);
+    }
+  }
 }
 
 main()

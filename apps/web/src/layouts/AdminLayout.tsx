@@ -8,6 +8,7 @@ import { clearAdminSession, loadAdminSession } from "../lib/adminSession.js";
 const NAV_LINKS = [
   { to: "/admin", key: "admin.nav.dashboard" },
   { to: "/admin/etablissements", key: "admin.nav.tenants" },
+  { to: "/admin/utilisateurs", key: "admin.nav.users" },
   { to: "/admin/abonnements", key: "admin.nav.subscriptions" },
   { to: "/admin/journaux-audit", key: "admin.nav.auditLogs" },
   { to: "/admin/donnees-reference", key: "admin.nav.referenceData" },

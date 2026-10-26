@@ -39,7 +39,6 @@ const NAV_LINKS: readonly NavLinkDef[] = [
       "TENANT_AUDITOR",
     ],
   },
-  { to: "/utilisateurs", key: "layout.nav.users", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN"] },
   { to: "/personnel", key: "layout.nav.employees", roles: ["SCHOOL_OWNER", "HR_MANAGER"] },
   { to: "/emplois-du-temps", key: "layout.nav.timetable" },
   {

@@ -101,3 +101,35 @@ export async function getPublicPricing() {
     })),
   };
 }
+
+/** Établissements validés par l'équipe : les dossiers en attente, rejetés ou suspendus n'apparaissent jamais. */
+const SHOWCASE_STATUSES = ["VERIFIED", "TRIAL", "ACTIVE"] as const;
+
+/**
+ * Vitrine « Ils nous font confiance » de la page d'accueil : nom, logo, courte
+ * présentation, ville et pays — jamais d'e-mail, de téléphone ni d'adresse. Un
+ * établissement peut s'en retirer depuis sa Configuration (showOnHomepage).
+ */
+export async function listShowcaseSchools() {
+  const tenants = await rawPrisma.tenant.findMany({
+    where: { status: { in: [...SHOWCASE_STATUSES] }, showOnHomepage: true, deletedAt: null },
+    orderBy: [{ verifiedAt: "asc" }, { createdAt: "asc" }],
+    take: 60,
+    select: {
+      id: true,
+      name: true,
+      logoUrl: true,
+      publicDescription: true,
+      ownershipType: true,
+      city: true,
+      country: { select: { isoCode: true, nameFr: true, nameEn: true } },
+    },
+  });
+
+  return tenants.map(({ country, ...tenant }) => ({
+    ...tenant,
+    countryIsoCode: country.isoCode,
+    countryNameFr: country.nameFr,
+    countryNameEn: country.nameEn,
+  }));
+}

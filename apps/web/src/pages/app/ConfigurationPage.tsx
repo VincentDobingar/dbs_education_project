@@ -14,6 +14,7 @@ import {
   RoomSeriesAssistant,
   SchoolYearMilestonesAssistant,
 } from "../../components/ConfigAssistants.js";
+import { ShowcaseSettings } from "../../components/ShowcaseSettings.js";
 import {
   createFeeCategory,
   createFeeStructure,
@@ -464,6 +465,10 @@ export function ConfigurationPage(): ReactNode {
           <p className="mt-2 text-sm text-red-600">{t("config.logoUploadError")}</p>
         ) : null}
         <p className="mt-2 text-xs text-slate-500">{t("config.logoHint")}</p>
+      </Section>
+
+      <Section title={t("config.showcase.title")}>
+        <ShowcaseSettings creds={creds} />
       </Section>
 
       <Section title={t("config.academicYears")}>

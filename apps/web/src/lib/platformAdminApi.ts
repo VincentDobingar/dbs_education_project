@@ -878,3 +878,101 @@ export function updatePlatformCatalogItem(
 ): Promise<PlatformCatalogItem> {
   return apiRequest(`/platform/catalog-items/${id}`, { method: "PATCH", body: input, ...creds });
 }
+
+// ---------------------------------------------------------------------------
+// Comptes des établissements (gérés uniquement depuis la super-administration)
+// ---------------------------------------------------------------------------
+
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
+
+export interface PlatformTenantUser {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  accountStatus: string;
+  membershipStatus: MembershipStatus;
+  roleCodes: string[];
+  lastLoginAt: string | null;
+}
+
+export interface InvitePlatformTenantUserInput {
+  email: string;
+  roleCode: string;
+  firstName?: string;
+  lastName?: string;
+  sendAccessEmail: boolean;
+  locale: "fr" | "en";
+  justification: string;
+}
+
+export function listPlatformTenantUsers(
+  tenantId: string,
+  creds: AdminCredentials,
+): Promise<PlatformTenantUser[]> {
+  return apiRequest(`/platform/tenants/${tenantId}/users`, { ...creds });
+}
+
+export function invitePlatformTenantUser(
+  tenantId: string,
+  input: InvitePlatformTenantUserInput,
+  creds: AdminCredentials,
+): Promise<{ userId: string; created: boolean }> {
+  return apiRequest(`/platform/tenants/${tenantId}/users`, { method: "POST", body: input, ...creds });
+}
+
+export function grantPlatformTenantRole(
+  tenantId: string,
+  userId: string,
+  roleCode: string,
+  justification: string,
+  creds: AdminCredentials,
+): Promise<void> {
+  return apiRequest(`/platform/tenants/${tenantId}/users/${userId}/roles`, {
+    method: "POST",
+    body: { roleCode, justification },
+    ...creds,
+  });
+}
+
+export function revokePlatformTenantRole(
+  tenantId: string,
+  userId: string,
+  roleCode: string,
+  justification: string,
+  creds: AdminCredentials,
+): Promise<void> {
+  return apiRequest(`/platform/tenants/${tenantId}/users/${userId}/roles/${roleCode}`, {
+    method: "DELETE",
+    body: { justification },
+    ...creds,
+  });
+}
+
+export function updatePlatformTenantMembershipStatus(
+  tenantId: string,
+  userId: string,
+  status: MembershipStatus,
+  justification: string,
+  creds: AdminCredentials,
+): Promise<void> {
+  return apiRequest(`/platform/tenants/${tenantId}/users/${userId}/status`, {
+    method: "PATCH",
+    body: { status, justification },
+    ...creds,
+  });
+}
+
+export function sendPlatformTenantUserAccessEmail(
+  tenantId: string,
+  userId: string,
+  locale: "fr" | "en",
+  justification: string,
+  creds: AdminCredentials,
+): Promise<void> {
+  return apiRequest(`/platform/tenants/${tenantId}/users/${userId}/access-email`, {
+    method: "POST",
+    body: { locale, justification },
+    ...creds,
+  });
+}
