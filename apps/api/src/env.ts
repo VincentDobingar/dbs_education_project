@@ -34,6 +34,12 @@ const apiEnvSchema = baseEnvSchema.extend({
   // renseignée. Expéditeur : EMAIL_FROM_ADDRESS, sinon SMTP_FROM_ADDRESS.
   BREVO_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().email().optional(),
+  // Konoom (Tchad, Cameroun) : branché seulement quand les quatre valeurs sont
+  // fournies par Konoom dans le cadre du partenariat (lib/payment-channels.ts).
+  KONOOM_API_BASE_URL: z.string().url().optional(),
+  KONOOM_API_KEY: z.string().optional(),
+  KONOOM_MERCHANT_ID: z.string().optional(),
+  KONOOM_WEBHOOK_SECRET: z.string().optional(),
   EMAIL_FROM_NAME: z.string().min(1).default("EduManage Africa"),
 
   TWILIO_ACCOUNT_SID: z.string().optional(),

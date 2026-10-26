@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "../components/LanguageSwitcher.js";
 const NAV_LINKS = [
   { to: "/", key: "nav.home" },
   { to: "/tarifs", key: "nav.pricing" },
+  { to: "/cours-de-renforcement", key: "nav.remedial" },
   { to: "/guide", key: "nav.guide" },
   { to: "/contact", key: "nav.contact" },
 ] as const;

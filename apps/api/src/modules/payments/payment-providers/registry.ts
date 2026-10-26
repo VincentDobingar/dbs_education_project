@@ -17,3 +17,15 @@ export function registerPaymentProviderAdapter(adapter: PaymentProviderAdapter):
 export function getPaymentProviderAdapter(code: string): PaymentProviderAdapter | undefined {
   return adapters.get(code);
 }
+
+/** Providers able to start a collection from the platform (Konoom, …). */
+export function listInitiatingProviderCodes(): string[] {
+  return [...adapters.values()]
+    .filter((adapter) => typeof adapter.initiatePayment === "function")
+    .map((a) => a.code);
+}
+
+/** Tests only. */
+export function resetPaymentProviderAdaptersForTests(): void {
+  adapters.clear();
+}

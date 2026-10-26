@@ -26,6 +26,12 @@ Les établissements ne gèrent plus leurs comptes : tout passe par **Utilisateur
 
 Chaque action est enregistrée dans les **Journaux d'audit**.
 
+### Cours de renforcement et Konoom
+
+- **Cours de renforcement** (menu) : lignes de reversement créées à chaque paiement confirmé — enseignant, établissement, et la commission DBS Africa. Après un virement (Mobile Money ou paiement de masse Konoom), saisir la référence et cliquer sur **Marquer versé**.
+- **Commission** : paramètre `remedial.platformCommissionBps` dans Paramètres (points de base : 1000 = 10 %, valeur par défaut ; 5000 maximum). Elle est figée sur chaque offre au moment où l'enseignant la soumet.
+- **Konoom** : les opérateurs `KONOOM_TD` et `KONOOM_CM` existent déjà ; ils ne sont proposés aux familles qu'une fois les variables `KONOOM_API_BASE_URL`, `KONOOM_API_KEY`, `KONOOM_MERCHANT_ID` et `KONOOM_WEBHOOK_SECRET` renseignées sur le service api (Railway). Adresse du webhook à communiquer à Konoom : `<URL de l'API>/api/v1/payments/webhooks/KONOOM_TD` (et `KONOOM_CM`).
+
 ### Autres pages
 
 | Page                | Usage                                                                                                                       |
@@ -77,10 +83,11 @@ Aucun mot de passe n'est défini : chaque compte choisit le sien avec **Mot de p
 
 ## Nouveautés d'octobre 2026
 
-| Nouveauté                                                                                                 |
-| --------------------------------------------------------------------------------------------------------- |
-| Page **Utilisateurs** : comptes et rôles de tous les établissements (retirée de l'espace établissement)   |
-| Boutons « Démarrer l'essai gratuit » et « Activer l'abonnement » dans **Abonnements**                     |
-| Onglet « Catalogue établissements » dans **Données de référence**                                         |
-| Données de démonstration dans AuriGeo School : 100 élèves, 19 enseignants, 13 emplois du temps            |
-| Double authentification désactivable : variable `MFA_REQUIRED_FOR_SENSITIVE_ROLES` (actuellement `false`) |
+| Nouveauté                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+| Menu **Cours de renforcement** : reversements aux enseignants et établissements ; opérateurs Konoom Tchad et Cameroun prêts à brancher |
+| Page **Utilisateurs** : comptes et rôles de tous les établissements (retirée de l'espace établissement)                                |
+| Boutons « Démarrer l'essai gratuit » et « Activer l'abonnement » dans **Abonnements**                                                  |
+| Onglet « Catalogue établissements » dans **Données de référence**                                                                      |
+| Données de démonstration dans AuriGeo School : 100 élèves, 19 enseignants, 13 emplois du temps                                         |
+| Double authentification désactivable : variable `MFA_REQUIRED_FOR_SENSITIVE_ROLES` (actuellement `false`)                              |

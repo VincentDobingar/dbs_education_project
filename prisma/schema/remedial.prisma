@@ -1,0 +1,165 @@
+// Cours de renforcement / de rattrapage entre établissements.
+//
+// Un enseignant publie une offre dans son établissement, au tarif d'une grille
+// validée par cet établissement ; une fois l'offre approuvée, tout élève de la
+// plateforme (de n'importe quel établissement) peut s'y inscrire, inscrit par
+// lui-même (StudentUserLink) ou par un parent vérifié (ParentStudentRelationship).
+//
+// Ces tables relient par nature deux établissements (celui de l'enseignant et
+// celui de l'élève) : comme FamilyAccount, elles ne sont PAS dans
+// TENANT_SCOPED_MODELS ni sous RLS — chaque accès passe par
+// modules/remedial/*.service.ts, qui vérifie explicitement qui peut voir quoi.
+
+enum RemedialMode {
+  ONSITE
+  ONLINE
+  HYBRID
+}
+
+enum RemedialFormat {
+  INDIVIDUAL
+  GROUP
+}
+
+enum RemedialOfferStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  CLOSED
+}
+
+enum RemedialEnrollmentStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum RemedialPayoutBeneficiary {
+  TEACHER
+  SCHOOL
+  PLATFORM
+}
+
+enum RemedialPayoutStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+/// Grille tarifaire validée par l'établissement : tarif horaire PAR ÉLÈVE et part
+/// de l'établissement (en points de base, 1 000 = 10 %).
+model RemedialTariff {
+  id              String         @id @default(cuid())
+  tenantId        String
+  label           String
+  format          RemedialFormat
+  mode            RemedialMode
+  hourlyRateCents Int
+  currencyId      String
+  schoolShareBps  Int
+  isActive        Boolean        @default(true)
+  approvedById    String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  offers RemedialOffer[]
+
+  @@index([tenantId])
+}
+
+model RemedialOffer {
+  id               String              @id @default(cuid())
+  tenantId         String
+  employeeId       String
+  teacherUserId    String
+  tariffId         String
+  subjectId        String?
+  subjectLabel     String
+  levelLabel       String
+  title            String
+  description      String
+  mode             RemedialMode
+  format           RemedialFormat
+  location         String?
+  /// Lien de visioconférence ou consignes pratiques : visibles des seuls inscrits confirmés.
+  accessDetails    String?
+  capacity         Int
+  totalMinutes     Int
+  startsOn         DateTime
+  endsOn           DateTime
+  scheduleNote     String
+  /// Prix par élève figé à la soumission (tarif horaire × durée totale).
+  priceCents       Int
+  currencyId       String
+  schoolShareBps   Int
+  /// Commission DBSA figée à la soumission (paramètre remedial.platformCommissionBps).
+  platformShareBps Int
+  status           RemedialOfferStatus @default(DRAFT)
+  reviewNote       String?
+  reviewedById     String?
+  reviewedAt       DateTime?
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  tariff      RemedialTariff       @relation(fields: [tariffId], references: [id])
+  enrollments RemedialEnrollment[]
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+model RemedialEnrollment {
+  id               String                   @id @default(cuid())
+  offerId          String
+  offerTenantId    String
+  studentId        String
+  learnerTenantId  String
+  enrolledByUserId String
+  /// PARENT ou STUDENT : qui a inscrit l'élève.
+  enrolledAs       String
+  status           RemedialEnrollmentStatus @default(PENDING_PAYMENT)
+  reference        String                   @unique
+  amountCents      Int
+  currencyId       String
+  confirmedAt      DateTime?
+  cancelledAt      DateTime?
+  cancelReason     String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  offer          RemedialOffer        @relation(fields: [offerId], references: [id])
+  payoutLines    RemedialPayoutLine[]
+  paymentIntents PaymentIntent[]
+
+  @@unique([offerId, studentId])
+  @@index([offerTenantId])
+  @@index([learnerTenantId])
+  @@index([enrolledByUserId])
+}
+
+/// Répartition d'une inscription payée : enseignant, établissement de
+/// l'enseignant, DBSA. Versée hors ligne ou par paiement de masse (Konoom).
+model RemedialPayoutLine {
+  id            String                    @id @default(cuid())
+  enrollmentId  String
+  beneficiary   RemedialPayoutBeneficiary
+  tenantId      String?
+  employeeId    String?
+  amountCents   Int
+  currencyId    String
+  status        RemedialPayoutStatus      @default(PENDING)
+  paidAt        DateTime?
+  paidReference String?
+  paidById      String?
+  createdAt     DateTime                  @default(now())
+
+  enrollment RemedialEnrollment @relation(fields: [enrollmentId], references: [id])
+
+  @@index([enrollmentId])
+  @@index([tenantId])
+  @@index([status])
+}

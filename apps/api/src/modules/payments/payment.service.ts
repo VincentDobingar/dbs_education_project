@@ -8,6 +8,7 @@ import {
 
 import { AppError } from "../../lib/errors.js";
 import { prisma, type PrismaTransactionClient } from "../../lib/prisma.js";
+import { confirmRemedialEnrollment } from "../remedial/remedial-settlement.js";
 import { isTransitionAllowed } from "../subscriptions/subscription-transitions.js";
 import { applySubscriptionTransition } from "../subscriptions/subscription.service.js";
 
@@ -269,7 +270,7 @@ export async function createPaymentIntent(input: CreatePaymentIntentInput): Prom
  * Idempotent — safe to call again for a transaction that already went through
  * (the ACTIVE transition and the receipt creation are both no-ops the second time).
  */
-async function handleSuccessfulTransaction(tx: Tx, transaction: PaymentTransaction): Promise<void> {
+export async function handleSuccessfulTransaction(tx: Tx, transaction: PaymentTransaction): Promise<void> {
   const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id: transaction.paymentIntentId } });
 
   if (intent.invoiceId) {
@@ -284,6 +285,10 @@ async function handleSuccessfulTransaction(tx: Tx, transaction: PaymentTransacti
         await applySubscriptionTransition(tx, subscription.id, "ACTIVE", { reason: "Payment received" });
       }
     }
+  }
+
+  if (intent.remedialEnrollmentId) {
+    await confirmRemedialEnrollment(tx, intent.remedialEnrollmentId);
   }
 
   const existingReceipt = await tx.receipt.findUnique({ where: { paymentTransactionId: transaction.id } });

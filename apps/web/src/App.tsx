@@ -59,6 +59,22 @@ const AdminSupportTicketsPage = lazyImport(
 );
 const AdminTenantsPage = lazyImport(() => import("./pages/admin/AdminTenantsPage.js"), "AdminTenantsPage");
 const AdminUsersPage = lazyImport(() => import("./pages/admin/AdminUsersPage.js"), "AdminUsersPage");
+const AdminRemedialPayoutsPage = lazyImport(
+  () => import("./pages/admin/AdminRemedialPayoutsPage.js"),
+  "AdminRemedialPayoutsPage",
+);
+const RemedialCoursesPage = lazyImport(
+  () => import("./pages/app/RemedialCoursesPage.js"),
+  "RemedialCoursesPage",
+);
+const PortalRemedialPage = lazyImport(
+  () => import("./pages/portal/PortalRemedialPage.js"),
+  "PortalRemedialPage",
+);
+const RemedialPublicPage = lazyImport(
+  () => import("./pages/marketing/RemedialPublicPage.js"),
+  "RemedialPublicPage",
+);
 const AnnouncementsPage = lazyImport(() => import("./pages/app/AnnouncementsPage.js"), "AnnouncementsPage");
 const AttendancePage = lazyImport(() => import("./pages/app/AttendancePage.js"), "AttendancePage");
 const BoardingPage = lazyImport(() => import("./pages/app/BoardingPage.js"), "BoardingPage");
@@ -154,6 +170,7 @@ export function App(): ReactNode {
               <Route path="/tarifs" element={<PricingPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/guide" element={<GuidePage />} />
+              <Route path="/cours-de-renforcement" element={<RemedialPublicPage />} />
               <Route path="/inscription" element={<SignupPage />} />
               <Route path="/connexion" element={<LoginPage />} />
               <Route path="/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
@@ -189,6 +206,7 @@ export function App(): ReactNode {
               <Route path="/cantine" element={<CafeteriaPage />} />
               <Route path="/internat" element={<BoardingPage />} />
               <Route path="/e-learning" element={<ElearningPage />} />
+              <Route path="/cours-renforcement" element={<RemedialCoursesPage />} />
               <Route path="/aide" element={<HelpPage />} />
             </Route>
 
@@ -200,6 +218,7 @@ export function App(): ReactNode {
               <Route path="/portail/eleve" element={<StudentPortalPage />} />
               <Route path="/portail/eleve/profil" element={<StudentProfilePage />} />
               <Route path="/portail/activation" element={<PortalRedeemPage />} />
+              <Route path="/portail/cours-renforcement" element={<PortalRemedialPage />} />
               <Route path="/portail/aide" element={<HelpPage />} />
             </Route>
             <Route path="/portail/connexion" element={<PortalLoginPage />} />
@@ -209,6 +228,7 @@ export function App(): ReactNode {
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
               <Route path="/admin/utilisateurs" element={<AdminUsersPage />} />
+              <Route path="/admin/cours-renforcement" element={<AdminRemedialPayoutsPage />} />
               <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
               <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
               <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />

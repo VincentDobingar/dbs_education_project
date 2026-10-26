@@ -128,6 +128,11 @@ const NAV_LINKS: readonly NavLinkDef[] = [
     key: "layout.nav.elearning",
     roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],
   },
+  {
+    to: "/cours-renforcement",
+    key: "layout.nav.remedial",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER"],
+  },
   { to: "/configuration", key: "layout.nav.configuration", roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN"] },
   // GET /subscriptions/school n'exige aucune permission ; seul SCHOOL_OWNER détient
   // subscriptions.manage pour souscrire (la page l'explique aux autres).

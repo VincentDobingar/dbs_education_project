@@ -450,5 +450,51 @@ export default async function setup(): Promise<void> {
     },
   });
 
+  // Cours de renforcement : permissions et opérateur Konoom de test (sans adaptateur
+  // enregistré par défaut — les tests enregistrent un faux adaptateur).
+  const remedialManage = await prisma.permission.upsert({
+    where: { code: "remedial.manage" },
+    update: {},
+    create: {
+      code: "remedial.manage",
+      module: "remedial",
+      descriptionFr: "Gérer les cours de renforcement",
+      descriptionEn: "Manage remedial courses",
+    },
+  });
+  const remedialTeach = await prisma.permission.upsert({
+    where: { code: "remedial.teach" },
+    update: {},
+    create: {
+      code: "remedial.teach",
+      module: "remedial",
+      descriptionFr: "Proposer des cours de renforcement",
+      descriptionEn: "Offer remedial courses",
+    },
+  });
+  await prisma.rolePermission.upsert({
+    where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: remedialManage.id } },
+    update: {},
+    create: { roleId: schoolOwnerRole.id, permissionId: remedialManage.id },
+  });
+  await prisma.rolePermission.upsert({
+    where: { roleId_permissionId: { roleId: teacherRole.id, permissionId: remedialTeach.id } },
+    update: {},
+    create: { roleId: teacherRole.id, permissionId: remedialTeach.id },
+  });
+  const cameroon = await prisma.country.findUniqueOrThrow({ where: { isoCode: "CM" } });
+  await prisma.paymentProvider.upsert({
+    where: { code: "KONOOM_CM" },
+    update: {},
+    create: {
+      code: "KONOOM_CM",
+      nameFr: "Konoom Cameroun",
+      nameEn: "Konoom Cameroon",
+      countryId: cameroon.id,
+      methodType: "WALLET",
+      isTestMode: true,
+    },
+  });
+
   await prisma.$disconnect();
 }

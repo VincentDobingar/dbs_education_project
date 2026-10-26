@@ -36,6 +36,23 @@ export const PAYMENT_PROVIDERS = [
     countryIso: "UG",
     methodType: "MOBILE_MONEY",
   },
+  // Konoom : établissement de paiement agréé COBAC (Tchad 2025, Cameroun 2026).
+  // Actif côté plateforme seulement quand ses identifiants sont configurés
+  // (apps/api/src/lib/payment-channels.ts).
+  {
+    code: "KONOOM_TD",
+    nameFr: "Konoom Tchad",
+    nameEn: "Konoom Chad",
+    countryIso: "TD",
+    methodType: "WALLET",
+  },
+  {
+    code: "KONOOM_CM",
+    nameFr: "Konoom Cameroun",
+    nameEn: "Konoom Cameroon",
+    countryIso: "CM",
+    methodType: "WALLET",
+  },
   {
     code: "CASH_AGENT",
     nameFr: "Espèces (agent autorisé)",

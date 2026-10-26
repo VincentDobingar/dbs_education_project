@@ -51,6 +51,7 @@ export function PortalLayout(): ReactNode {
   if (!studentMode && roles.data.parent)
     links.push({ to: "/portail/abonnements", label: "Mes abonnements famille" });
   links.push(
+    { to: "/portail/cours-renforcement", label: "Cours de renforcement" },
     { to: "/portail/activation", label: "Activer un code" },
     { to: "/portail/aide", label: "Guide d'utilisation" },
   );

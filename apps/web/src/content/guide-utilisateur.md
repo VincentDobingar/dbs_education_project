@@ -144,6 +144,18 @@ Catégories de dépenses et saisie des dépenses, sessions de caisse (ouvrir ave
 | Internat     | Chambres, lits, affectation des élèves, présence nocturne                                   |
 | E-learning   | Cours par classe, ressources (vidéo, document, lien, texte), progression des élèves         |
 
+### Cours de renforcement
+
+Les enseignants proposent des cours de renforcement ou de rattrapage, ouverts aux élèves **de tous les établissements** de la plateforme. Menu **Cours de renforcement**.
+
+1. **La direction fixe la grille tarifaire** (onglet Grille tarifaire) : intitulé, format (en groupe ou individuel), lieu (sur place, en ligne, hybride), tarif horaire par élève et part de l'établissement. Sans grille, aucun enseignant ne peut proposer de cours.
+2. **L'enseignant propose un cours** (onglet Mes offres) : il choisit un tarif de la grille, la matière, le niveau, les dates, les créneaux, la durée totale et le nombre de places. Le prix par élève est calculé automatiquement (tarif horaire × durée). Il clique ensuite sur **Soumettre à la direction**.
+3. **La direction valide ou refuse** (onglet Offres de l'établissement). Un refus demande un motif, que l'enseignant voit pour corriger son offre.
+4. **Les familles s'inscrivent et paient** depuis le portail. L'enseignant voit la liste de ses inscrits (nom, établissement d'origine, contact une fois le paiement reçu). La direction peut **encaisser en espèces** une inscription en attente.
+5. **Chaque paiement est réparti** entre l'enseignant, l'établissement (sa part de la grille) et DBS Africa (commission de la plateforme, 10 % par défaut). Les onglets Mes gains et Reversements montrent ce qui reste à verser et ce qui a été versé.
+
+Le lien de visioconférence ou les consignes du cours ne sont visibles que des inscrits ayant payé.
+
 ## Portail parent et élève
 
 Parents et élèves ont leur propre espace, séparé de celui de l'établissement, avec le même menu en barre latérale (Parent, Élève, Activer un code).
@@ -152,6 +164,7 @@ Parents et élèves ont leur propre espace, séparé de celui de l'établissemen
 2. **Activer un code** : saisir le code d'activation envoyé par l'établissement depuis la fiche de l'élève. Le code lie un enfant au compte parent, ou le compte élève à sa fiche. Un code ne sert qu'une fois et peut expirer.
 3. **Suivre la scolarité** : le parent voit ses enfants, leur dernière moyenne et les annonces. La page d'un enfant montre ses présences, ses devoirs et les annonces de sa classe.
 4. **Travailler en ligne** (élève) : rendre un devoir, suivre les cours en ligne et les marquer comme terminés.
+5. **Cours de renforcement** : chercher un cours par matière, niveau, lieu ou pays (y compris dans un autre établissement), cliquer sur **S'inscrire**, choisir l'enfant, puis **Payer** — en ligne (Konoom ou Mobile Money, dès que l'opérateur est branché : valider la demande sur le téléphone) ou en espèces auprès de l'établissement de l'enseignant avec la référence de l'inscription. Le catalogue est aussi consultable sans compte sur la page [Cours de renforcement](/cours-de-renforcement).
 
 Le dossier détaillé d'un enfant demande un abonnement familial (à partir de 1 000 FCFA par mois), souscrit depuis le portail, ou une licence offerte par un sponsor.
 
@@ -196,16 +209,18 @@ Si le problème persiste, ouvrez un ticket dans **Support** en décrivant la pag
 
 Ces nouveautés sont en ligne depuis le 20 octobre 2026, sauf les trois dernières, ajoutées le 22 octobre.
 
-| Nouveauté                                                                                                                                                                         | Pour qui                     |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Menu en barre latérale dans tous les espaces                                                                                                                                      | Tous                         |
-| Page Abonnement : choix de la formule, code promo, suivi de l'état ; bandeau d'alerte sans abonnement actif                                                                       | Propriétaire, direction      |
-| Listes de choix et assistants en Configuration : années scolaires, campus, salles, calendrier, classes, cycles, niveaux, matières, types d'évaluation, catégories de frais        | Propriétaire, administrateur |
-| Tableau de bord plus rapide en cas d'erreur ; sans abonnement, il mène à la page Abonnement                                                                                       | Tous                         |
-| Double authentification désactivée : connexion par email et mot de passe                                                                                                          | Tous                         |
-| Rechargement automatique après une mise à jour de l'application                                                                                                                   | Tous                         |
-| Menu ☰ sur téléphone pour le site public (Accueil, Tarifs, Guide, Contact, Portail famille)                                                                                      | Tous                         |
-| Bouton « Installer l'application » : invite d'installation sur Android et ordinateur, mode d'emploi sur iPhone                                                                    | Tous                         |
-| Guide d'utilisation en ligne et en PDF, avec une section sur l'utilisation hors connexion                                                                                         | Tous                         |
-| Carrousel « Ils nous font confiance » sur la page d'accueil : logo et présentation de chaque établissement validé ; réglage dans Configuration → Page d'accueil du site           | Propriétaire, administrateur |
-| Comptes et rôles créés par l'équipe DBS Africa : le menu Utilisateurs n'est plus dans l'espace établissement ; chaque nouveau compte reçoit un lien pour choisir son mot de passe | Tous                         |
+| Nouveauté                                                                                                                                                                         | Pour qui                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Menu en barre latérale dans tous les espaces                                                                                                                                      | Tous                             |
+| Page Abonnement : choix de la formule, code promo, suivi de l'état ; bandeau d'alerte sans abonnement actif                                                                       | Propriétaire, direction          |
+| Listes de choix et assistants en Configuration : années scolaires, campus, salles, calendrier, classes, cycles, niveaux, matières, types d'évaluation, catégories de frais        | Propriétaire, administrateur     |
+| Tableau de bord plus rapide en cas d'erreur ; sans abonnement, il mène à la page Abonnement                                                                                       | Tous                             |
+| Double authentification désactivée : connexion par email et mot de passe                                                                                                          | Tous                             |
+| Rechargement automatique après une mise à jour de l'application                                                                                                                   | Tous                             |
+| Menu ☰ sur téléphone pour le site public (Accueil, Tarifs, Guide, Contact, Portail famille)                                                                                      | Tous                             |
+| Bouton « Installer l'application » : invite d'installation sur Android et ordinateur, mode d'emploi sur iPhone                                                                    | Tous                             |
+| Guide d'utilisation en ligne et en PDF, avec une section sur l'utilisation hors connexion                                                                                         | Tous                             |
+| Carrousel « Ils nous font confiance » sur la page d'accueil : logo et présentation de chaque établissement validé ; réglage dans Configuration → Page d'accueil du site           | Propriétaire, administrateur     |
+| Comptes et rôles créés par l'équipe DBS Africa : le menu Utilisateurs n'est plus dans l'espace établissement ; chaque nouveau compte reçoit un lien pour choisir son mot de passe | Tous                             |
+| Cours de renforcement entre établissements : grille tarifaire validée par la direction, offres des enseignants, inscription et paiement depuis le portail famille                 | Direction, enseignants, familles |
+| Paiement Konoom (Tchad, Cameroun) intégré, activé dès la signature du partenariat                                                                                                 | Familles, établissements         |

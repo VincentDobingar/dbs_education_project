@@ -205,6 +205,18 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer l'internat",
     descriptionEn: "Manage the boarding house",
   },
+  {
+    code: "remedial.manage",
+    module: "remedial",
+    descriptionFr: "Gérer les cours de renforcement (grille tarifaire, validation, encaissement)",
+    descriptionEn: "Manage remedial courses (price grid, review, cash collection)",
+  },
+  {
+    code: "remedial.teach",
+    module: "remedial",
+    descriptionFr: "Proposer des cours de renforcement",
+    descriptionEn: "Offer remedial courses",
+  },
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number]["code"];
@@ -219,6 +231,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
   PLATFORM_AUDITOR: [],
 
   SCHOOL_OWNER: [
+    "remedial.manage",
     "students.read",
     "students.write",
     "grades.read",
@@ -246,6 +259,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "boarding.write",
   ],
   SCHOOL_ADMIN: [
+    "remedial.manage",
     "students.read",
     "students.write",
     "grades.read",
@@ -262,6 +276,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "boarding.read",
   ],
   DIRECTOR: [
+    "remedial.manage",
     "students.read",
     "grades.read",
     "grades.publish",
@@ -274,6 +289,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "elearning.read",
   ],
   ACADEMIC_DIRECTOR: [
+    "remedial.manage",
     "students.read",
     "grades.read",
     "grades.write",
@@ -289,6 +305,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
   ACCOUNTANT: ["finance.read", "finance.write"],
   HR_MANAGER: ["hr.manage", "hr.salary.manage"],
   TEACHER: [
+    "remedial.teach",
     "students.read",
     "grades.read",
     "grades.write",

@@ -73,6 +73,7 @@ enum PaymentPurpose {
   SAAS_INVOICE
   STUDENT_FEE
   LICENSE_BATCH
+  REMEDIAL_COURSE
 }
 
 enum PaymentTransactionStatus {
@@ -364,23 +365,25 @@ model PaymentProvider {
 
 /// IdempotencyKey empeche la double creation d'intention de paiement (§24, §37).
 model PaymentIntent {
-  id               String                   @id @default(cuid())
-  providerId       String
-  purpose          PaymentPurpose
-  invoiceId        String?
-  studentInvoiceId String?
-  licenseBatchId   String?
-  amountCents      Int
-  currencyId       String
-  status           PaymentTransactionStatus @default(PENDING)
-  idempotencyKey   String                   @unique
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
+  id                   String                   @id @default(cuid())
+  providerId           String
+  purpose              PaymentPurpose
+  invoiceId            String?
+  studentInvoiceId     String?
+  licenseBatchId       String?
+  remedialEnrollmentId String?
+  amountCents          Int
+  currencyId           String
+  status               PaymentTransactionStatus @default(PENDING)
+  idempotencyKey       String                   @unique
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
 
-  provider       PaymentProvider @relation(fields: [providerId], references: [id])
-  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
-  studentInvoice StudentInvoice? @relation(fields: [studentInvoiceId], references: [id])
-  licenseBatch   LicenseBatch?   @relation(fields: [licenseBatchId], references: [id])
+  provider           PaymentProvider     @relation(fields: [providerId], references: [id])
+  invoice            Invoice?            @relation(fields: [invoiceId], references: [id])
+  studentInvoice     StudentInvoice?     @relation(fields: [studentInvoiceId], references: [id])
+  licenseBatch       LicenseBatch?       @relation(fields: [licenseBatchId], references: [id])
+  remedialEnrollment RemedialEnrollment? @relation(fields: [remedialEnrollmentId], references: [id])
 
   transactions PaymentTransaction[]
 

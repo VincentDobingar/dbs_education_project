@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { to: "/admin/support", key: "admin.nav.supportTickets" },
   { to: "/admin/modeles-messages", key: "admin.nav.messageTemplates" },
   { to: "/admin/sponsors", key: "admin.nav.sponsors" },
+  { to: "/admin/cours-renforcement", key: "admin.nav.remedial" },
   { to: "/admin/parametres", key: "admin.nav.platformSettings" },
   { to: "/admin/guide", key: "admin.nav.guide" },
 ] as const;

@@ -27,6 +27,11 @@ import { parentPortalRouter } from "./modules/parent-portal/parent-portal.routes
 import { paymentWebhookRouter } from "./modules/payments/payment.routes.js";
 import { platformAdminRouter } from "./modules/platform-admin/platform-admin.routes.js";
 import { publicRouter } from "./modules/public/public.routes.js";
+import {
+  remedialPlatformRouter,
+  remedialPortalRouter,
+  remedialSchoolRouter,
+} from "./modules/remedial/remedial.routes.js";
 import { schoolConfigRouter } from "./modules/school-config/school-config.routes.js";
 import { studentPortalRouter } from "./modules/student-portal/student-portal.routes.js";
 import { registrationRouter } from "./modules/students/registration.routes.js";
@@ -103,6 +108,9 @@ export function createApp(): express.Express {
   app.use("/api/v1/communication", communicationRouter);
   app.use("/api/v1/parent-portal", parentAccountRouter, parentPortalRouter);
   app.use("/api/v1/student-portal", studentPortalRouter);
+  app.use("/api/v1/remedial", remedialSchoolRouter);
+  app.use("/api/v1/remedial-portal", remedialPortalRouter);
+  app.use("/api/v1/platform/remedial", remedialPlatformRouter);
   app.use("/api/v1/platform", platformAdminRouter);
 
   app.use((_req: Request, res: Response) => {
