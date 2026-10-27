@@ -59,6 +59,11 @@ const AdminSupportTicketsPage = lazyImport(
 );
 const AdminTenantsPage = lazyImport(() => import("./pages/admin/AdminTenantsPage.js"), "AdminTenantsPage");
 const AdminUsersPage = lazyImport(() => import("./pages/admin/AdminUsersPage.js"), "AdminUsersPage");
+const AdminFeeSettlementsPage = lazyImport(
+  () => import("./pages/admin/AdminFeeSettlementsPage.js"),
+  "AdminFeeSettlementsPage",
+);
+const FeeSetupPage = lazyImport(() => import("./pages/app/FeeSetupPage.js"), "FeeSetupPage");
 const AdminRemedialPayoutsPage = lazyImport(
   () => import("./pages/admin/AdminRemedialPayoutsPage.js"),
   "AdminRemedialPayoutsPage",
@@ -207,6 +212,7 @@ export function App(): ReactNode {
               <Route path="/internat" element={<BoardingPage />} />
               <Route path="/e-learning" element={<ElearningPage />} />
               <Route path="/cours-renforcement" element={<RemedialCoursesPage />} />
+              <Route path="/frais-echeanciers" element={<FeeSetupPage />} />
               <Route path="/aide" element={<HelpPage />} />
             </Route>
 
@@ -229,6 +235,7 @@ export function App(): ReactNode {
               <Route path="/admin/etablissements" element={<AdminTenantsPage />} />
               <Route path="/admin/utilisateurs" element={<AdminUsersPage />} />
               <Route path="/admin/cours-renforcement" element={<AdminRemedialPayoutsPage />} />
+              <Route path="/admin/reversements-frais" element={<AdminFeeSettlementsPage />} />
               <Route path="/admin/abonnements" element={<AdminSubscriptionsPage />} />
               <Route path="/admin/journaux-audit" element={<AdminAuditLogsPage />} />
               <Route path="/admin/donnees-reference" element={<AdminReferenceDataPage />} />

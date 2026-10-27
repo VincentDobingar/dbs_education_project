@@ -96,6 +96,12 @@ export const PERMISSIONS = [
     descriptionFr: "Gérer les finances",
     descriptionEn: "Manage finances",
   },
+  {
+    code: "finance.exceptions",
+    module: "finance",
+    descriptionFr: "Accorder remises et échéanciers individuels",
+    descriptionEn: "Grant discounts and individual payment plans",
+  },
   { code: "hr.manage", module: "hr", descriptionFr: "Gérer le personnel", descriptionEn: "Manage staff" },
   {
     code: "hr.salary.manage",
@@ -240,6 +246,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "finance.read",
     "finance.write",
+    "finance.exceptions",
     "hr.manage",
     "hr.salary.manage",
     "tenant.settings.manage",
@@ -284,6 +291,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionCode[]> = {
     "discipline.read",
     "discipline.write",
     "finance.read",
+    "finance.exceptions",
     "communication.manage",
     "homework.read",
     "elearning.read",

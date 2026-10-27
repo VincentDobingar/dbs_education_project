@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { EnrollmentFeePreview } from "../../components/EnrollmentFeePreview.js";
+import { EMPTY_FEE_CHOICES, getFeeMode, type EnrollmentFeeChoices } from "../../lib/feesApi.js";
 import { formText } from "../../lib/formData.js";
 import {
   createRegistrationPeriod,
@@ -14,6 +16,16 @@ import { listAcademicYears, listClassrooms } from "../../lib/schoolConfigApi.js"
 import { enrollStudent, listStudents } from "../../lib/studentsApi.js";
 import { useRequiredSession } from "../../lib/useSession.js";
 
+const ENROLLMENT_STATUS_LABELS: Record<string, string> = {
+  ADMITTED: "Admis — inscription à payer",
+  ENROLLED: "Inscrit",
+  RE_ENROLLED: "Réinscrit",
+  PRE_REGISTERED: "Préinscrit",
+  WITHDRAWN: "Retiré",
+  TRANSFERRED_OUT: "Transféré",
+  GRADUATED: "Diplômé",
+};
+
 export function RegistrationsPage(): ReactNode {
   const session = useRequiredSession();
   const creds = { accessToken: session.accessToken, subdomain: session.subdomain };
@@ -23,6 +35,7 @@ export function RegistrationsPage(): ReactNode {
   const [studentId, setStudentId] = useState("");
   const [classroomId, setClassroomId] = useState("");
   const [trancheCount, setTrancheCount] = useState(1);
+  const [feeChoices, setFeeChoices] = useState<EnrollmentFeeChoices>(EMPTY_FEE_CHOICES);
   const canWrite = session.roleCodes.some((role) =>
     ["SCHOOL_OWNER", "SCHOOL_ADMIN", "SECRETARY"].includes(role),
   );
@@ -42,6 +55,15 @@ export function RegistrationsPage(): ReactNode {
     queryKey: ["students", session.subdomain, "registration"],
     queryFn: () => listStudents(creds),
   });
+  const feeMode = useQuery({
+    queryKey: ["fee-mode", session.subdomain, yearId],
+    queryFn: () => getFeeMode(yearId, creds),
+    enabled: Boolean(yearId),
+  });
+  const usesPlans = Boolean(feeMode.data?.usesPlans);
+  const canGrantManualDiscount = session.roleCodes.some((role) =>
+    ["SCHOOL_OWNER", "DIRECTOR"].includes(role),
+  );
   const registrations = useQuery({
     queryKey: ["registrations", session.subdomain, yearId],
     queryFn: () => listRegistrations(creds, yearId),
@@ -59,10 +81,12 @@ export function RegistrationsPage(): ReactNode {
           academicYearId: yearId,
           startDate: new Date(`${formText(data, "startDate")}T00:00:00Z`).toISOString(),
           endDate: new Date(`${formText(data, "endDate")}T23:59:59.999Z`).toISOString(),
-          installments: Array.from({ length: trancheCount }, (_, index) => ({
-            amountCents: Math.round(Number(data.get(`amount-${index}`)) * 100),
-            dueDate: new Date(`${formText(data, `due-${index}`)}T23:59:59.999Z`).toISOString(),
-          })),
+          installments: usesPlans
+            ? []
+            : Array.from({ length: trancheCount }, (_, index) => ({
+                amountCents: Math.round(Number(data.get(`amount-${index}`)) * 100),
+                dueDate: new Date(`${formText(data, `due-${index}`)}T23:59:59.999Z`).toISOString(),
+              })),
         },
         creds,
       ),
@@ -85,6 +109,11 @@ export function RegistrationsPage(): ReactNode {
           campusId: classroom.campusId,
           gradeLevelId: classroom.gradeLevelId,
           registrationPeriodId: periodId,
+          ...(feeChoices.optionalFeeStructureIds.length
+            ? { optionalFeeStructureIds: feeChoices.optionalFeeStructureIds }
+            : {}),
+          ...(feeChoices.discountPresetIds.length ? { discountPresetIds: feeChoices.discountPresetIds } : {}),
+          ...(feeChoices.manualDiscounts.length ? { manualDiscounts: feeChoices.manualDiscounts } : {}),
         },
         creds,
       );
@@ -92,17 +121,34 @@ export function RegistrationsPage(): ReactNode {
     onSuccess: () => {
       refresh();
       setStudentId("");
+      setFeeChoices(EMPTY_FEE_CHOICES);
       void client.invalidateQueries({ queryKey: ["student-invoices", session.subdomain] });
     },
   });
   const period = periods.data?.find((item) => item.id === periodId);
   const student = students.data?.find((item) => item.id === studentId);
+  const chosenClassroom = classrooms.data?.find((item) => item.id === classroomId);
+  const enrollmentBase =
+    chosenClassroom && periodId
+      ? {
+          academicYearId: chosenClassroom.academicYearId,
+          classroomId,
+          campusId: chosenClassroom.campusId,
+          gradeLevelId: chosenClassroom.gradeLevelId,
+          registrationPeriodId: periodId,
+        }
+      : null;
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 py-10">
       <h1 className="text-2xl font-bold">Inscriptions / réinscriptions</h1>
       <p className="text-slate-600">
-        Choisissez l'année, ouvrez une période et définissez une à trois tranches de frais d'inscription.
-        Chaque inscription génère les factures correspondantes, consultables dans la fiche élève.
+        Choisissez l'année et ouvrez une période d'inscription. Les montants viennent de la grille tarifaire
+        et du plan d'échéances définis dans{" "}
+        <Link className="underline" to="/frais-echeanciers">
+          Frais et échéanciers
+        </Link>{" "}
+        ; à défaut de plan, la période porte elle-même une à trois tranches. Chaque inscription génère les
+        échéances de l'élève, consultables dans sa fiche.
       </p>
       <label className="block font-medium">
         Année académique
@@ -154,40 +200,49 @@ export function RegistrationsPage(): ReactNode {
               Clôture
               <input className="input block" type="date" name="endDate" required />
             </label>
-            <label>
-              Nombre de tranches
-              <select
-                className="input block"
-                value={trancheCount}
-                onChange={(event) => setTrancheCount(Number(event.target.value))}
-              >
-                {[1, 2, 3].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {Array.from({ length: trancheCount }, (_, index) => (
-            <div key={index} className="flex flex-wrap gap-3">
+            {!usesPlans && (
               <label>
-                Tranche {index + 1} — montant (devise de l'établissement)
-                <input
+                Nombre de tranches
+                <select
                   className="input block"
-                  name={`amount-${index}`}
-                  type="number"
-                  required
-                  min="0.01"
-                  step="0.01"
-                />
+                  value={trancheCount}
+                  onChange={(event) => setTrancheCount(Number(event.target.value))}
+                >
+                  {[1, 2, 3].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
               </label>
-              <label>
-                Échéance
-                <input className="input block" name={`due-${index}`} type="date" required />
-              </label>
-            </div>
-          ))}
+            )}
+          </div>
+          {usesPlans && (
+            <p className="text-sm text-slate-600">
+              Cette année utilise des plans d'échéances : la période fixe seulement les dates d'ouverture et
+              de clôture des inscriptions.
+            </p>
+          )}
+          {!usesPlans &&
+            Array.from({ length: trancheCount }, (_, index) => (
+              <div key={index} className="flex flex-wrap gap-3">
+                <label>
+                  Tranche {index + 1} — montant (devise de l'établissement)
+                  <input
+                    className="input block"
+                    name={`amount-${index}`}
+                    type="number"
+                    required
+                    min="0.01"
+                    step="0.01"
+                  />
+                </label>
+                <label>
+                  Échéance
+                  <input className="input block" name={`due-${index}`} type="date" required />
+                </label>
+              </div>
+            ))}
           <Button type="submit" disabled={createPeriod.isPending}>
             Créer la période
           </Button>
@@ -318,7 +373,17 @@ export function RegistrationsPage(): ReactNode {
               avant l'inscription.
             </p>
           )}
-          {period && (
+          {student && enrollmentBase && (
+            <EnrollmentFeePreview
+              studentId={student.id}
+              base={enrollmentBase}
+              creds={creds}
+              canGrantManualDiscount={canGrantManualDiscount}
+              value={feeChoices}
+              onChange={setFeeChoices}
+            />
+          )}
+          {period && period.installments.length > 0 && !usesPlans && (
             <p className="text-sm text-slate-600">
               Frais d'inscription :{" "}
               {(period.installments.reduce((sum, item) => sum + item.amountCents, 0) / 100).toLocaleString(
@@ -340,7 +405,9 @@ export function RegistrationsPage(): ReactNode {
           )}
           {enroll.isSuccess && (
             <p role="status" className="text-teal-700">
-              Inscription enregistrée et factures créées.
+              {enroll.data.status === "ADMITTED"
+                ? "Élève admis : il apparaîtra dans sa classe dès le paiement des frais d'inscription (fiche élève, rubrique Échéancier)."
+                : "Inscription enregistrée et échéances créées."}
             </p>
           )}
         </form>
@@ -379,7 +446,7 @@ export function RegistrationsPage(): ReactNode {
                 <td>{r.academicYear.name}</td>
                 <td>{r.classroom.name}</td>
                 <td>{r.registrationPeriod?.name ?? "Dossier historique à compléter"}</td>
-                <td>{r.status}</td>
+                <td>{ENROLLMENT_STATUS_LABELS[r.status] ?? r.status}</td>
               </tr>
             ))}
           </tbody>

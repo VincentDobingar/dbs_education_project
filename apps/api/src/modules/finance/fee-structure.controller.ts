@@ -30,3 +30,10 @@ export function updateFeeStructure(req: Request, res: Response, next: NextFuncti
     res.status(200).json(feeStructure);
   })().catch(next);
 }
+
+export function deleteFeeStructure(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    await feeStructureService.deleteFeeStructure(req.params.id as string);
+    res.status(204).end();
+  })().catch(next);
+}

@@ -5,6 +5,7 @@ import { requireEntitlement } from "../../middleware/requireEntitlement.js";
 import { parentCoverageOwnerContext, requireParentCoverage } from "../../middleware/requireParentCoverage.js";
 import { requireVerifiedStudentRelationship } from "../../middleware/requireVerifiedStudentRelationship.js";
 import * as publication from "../elearning/course-publication.controller.js";
+import { familyFeeHandlers } from "../finance/fee-portal.routes.js";
 import { getTimetableBreaks } from "../school-config/timetable-breaks.service.js";
 import { getGrades, getIncidents } from "../student-portal/student-portal.controller.js";
 
@@ -140,6 +141,32 @@ parentPortalRouter.get(
   verifiedChild,
   requireFamilySubscription,
   parentPortalController.getChildFinancialSituation,
+);
+// Échéancier et paiement en ligne des frais scolaires : un parent peut toujours
+// payer, même sans abonnement famille (pas de requireFamilySubscription).
+parentPortalRouter.get(
+  "/children/:studentId/fee-schedule",
+  requireAuth,
+  verifiedChild,
+  familyFeeHandlers.schedule,
+);
+parentPortalRouter.get(
+  "/children/:studentId/fee-schedule/:invoiceId/payment-options",
+  requireAuth,
+  verifiedChild,
+  familyFeeHandlers.options,
+);
+parentPortalRouter.post(
+  "/children/:studentId/fee-schedule/:invoiceId/pay",
+  requireAuth,
+  verifiedChild,
+  familyFeeHandlers.pay,
+);
+parentPortalRouter.get(
+  "/children/:studentId/fee-schedule/:invoiceId/payments/:intentId",
+  requireAuth,
+  verifiedChild,
+  familyFeeHandlers.status,
 );
 parentPortalRouter.get(
   "/children/:studentId/receipts",

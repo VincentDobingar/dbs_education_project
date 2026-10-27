@@ -116,6 +116,7 @@ model Enrollment {
   campus             Campus              @relation(fields: [campusId], references: [id])
   gradeLevel         GradeLevel          @relation(fields: [gradeLevelId], references: [id])
   registrationPeriod RegistrationPeriod? @relation(fields: [registrationPeriodId, tenantId, academicYearId], references: [id, tenantId, academicYearId], onDelete: Restrict)
+  feeAgreement       StudentFeeAgreement?
 
   @@unique([studentId, academicYearId])
   @@index([tenantId])

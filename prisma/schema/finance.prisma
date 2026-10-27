@@ -23,6 +23,10 @@ model FeeCategory {
   code      String
   nameFr    String
   nameEn    String
+  /// Nature de la rubrique : l'inscription est exigée à l'inscription, la scolarité
+  /// est découpée par le plan d'échéances, annexes et examens suivent une tranche.
+  nature       FeeNature @default(TUITION)
+  isRefundable Boolean   @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -42,6 +46,12 @@ model FeeStructure {
   amountCents    Int
   dueDate        DateTime?
   isMandatory    Boolean   @default(true)
+  /// Tarif nouveau / ancien élève (ex. réinscription moins chère que l'inscription).
+  studentType    FeeStudentType @default(ALL)
+  /// Filière (série) : un tarif propre à une filière prime sur le tarif du niveau.
+  programId      String?
+  /// Annexes et examens : numéro de la tranche avec laquelle ils sont facturés (1 par défaut).
+  dueWithInstallment Int?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -63,10 +73,16 @@ model StudentInvoice {
   dueAt          DateTime?
   issuedAt       DateTime?
   deletedAt      DateTime?
+  kind                StudentInvoiceKind @default(MANUAL)
+  agreementId         String?
+  installmentSequence Int?
+  /// Pénalité de retard : une seule par échéance en retard.
+  penaltyForInvoiceId String?            @unique
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  student Student @relation(fields: [studentId], references: [id])
+  student   Student              @relation(fields: [studentId], references: [id])
+  agreement StudentFeeAgreement? @relation(fields: [agreementId], references: [id])
 
   items          StudentInvoiceItem[]
   payments       StudentPayment[]
@@ -76,6 +92,7 @@ model StudentInvoice {
   @@index([tenantId])
   @@index([studentId])
   @@index([status])
+  @@index([agreementId])
 }
 
 model StudentInvoiceItem {
@@ -100,6 +117,10 @@ model StudentPayment {
   method               PaymentMethodType
   recordedByEmployeeId String? // obligatoire pour un encaissement especes (agent autorise)
   paymentTransactionId String? // renseigne pour un paiement electronique (Mobile Money, carte)
+  /// Un versement réparti sur plusieurs échéances : même identifiant de groupe, un reçu groupé.
+  allocationGroupId    String?
+  /// Paiement en ligne encaissé par DBSA pour l'établissement : date du reversement.
+  platformSettledAt    DateTime?
   paidAt               DateTime          @default(now())
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
@@ -111,6 +132,7 @@ model StudentPayment {
 
   @@index([tenantId])
   @@index([studentInvoiceId])
+  @@index([allocationGroupId])
 }
 
 /// Append-only : un paiement peut etre rembourse partiellement plusieurs fois (§23).

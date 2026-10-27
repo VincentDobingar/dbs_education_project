@@ -5,7 +5,7 @@
 1. Dans **Configuration**, créer l'année académique et les classes (campus et niveau compris).
 2. Dans **Parents / tuteurs**, enregistrer les coordonnées du responsable. Il peut être sélectionné pour plusieurs enfants.
 3. Dans **Élèves**, créer le dossier en sélectionnant son tuteur principal. Pour les dossiers existants, utiliser le rattachement dans la fiche élève.
-4. Dans **Inscriptions**, sélectionner l'année et créer une période d'inscription avec ses dates d'ouverture et de clôture. Définir de une à trois tranches : montant dans la devise de l'établissement et date d'échéance pour chacune.
+4. Dans **Inscriptions**, sélectionner l'année et créer une période d'inscription avec ses dates d'ouverture et de clôture. Si l'année a un plan d'échéances (menu **Frais et échéanciers**, voir `echeancier-flexible.md`), les montants viennent de la grille et du plan ; sinon, définir de une à trois tranches sur la période.
 5. Sélectionner une période ouverte, l'élève et une classe de l'année correspondante. La confirmation crée atomiquement l'inscription et une facture émise par tranche. Les encaissements utilisent ensuite la facturation existante dans la fiche élève.
 
 ## Règles et protection des données

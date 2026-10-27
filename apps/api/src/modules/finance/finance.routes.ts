@@ -11,6 +11,7 @@ import * as expenseCategoryController from "./expense-category.controller.js";
 import * as expenseController from "./expense.controller.js";
 import * as feeCategoryController from "./fee-category.controller.js";
 import * as feeStructureController from "./fee-structure.controller.js";
+import * as feeController from "./fee.controller.js";
 import * as financialReportController from "./financial-report.controller.js";
 import * as studentInvoiceController from "./student-invoice.controller.js";
 import * as studentPaymentController from "./student-payment.controller.js";
@@ -21,13 +22,37 @@ financeRouter.use(requireAuth, enforceTenantScope, requireTenantMembership, requ
 
 const readFinance = requirePermission("finance.read");
 const writeFinance = requirePermission("finance.write");
+/** Exceptions validées par la direction : reports, découpages d'échéances. */
+const financeExceptions = requirePermission("finance.exceptions");
 
 financeRouter.post("/fee-categories", writeFinance, feeCategoryController.createFeeCategory);
 financeRouter.get("/fee-categories", readFinance, feeCategoryController.listFeeCategories);
+financeRouter.patch("/fee-categories/:id", writeFinance, feeCategoryController.updateFeeCategory);
 
 financeRouter.post("/fee-structures", writeFinance, feeStructureController.createFeeStructure);
 financeRouter.get("/fee-structures", readFinance, feeStructureController.listFeeStructures);
 financeRouter.patch("/fee-structures/:id", writeFinance, feeStructureController.updateFeeStructure);
+financeRouter.delete("/fee-structures/:id", writeFinance, feeStructureController.deleteFeeStructure);
+
+// Inscription et échéancier flexibles.
+financeRouter.get("/fee-policy", readFinance, feeController.getPolicy);
+financeRouter.put("/fee-policy", writeFinance, feeController.putPolicy);
+financeRouter.get("/fee-plans", readFinance, feeController.listPlans);
+financeRouter.post("/fee-plans", writeFinance, feeController.createPlan);
+financeRouter.put("/fee-plans/:id", writeFinance, feeController.updatePlan);
+financeRouter.delete("/fee-plans/:id", writeFinance, feeController.deletePlan);
+financeRouter.post("/fee-setup/copy", writeFinance, feeController.copySetup);
+financeRouter.get("/discount-presets", readFinance, feeController.listDiscounts);
+financeRouter.post("/discount-presets", writeFinance, feeController.createDiscount);
+financeRouter.patch("/discount-presets/:id", writeFinance, feeController.updateDiscount);
+financeRouter.get("/students/:studentId/schedule", readFinance, feeController.studentSchedule);
+financeRouter.get("/students/:studentId/credits", readFinance, feeController.studentCredits);
+financeRouter.post("/students/:studentId/payments", writeFinance, feeController.recordPayment);
+financeRouter.get("/payment-groups/:groupId", readFinance, feeController.paymentGroup);
+financeRouter.get("/payment-groups/:groupId/pdf", readFinance, feeController.paymentGroupPdf);
+financeRouter.post("/student-invoices/:id/reschedule", financeExceptions, feeController.reschedule);
+financeRouter.post("/student-invoices/:id/split", financeExceptions, feeController.split);
+financeRouter.get("/recovery", readFinance, feeController.recovery);
 
 financeRouter.post("/student-invoices", writeFinance, studentInvoiceController.createStudentInvoice);
 financeRouter.get("/student-invoices", readFinance, studentInvoiceController.listStudentInvoices);

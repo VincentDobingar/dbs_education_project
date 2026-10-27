@@ -13,7 +13,7 @@ export const installmentSchema = z.object({
 });
 export const installmentsSchema = z
   .array(installmentSchema)
-  .min(1)
+  .min(0)
   .max(3)
   .refine(
     (items) => items.reduce((sum, item) => sum + item.amountCents, 0) <= 2_000_000_000,

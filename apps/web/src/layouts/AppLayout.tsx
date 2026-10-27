@@ -97,6 +97,11 @@ const NAV_LINKS: readonly NavLinkDef[] = [
     roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACCOUNTANT", "TENANT_AUDITOR"],
   },
   {
+    to: "/frais-echeanciers",
+    key: "layout.nav.fees",
+    roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACCOUNTANT", "TENANT_AUDITOR"],
+  },
+  {
     to: "/devoirs",
     key: "layout.nav.homework",
     roles: ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACADEMIC_DIRECTOR", "TEACHER", "TENANT_AUDITOR"],

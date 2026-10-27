@@ -1,0 +1,187 @@
+// Inscription et échéancier flexibles (frais scolaires).
+//
+// L'établissement paramètre une fois par an : rubriques typées (FeeCategory.nature),
+// grille par niveau et par profil nouveau / ancien élève (FeeStructure), plan
+// d'échéances (FeePlan, ses tranches ancrées sur les périodes scolaires) et remises
+// prédéfinies. À chaque inscription, ces règles produisent un contrat financier
+// figé (StudentFeeAgreement) puis les échéances de l'élève (StudentInvoice).
+// Montants en centimes (Int), jamais en flottant. Toutes ces tables portent un
+// tenantId obligatoire : elles sont sous RLS et dans TENANT_SCOPED_MODELS.
+
+enum FeeNature {
+  REGISTRATION
+  TUITION
+  ANNEX
+  EXAM
+}
+
+enum FeeStudentType {
+  ALL
+  NEW
+  RETURNING
+}
+
+enum FeeAnchorType {
+  ENROLLMENT
+  PERIOD_START
+  FIXED_DATE
+}
+
+enum FeeDiscountKind {
+  PERCENT
+  AMOUNT
+}
+
+enum FeeAgreementStatus {
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum StudentInvoiceKind {
+  MANUAL
+  REGISTRATION
+  INSTALLMENT
+  PENALTY
+}
+
+enum FeeReminderKind {
+  BEFORE_DUE
+  AFTER_DUE
+  LONG_OVERDUE
+}
+
+/// Un plan par année ; un plan propre à un cycle (ex. maternelle en mensualités)
+/// prime sur le plan général (educationCycleId nul) de la même année.
+model FeePlan {
+  id               String   @id @default(cuid())
+  tenantId         String
+  academicYearId   String
+  educationCycleId String?
+  name             String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  installments FeePlanInstallment[]
+  agreements   StudentFeeAgreement[]
+
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId])
+  @@index([academicYearId])
+}
+
+/// Une tranche : part de la scolarité nette (en points de base, total 10 000) et
+/// règle d'échéance (début d'une période scolaire + décalage, date fixe, ou jour
+/// de l'inscription).
+model FeePlanInstallment {
+  id               String        @id @default(cuid())
+  tenantId         String
+  feePlanId        String
+  sequence         Int
+  label            String
+  shareBps         Int
+  anchorType       FeeAnchorType
+  academicPeriodId String?
+  offsetDays       Int           @default(0)
+  fixedDate        DateTime?
+  createdAt        DateTime      @default(now())
+
+  feePlan FeePlan @relation(fields: [feePlanId], references: [id], onDelete: Cascade)
+
+  @@unique([feePlanId, sequence])
+  @@index([tenantId])
+}
+
+/// Remise prédéfinie par l'établissement (fratrie, enfant du personnel, bourse…).
+/// value : points de base pour PERCENT, centimes pour AMOUNT. S'applique à la scolarité.
+model FeeDiscountPreset {
+  id        String          @id @default(cuid())
+  tenantId  String
+  name      String
+  kind      FeeDiscountKind
+  value     Int
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+/// Contrat financier de l'élève pour une inscription : photographie figée des
+/// rubriques, montants, remises et du plan au moment de l'inscription. Un
+/// changement de tarif ultérieur ne le modifie pas.
+model StudentFeeAgreement {
+  id             String             @id @default(cuid())
+  tenantId       String
+  enrollmentId   String             @unique
+  studentId      String
+  academicYearId String
+  feePlanId      String?
+  isReturning    Boolean
+  /// [{ feeStructureId, feeCategoryId, label, nature, amountCents, isMandatory, dueWithInstallment }]
+  lines          Json
+  grossCents     Int
+  discountCents  Int                @default(0)
+  totalCents     Int
+  status         FeeAgreementStatus @default(ACTIVE)
+  createdById    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  enrollment Enrollment         @relation(fields: [enrollmentId], references: [id])
+  feePlan    FeePlan?           @relation(fields: [feePlanId], references: [id])
+  discounts  StudentFeeDiscount[]
+  invoices   StudentInvoice[]
+
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+/// Remise accordée à un élève, tracée (qui, quand, pourquoi).
+model StudentFeeDiscount {
+  id              String          @id @default(cuid())
+  tenantId        String
+  agreementId     String
+  presetId        String?
+  label           String
+  kind            FeeDiscountKind
+  value           Int
+  amountCents     Int
+  reason          String?
+  grantedByUserId String?
+  createdAt       DateTime        @default(now())
+
+  agreement StudentFeeAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([agreementId])
+}
+
+/// Avoir : trop-perçu d'un versement, consommé en priorité par les versements suivants.
+model StudentCredit {
+  id                String   @id @default(cuid())
+  tenantId          String
+  studentId         String
+  amountCents       Int
+  remainingCents    Int
+  allocationGroupId String?
+  reason            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([studentId])
+}
+
+/// Un rappel envoyé une seule fois par échéance et par type (idempotence de la tâche planifiée).
+model FeeReminderLog {
+  id        String          @id @default(cuid())
+  tenantId  String
+  invoiceId String
+  kind      FeeReminderKind
+  sentAt    DateTime        @default(now())
+
+  @@unique([invoiceId, kind])
+  @@index([tenantId])
+}

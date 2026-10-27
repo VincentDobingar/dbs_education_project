@@ -67,6 +67,8 @@ enum PaymentMethodType {
   WALLET
   PREPAID_CODE
   SPONSOR
+  /// Règlement par un avoir (trop-perçu d'un versement antérieur).
+  CREDIT
 }
 
 enum PaymentPurpose {
@@ -372,6 +374,8 @@ model PaymentIntent {
   studentInvoiceId     String?
   licenseBatchId       String?
   remedialEnrollmentId String?
+  /// Établissement concerné (frais scolaires payés en ligne) : ouvre la session RLS au webhook.
+  tenantId             String?
   amountCents          Int
   currencyId           String
   status               PaymentTransactionStatus @default(PENDING)

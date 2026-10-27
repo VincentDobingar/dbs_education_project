@@ -8,6 +8,7 @@ import type { TenantActor } from "../../lib/tenant-actor.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 import { generateReference } from "../payments/reference.js";
 
+import { activateEnrollmentIfRegistrationPaid } from "./fee-schedule/activation.js";
 import { requireStudentInvoice } from "./student-invoice.service.js";
 import type { RecordCashPaymentInput, RefundStudentPaymentInput } from "./student-payment.validation.js";
 
@@ -104,6 +105,8 @@ export async function recordCashPayment(
         number: generateReference("REC"),
       },
     });
+
+    if (newStatus === "PAID") await activateEnrollmentIfRegistrationPaid(tx, invoiceId);
 
     return { ...payment, receipt };
   });

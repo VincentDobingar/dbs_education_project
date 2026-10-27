@@ -8,6 +8,9 @@ import {
 
 import { AppError } from "../../lib/errors.js";
 import { prisma, type PrismaTransactionClient } from "../../lib/prisma.js";
+import { runWithContext } from "../../lib/tenant-context.js";
+import { minorUnitsToStudentCents } from "../finance/fee-schedule/family-payment.service.js";
+import { settleOnlineInvoicePayment } from "../finance/fee-schedule/payment-allocation.service.js";
 import { confirmRemedialEnrollment } from "../remedial/remedial-settlement.js";
 import { isTransitionAllowed } from "../subscriptions/subscription-transitions.js";
 import { applySubscriptionTransition } from "../subscriptions/subscription.service.js";
@@ -289,6 +292,26 @@ export async function handleSuccessfulTransaction(tx: Tx, transaction: PaymentTr
 
   if (intent.remedialEnrollmentId) {
     await confirmRemedialEnrollment(tx, intent.remedialEnrollmentId);
+  }
+
+  if (intent.studentInvoiceId && intent.tenantId) {
+    const [provider, currency] = await Promise.all([
+      tx.paymentProvider.findUnique({ where: { id: intent.providerId } }),
+      tx.currency.findUniqueOrThrow({ where: { id: intent.currencyId } }),
+    ]);
+    const tenantId = intent.tenantId;
+    const invoiceId = intent.studentInvoiceId;
+    // Même transaction ; le contexte d'établissement est posé pour le garde
+    // multi-établissement du client (le webhook arrive hors de tout sous-domaine).
+    await runWithContext({ userId: null, tenantId }, () =>
+      settleOnlineInvoicePayment(tx as unknown as Prisma.TransactionClient, {
+        tenantId,
+        invoiceId,
+        amountCents: minorUnitsToStudentCents(transaction.amountCents, currency.decimalDigits),
+        paymentTransactionId: transaction.id,
+        method: provider?.methodType ?? "MOBILE_MONEY",
+      }),
+    );
   }
 
   const existingReceipt = await tx.receipt.findUnique({ where: { paymentTransactionId: transaction.id } });

@@ -18,6 +18,7 @@ import { disciplineRouter } from "./modules/discipline/discipline.routes.js";
 import { elearningRouter } from "./modules/elearning/elearning.routes.js";
 import { employeeRouter } from "./modules/employees/employee.routes.js";
 import { familyRouter } from "./modules/family/family.routes.js";
+import { feeSettlementPlatformRouter } from "./modules/finance/fee-portal.routes.js";
 import { financeRouter } from "./modules/finance/finance.routes.js";
 import { gradingRouter } from "./modules/grading/grading.routes.js";
 import { homeworkRouter } from "./modules/homework/homework.routes.js";
@@ -111,6 +112,7 @@ export function createApp(): express.Express {
   app.use("/api/v1/remedial", remedialSchoolRouter);
   app.use("/api/v1/remedial-portal", remedialPortalRouter);
   app.use("/api/v1/platform/remedial", remedialPlatformRouter);
+  app.use("/api/v1/platform/fee-settlements", feeSettlementPlatformRouter);
   app.use("/api/v1/platform", platformAdminRouter);
 
   app.use((_req: Request, res: Response) => {

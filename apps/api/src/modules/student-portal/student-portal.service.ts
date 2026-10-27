@@ -11,6 +11,7 @@ import { AppError } from "../../lib/errors.js";
 import type { TenantLetterhead } from "../../lib/pdf-letterhead.js";
 import { prisma } from "../../lib/prisma.js";
 import { listAnnouncementsForStudent } from "../communication/announcement.service.js";
+import { assertReportCardNotWithheld } from "../finance/fee-schedule/withholding.js";
 import { generateInvoicePdf } from "../finance/invoice-pdf.service.js";
 import { generateReceiptPdf } from "../finance/receipt-pdf.service.js";
 import { requireStudentInvoice } from "../finance/student-invoice.service.js";
@@ -90,6 +91,7 @@ export async function getMyReportCard(studentId: string, reportCardId: string): 
   if (reportCard.studentId !== studentId) {
     throw new AppError(404, "REPORT_CARD_NOT_FOUND", `Report card not found: ${reportCardId}`);
   }
+  await assertReportCardNotWithheld(studentId);
   return reportCard;
 }
 

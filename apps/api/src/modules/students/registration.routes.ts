@@ -107,6 +107,16 @@ registrationRouter.post(
     const year = await prisma.academicYear.findUnique({ where: { id: input.academicYearId } });
     if (!year || year.deletedAt)
       throw new AppError(404, "ACADEMIC_YEAR_NOT_FOUND", "Année académique introuvable");
+    // Sans plan d'échéances pour l'année, la période porte elle-même ses 1 à 3 tranches.
+    if (
+      input.installments.length === 0 &&
+      (await prisma.feePlan.count({ where: { academicYearId: year.id } })) === 0
+    )
+      throw new AppError(
+        400,
+        "REGISTRATION_INSTALLMENTS_REQUIRED",
+        "Définissez 1 à 3 tranches, ou créez d'abord un plan d'échéances pour cette année",
+      );
     return res.status(201).json(
       await prisma.registrationPeriod.create({
         data: { ...input, tenantId: requireCurrentTenantId() },
@@ -150,6 +160,30 @@ registrationRouter.get(
         },
       }),
     );
+  }),
+);
+
+/** Remises prédéfinies proposables à l'inscription (le secrétariat n'a pas accès aux finances). */
+registrationRouter.get(
+  "/discount-presets",
+  read,
+  action(async (_req, res) => {
+    return res.json(
+      await prisma.feeDiscountPreset.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    );
+  }),
+);
+/** L'année utilise-t-elle les plans d'échéances (sinon l'ancien échéancier de période) ? */
+registrationRouter.get(
+  "/fee-mode",
+  read,
+  action(async (req, res) => {
+    const query = z.object({ academicYearId: z.string().min(1) }).parse(req.query);
+    const plans = await prisma.feePlan.findMany({
+      where: { academicYearId: query.academicYearId },
+      select: { id: true, name: true, educationCycleId: true },
+    });
+    return res.json({ usesPlans: plans.length > 0, plans });
   }),
 );
 

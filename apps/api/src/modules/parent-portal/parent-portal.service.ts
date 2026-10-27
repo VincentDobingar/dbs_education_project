@@ -18,6 +18,7 @@ import { listAnnouncementsForStudent } from "../communication/announcement.servi
 import { requireFamilyAccountForUser } from "../family/family-account.service.js";
 import type { VerifiedChild } from "../family/parent-student-relationship.service.js";
 import { listVerifiedChildrenForParent } from "../family/parent-student-relationship.service.js";
+import { assertReportCardNotWithheld } from "../finance/fee-schedule/withholding.js";
 import {
   getStudentFinancialSituation,
   type StudentFinancialSituation,
@@ -61,6 +62,7 @@ export async function getChildReportCard(
   if (reportCard.studentId !== studentId) {
     throw new AppError(404, "REPORT_CARD_NOT_FOUND", `Report card not found: ${reportCardId}`);
   }
+  await assertReportCardNotWithheld(studentId);
   return reportCard;
 }
 

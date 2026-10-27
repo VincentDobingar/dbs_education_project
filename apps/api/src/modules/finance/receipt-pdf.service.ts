@@ -26,6 +26,7 @@ const METHODS: Record<string, string> = {
   WALLET: "Portefeuille",
   PREPAID_CODE: "Code prépayé",
   SPONSOR: "Prise en charge",
+  CREDIT: "Avoir",
 };
 const amount = (cents: number) =>
   (cents / 100)

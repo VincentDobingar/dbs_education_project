@@ -33,6 +33,7 @@ import { enrollStudent, fetchIdCardPdf, getStudent, listEnrollments } from "../.
 import { useRequiredSession } from "../../lib/useSession.js";
 
 import { InvoiceDownloadButton } from "./InvoiceDownloadButton.js";
+import { StudentFeeSchedule } from "./StudentFeeSchedule.js";
 import { StudentProfileEditor } from "./StudentProfileEditor.js";
 
 function formatAmount(cents: number): string {
@@ -404,6 +405,7 @@ export function StudentDetailPage(): ReactNode {
       void queryClient.invalidateQueries({ queryKey: ["registrations", session.subdomain] });
       void queryClient.invalidateQueries({ queryKey: ["students", session.subdomain] });
       void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+      void queryClient.invalidateQueries({ queryKey: ["student-schedule", session.subdomain, studentId] });
       setSelectedClassroomId("");
     },
   });
@@ -558,7 +560,9 @@ export function StudentDetailPage(): ReactNode {
                     {years.data?.find((year) => year.id === enrollment.academicYearId)?.name} ·{" "}
                     {classroom?.name ?? enrollment.classroomId}
                   </span>
-                  <span className="text-slate-500">{enrollment.status}</span>
+                  <span className="text-slate-500">
+                    {t(`fees.enrollmentStatus.${enrollment.status}`, { defaultValue: enrollment.status })}
+                  </span>
                 </li>
               );
             })}
@@ -627,9 +631,24 @@ export function StudentDetailPage(): ReactNode {
           </Button>
         </form>
         {enrollMutation.isError ? (
-          <p className="mt-2 text-sm text-red-600">{t("studentDetail.enrollError")}</p>
+          <p className="mt-2 text-sm text-red-600">
+            {enrollMutation.error instanceof Error && enrollMutation.error.message !== "Request failed"
+              ? enrollMutation.error.message
+              : t("studentDetail.enrollError")}
+          </p>
         ) : null}
       </section>
+
+      {session.roleCodes.some((role) =>
+        ["SCHOOL_OWNER", "SCHOOL_ADMIN", "DIRECTOR", "ACCOUNTANT", "TENANT_AUDITOR"].includes(role),
+      ) ? (
+        <StudentFeeSchedule
+          studentId={studentId}
+          creds={creds}
+          canCollect={session.roleCodes.some((role) => ["SCHOOL_OWNER", "ACCOUNTANT"].includes(role))}
+          canGrantExceptions={session.roleCodes.some((role) => ["SCHOOL_OWNER", "DIRECTOR"].includes(role))}
+        />
+      ) : null}
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.billing")}</h2>

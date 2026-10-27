@@ -128,6 +128,18 @@ Choisir la classe et la date, marquer chaque élève Présent, Absent, En retard
 
 Catégories de dépenses et saisie des dépenses, sessions de caisse (ouvrir avec un solde d'ouverture, clôturer avec le solde de clôture), rapports de recettes et de dépenses sur une période, exportables en CSV, PDF ou Excel.
 
+### Frais et échéanciers
+
+Menu **Frais et échéanciers** (propriétaire, comptable ; lecture pour la direction).
+
+1. **Rubriques et tarifs** : créez les rubriques en choisissant leur nature (inscription, scolarité, frais annexes, frais d'examen), puis la grille de l'année : un montant par rubrique, par niveau si besoin, et pour les nouveaux ou anciens élèves. Les frais facultatifs (cantine, transport) sont cochés à l'inscription. « Dupliquer sur cette année » reprend la grille et les plans d'une autre année.
+2. **Plans d'échéances** : partez d'un modèle (3 tranches trimestrielles, 4 tranches sur 3 trimestres, 2 tranches semestrielles, 10 mensualités). Chaque tranche est une part de la scolarité et une échéance : à l'inscription, au début d'un trimestre ou semestre (+ quelques jours), ou à date fixe. Un plan propre à un cycle (ex. maternelle) prime sur le plan général.
+3. **Remises** : fratrie, enfant du personnel, bourse… proposées à l'inscription. La direction peut aussi accorder une remise au cas par cas, avec un motif.
+4. **Règles** : inscription en cours d'année, réinscription avec arriérés, relances automatiques, pénalités, retenue du bulletin, paiement en ligne. Tout ce qui pénalise l'élève est désactivé par défaut.
+5. **Recouvrement** : taux par tranche et par classe, élèves en retard, encaissements attendus sur 30 jours.
+
+À l'inscription, l'aperçu montre l'échéancier exact avant validation. Un élève qui doit des frais d'inscription est **admis** : il n'apparaît dans sa classe qu'une fois ces frais payés. Dans la fiche élève, la rubrique **Échéancier** permet d'encaisser un versement (réparti automatiquement : l'inscription d'abord, puis les tranches les plus anciennes ; le trop-perçu devient un avoir), d'imprimer le reçu détaillé et, pour la direction, de reporter ou découper une échéance.
+
 ### Devoirs, Annonces, Support
 
 - **Devoirs** : assigner un devoir à une classe avec une échéance, puis **Voir les rendus** (à temps ou en retard).
@@ -157,6 +169,8 @@ Les enseignants proposent des cours de renforcement ou de rattrapage, ouverts au
 Le lien de visioconférence ou les consignes du cours ne sont visibles que des inscrits ayant payé.
 
 ## Portail parent et élève
+
+Le parent voit les **frais de scolarité** de chaque enfant : ce qu'il doit et pour quand, les tranches payées et à venir, et peut payer une échéance en ligne si l'établissement l'a activé (sinon, la référence à présenter à la caisse).
 
 Parents et élèves ont leur propre espace, séparé de celui de l'établissement, avec le même menu en barre latérale (Parent, Élève, Activer un code).
 

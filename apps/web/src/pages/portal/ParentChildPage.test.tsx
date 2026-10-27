@@ -16,6 +16,7 @@ import {
 
 import { ParentChildPage } from "./ParentChildPage.js";
 vi.mock("./FamilyCourses.js", () => ({ FamilyCourses: () => null }));
+vi.mock("./FamilyFeeSchedule.js", () => ({ FamilyFeeSchedule: () => null }));
 
 vi.mock("../../lib/portalSession.js", () => ({ loadPortalSession: () => ({ accessToken: "parent-token" }) }));
 vi.mock("../../lib/apiClient.js", async (importOriginal) => ({

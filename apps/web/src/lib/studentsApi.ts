@@ -96,6 +96,10 @@ export interface CreateEnrollmentInput {
   classroomId: string;
   campusId: string;
   gradeLevelId: string;
+  /** Échéancier flexible : tarifs facultatifs choisis, remises prédéfinies ou au cas par cas. */
+  optionalFeeStructureIds?: string[];
+  discountPresetIds?: string[];
+  manualDiscounts?: { label: string; kind: "PERCENT" | "AMOUNT"; value: number; reason: string }[];
 }
 
 export function listEnrollments(studentId: string, creds: TenantCredentials): Promise<Enrollment[]> {

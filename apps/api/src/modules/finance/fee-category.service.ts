@@ -4,7 +4,7 @@ import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireCurrentTenantId } from "../../lib/tenant-context.js";
 
-import type { CreateFeeCategoryInput } from "./fee-category.validation.js";
+import type { CreateFeeCategoryInput, UpdateFeeCategoryInput } from "./fee-category.validation.js";
 
 export async function createFeeCategory(input: CreateFeeCategoryInput): Promise<FeeCategory> {
   const existing = await prisma.feeCategory.findFirst({ where: { code: input.code } });
@@ -18,6 +18,22 @@ export async function createFeeCategory(input: CreateFeeCategoryInput): Promise<
       code: input.code,
       nameFr: input.nameFr,
       nameEn: input.nameEn,
+      nature: input.nature ?? "TUITION",
+      // Les frais d'inscription ne sont pas remboursables par défaut.
+      isRefundable: input.isRefundable ?? input.nature !== "REGISTRATION",
+    },
+  });
+}
+
+export async function updateFeeCategory(id: string, input: UpdateFeeCategoryInput): Promise<FeeCategory> {
+  await requireFeeCategory(id);
+  return prisma.feeCategory.update({
+    where: { id },
+    data: {
+      ...(input.nameFr !== undefined ? { nameFr: input.nameFr } : {}),
+      ...(input.nameEn !== undefined ? { nameEn: input.nameEn } : {}),
+      ...(input.nature !== undefined ? { nature: input.nature } : {}),
+      ...(input.isRefundable !== undefined ? { isRefundable: input.isRefundable } : {}),
     },
   });
 }

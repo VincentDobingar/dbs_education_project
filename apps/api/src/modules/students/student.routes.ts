@@ -41,6 +41,7 @@ studentRouter.get("/classrooms/:classroomId/id-cards", readStudents, idCardContr
 studentRouter.get("/:id/id-card", readStudents, idCardController.generateIdCard);
 
 studentRouter.post("/:studentId/enrollments", manageStudents, enrollmentController.enrollStudent);
+studentRouter.post("/:studentId/enrollments/preview", manageStudents, enrollmentController.previewEnrollment);
 studentRouter.get("/:studentId/enrollments", readStudents, enrollmentController.listEnrollments);
 studentRouter.patch(
   "/:studentId/enrollments/:id",

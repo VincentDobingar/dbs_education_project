@@ -1,4 +1,4 @@
-import type { FeeStructure } from "@prisma/client";
+import type { FeeCategory, FeeStructure } from "@prisma/client";
 
 import { AppError } from "../../lib/errors.js";
 import { prisma } from "../../lib/prisma.js";
@@ -24,6 +24,13 @@ export async function createFeeStructure(input: CreateFeeStructureInput): Promis
     }
   }
 
+  if (input.programId) {
+    const program = await prisma.program.findUnique({ where: { id: input.programId } });
+    if (!program) {
+      throw new AppError(404, "PROGRAM_NOT_FOUND", `Program not found: ${input.programId}`);
+    }
+  }
+
   return prisma.feeStructure.create({
     data: {
       tenantId: requireCurrentTenantId(),
@@ -31,14 +38,20 @@ export async function createFeeStructure(input: CreateFeeStructureInput): Promis
       feeCategoryId: input.feeCategoryId,
       amountCents: input.amountCents,
       ...(input.gradeLevelId ? { gradeLevelId: input.gradeLevelId } : {}),
+      ...(input.programId ? { programId: input.programId } : {}),
+      ...(input.studentType ? { studentType: input.studentType } : {}),
+      ...(input.dueWithInstallment ? { dueWithInstallment: input.dueWithInstallment } : {}),
       ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
       ...(input.isMandatory !== undefined ? { isMandatory: input.isMandatory } : {}),
     },
   });
 }
 
-export async function listFeeStructures(query: ListFeeStructuresQuery): Promise<FeeStructure[]> {
+export async function listFeeStructures(
+  query: ListFeeStructuresQuery,
+): Promise<(FeeStructure & { feeCategory: FeeCategory })[]> {
   return prisma.feeStructure.findMany({
+    include: { feeCategory: true },
     where: {
       ...(query.academicYearId ? { academicYearId: query.academicYearId } : {}),
       ...(query.gradeLevelId ? { gradeLevelId: query.gradeLevelId } : {}),
@@ -65,6 +78,14 @@ export async function updateFeeStructure(id: string, input: UpdateFeeStructureIn
       ...(input.amountCents !== undefined ? { amountCents: input.amountCents } : {}),
       ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
       ...(input.isMandatory !== undefined ? { isMandatory: input.isMandatory } : {}),
+      ...(input.studentType !== undefined ? { studentType: input.studentType } : {}),
+      ...(input.dueWithInstallment !== undefined ? { dueWithInstallment: input.dueWithInstallment } : {}),
     },
   });
+}
+
+/** Retirer un tarif de la grille n'affecte aucun contrat déjà signé (photographie figée). */
+export async function deleteFeeStructure(id: string): Promise<void> {
+  await requireFeeStructure(id);
+  await prisma.feeStructure.delete({ where: { id } });
 }

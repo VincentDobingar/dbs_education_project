@@ -22,6 +22,7 @@ import {
 import { loadPortalSession } from "../../lib/portalSession.js";
 
 import { FamilyCourses } from "./FamilyCourses.js";
+import { FamilyFeeSchedule } from "./FamilyFeeSchedule.js";
 import { PortalSchoolFollowUp } from "./PortalSchoolFollowUp.js";
 import { PortalTimetable } from "./PortalTimetable.js";
 
@@ -249,6 +250,8 @@ function ParentChildContent(): ReactNode {
           </Link>
         </section>
       ) : null}
+
+      <FamilyFeeSchedule studentId={id} accessToken={accessToken} />
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">{t("studentDetail.billing")}</h2>

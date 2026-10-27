@@ -482,6 +482,21 @@ export default async function setup(): Promise<void> {
     update: {},
     create: { roleId: teacherRole.id, permissionId: remedialTeach.id },
   });
+  const financeExceptions = await prisma.permission.upsert({
+    where: { code: "finance.exceptions" },
+    update: {},
+    create: {
+      code: "finance.exceptions",
+      module: "finance",
+      descriptionFr: "Accorder remises et échéanciers individuels",
+      descriptionEn: "Grant discounts and individual payment plans",
+    },
+  });
+  await prisma.rolePermission.upsert({
+    where: { roleId_permissionId: { roleId: schoolOwnerRole.id, permissionId: financeExceptions.id } },
+    update: {},
+    create: { roleId: schoolOwnerRole.id, permissionId: financeExceptions.id },
+  });
   const cameroon = await prisma.country.findUniqueOrThrow({ where: { isoCode: "CM" } });
   await prisma.paymentProvider.upsert({
     where: { code: "KONOOM_CM" },

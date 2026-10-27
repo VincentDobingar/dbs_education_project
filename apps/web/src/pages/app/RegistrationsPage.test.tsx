@@ -100,7 +100,7 @@ describe("inscription depuis l'interface", () => {
       ),
     );
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Inscription enregistrée et factures créées.",
+      "Inscription enregistrée et échéances créées.",
     );
   });
 });
